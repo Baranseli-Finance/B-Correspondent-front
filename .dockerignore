@@ -1,0 +1,14 @@
+*
+!deploy
+!dev
+!src
+!test
+!package.json
+!*.dhall
+!*.nix
+!*.mjs
+!config.json
+!app
+!index.js
+!nix
+!scripts
