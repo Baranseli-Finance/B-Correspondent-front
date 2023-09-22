@@ -1,4 +1,4 @@
-module Buzgibi.Web.Platform (getPlatform) where
+module BCorrespondent.Web.Platform (getPlatform) where
 
 import Prelude
 

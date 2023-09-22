@@ -17,13 +17,13 @@ module AppM (AppM(..), runAppM) where
 
 import Prelude
 
-import Buzgibi.Capability.Navigate
-import Buzgibi.Data.Route as Route
-import Buzgibi.Data.Config
-import Buzgibi.Capability.LogMessages
-import Buzgibi.Capability.Now
-import Buzgibi.Data.Log
-import Buzgibi.Data.Config
+import BCorrespondent.Capability.Navigate
+import BCorrespondent.Data.Route as Route
+import BCorrespondent.Data.Config
+import BCorrespondent.Capability.LogMessages
+import BCorrespondent.Capability.Now
+import BCorrespondent.Data.Log
+import BCorrespondent.Data.Config
 
 import Store as Store
 import Store.Types (LogLevel(Prod))

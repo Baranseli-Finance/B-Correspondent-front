@@ -14,8 +14,8 @@ package-lock.json
 
 openapitools.json
 
-src/core/Buzgibi/Api/Foreign/BuzgibiBack
-src/lib/Buzgibi/Web/Bowser
+src/core/BCorrespondent/Api/Foreign/Back
+src/lib/BCorrespondent/Web/Bowser
 
 app/*.js
 
