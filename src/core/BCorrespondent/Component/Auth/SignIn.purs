@@ -30,6 +30,7 @@ import Web.Storage.Storage (setItem)
 import Web.HTML (window)
 import Store (Action(UpdateJwtUser))
 import Crypto.Jwt as Jwt
+import Effect.AVar as Async
 
 import Undefined
 
@@ -61,9 +62,7 @@ component =
         }
     }
   where
-  handleAction Initialize = do
-    { user } <- getStore
-    when (isJust user) $ navigate Route.Home
+  handleAction Initialize = pure unit
   handleAction (FillEmail s) = H.modify_ _ { email = Just s }
   handleAction (FillPassword s) = H.modify_ _ { password = Just s }
   handleAction (MakeRequest ev) = do
@@ -96,7 +95,8 @@ component =
           H.liftEffect $ window >>= localStorage >>= setItem "b-correspondent_jwt" token
           user <- H.liftEffect $ Jwt.parse token
           updateStore $ UpdateJwtUser (Just { jwtUser: user, token: Back.JWTToken token })
-          navigate Route.Home
+          {isLoginVar} <- getStore
+          void $ H.liftEffect $ Async.tryPut unit isLoginVar
 
 render { email, password, errMsg } =
   HH.div_

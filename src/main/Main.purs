@@ -26,7 +26,7 @@ import Web.HTML.Navigator (userAgent)
 import Web.HTML.Window (navigator, document, localStorage)
 import Web.HTML (window)
 import Store (initAppStore, User)
-import Store.Types (readPlatform, LogLevel(Dev))
+import Store.Types (readPlatform, LogLevel(Dev), readLogLevel)
 import Effect.Exception as Excep
 import Data.Either (Either(..))
 import Effect.AVar (new, empty) as Async
@@ -46,11 +46,8 @@ import Data.Argonaut.Core (stringifyWithIndent)
 import Web.Storage.Storage (getItem, removeItem)
 import Crypto.Jwt as Jwt
 import Effect.Ref as Ref
-import Store.Types (readLogLevel)
 import Data.Array (find)
 
-
-import Undefined
 
 main :: Cfg.Config -> Effect Unit
 main cfg = do
@@ -93,6 +90,8 @@ main cfg = do
         platform <- H.liftEffect $ withMaybe _platform
 
         wsVar <- H.liftEffect Async.empty
+        
+        isLoginVar <- H.liftEffect Async.empty
 
         when (logLevel == Dev)
           $ H.liftEffect
@@ -118,6 +117,7 @@ main cfg = do
             , logLevel: logLevel
             , user: user
             , wsVar: wsVar
+            , isLoginVar: isLoginVar
             }
 
         -- With our app environment ready to go, we can prepare the router to run as our root component.

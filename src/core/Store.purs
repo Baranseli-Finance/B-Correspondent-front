@@ -65,6 +65,7 @@ type Store =
   , logLevel :: LogLevel
   , user :: Maybe User
   , wsVar :: AVar (Array WS)
+  , isLoginVar :: AVar Unit
   }
 
 printStore store =
