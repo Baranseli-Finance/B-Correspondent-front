@@ -74,11 +74,13 @@ main cfg = do
     initResp <- initAppStore (_.apiBCorrespondentHost (getVal cfg)) $ map JWTToken jwt
     case initResp of
       Left err -> void $ runUI AppInitFailure.component { error: err } body
-      Right init@{isjwtvalid, shaxs, loglevel, totelegram} -> do
+      Right init@{isjwtvalid, shaxs, level, totelegram} -> do
+
+        H.liftEffect $ logShow $ printInit init
 
         -- I am sick to the back teeth of changing css hash manualy
         -- let's make the process a bit self-generating
-        cssSha <- H.liftEffect $ withMaybe $ map (_.value) (find (shaPred "") shaxs)
+        cssSha <- H.liftEffect $ withMaybe $ map (_.value) (find (shaPred "B-Correspondent-css") shaxs)
         for_ (_.cssFiles (getVal cfg)) $ H.liftEffect <<< setCssLink cssSha (_.cssLink (getVal cfg))
 
   
@@ -86,7 +88,7 @@ main cfg = do
 
         telVar <- H.liftEffect $ Async.newChannel
 
-        logLevel <- H.liftEffect $ withMaybe $ readLogLevel loglevel
+        logLevel <- H.liftEffect $ withMaybe $ readLogLevel level
 
         platform <- H.liftEffect $ withMaybe _platform
 
@@ -103,7 +105,7 @@ main cfg = do
         -- We now have the three pieces of information necessary to configure our app. Let's create
         -- a record that matches the `Store` type our application requires by filling in these three
         -- fields. If our environment type ever changes, we'll get a compiler error here.
-        frontSha <- H.liftEffect $ withMaybe $ map (_.value) (find (shaPred "") shaxs)
+        frontSha <- H.liftEffect $ withMaybe $ map (_.value) (find (shaPred "B-Correspondent-front") shaxs)
         let
           initialStore =
             { config: 

@@ -4,6 +4,6 @@
     "telegramHost": "https://api.telegram.org/",
     "apiBCorrespondentHost": "http://127.0.0.1:12000",
     "apiBCorrespondentHostWS": "ws://127.0.0.1:12000",
-    "cssLink": "",
-    "cssFiles": []
+    "cssLink": "https://cdn.jsdelivr.net/gh/Baranseli-Finance/B-Correspondent-css@",
+    "cssFiles": ["error"]
 }
