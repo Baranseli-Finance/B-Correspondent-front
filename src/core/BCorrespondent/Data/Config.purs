@@ -2,7 +2,6 @@ module BCorrespondent.Data.Config
   ( Config(..)
   , ConfigVal
   , getVal
-  , setIsCaptcha
   , setShaCommit
   , setToTelegram
   ) where
@@ -28,7 +27,6 @@ type ConfigVal =
   , cssLink :: String
   , traceLocation :: String
   , cssFiles :: Array String
-  , isCaptcha :: Boolean
   }
 
 newtype Config = Config ConfigVal
@@ -47,7 +45,6 @@ instance EncodeJson Config where
         , cssLink
         , traceLocation
         , cssFiles
-        , isCaptcha
         , apiBCorrespondentHostWS
         }
     ) =
@@ -60,7 +57,6 @@ instance EncodeJson Config where
       ~> "cssLink" := cssLink
       ~> "traceLocation" := traceLocation
       ~> "cssFiles" := cssFiles
-      ~> "isCaptcha" := isCaptcha
       ~> "apiBCorrespondentHostWS" := apiBCorrespondentHostWS
       ~> jsonEmptyObject
 
@@ -76,15 +72,11 @@ instance DecodeJson Config where
     cssLink <- obj .: "cssLink"
     traceLocation <- obj .: "traceLocation"
     cssFiles <- obj .: "cssFiles"
-    isCaptcha <- obj .: "isCaptcha"
     apiBCorrespondentHostWS <- obj .: "apiBCorrespondentHostWS"
-    pure $ Config $ { telegramBot, telegramChat, telegramHost, toTelegram, apiBCorrespondentHost, sha256Commit, cssLink, traceLocation, cssFiles, isCaptcha, apiBCorrespondentHostWS }
+    pure $ Config $ { telegramBot, telegramChat, telegramHost, toTelegram, apiBCorrespondentHost, sha256Commit, cssLink, traceLocation, cssFiles, apiBCorrespondentHostWS }
 
 setShaCommit :: String -> Config -> Config
 setShaCommit x (Config cfg) = Config $ cfg { sha256Commit = x }
-
-setIsCaptcha :: Boolean -> Config -> Config
-setIsCaptcha x (Config cfg) = Config $ cfg { isCaptcha = x }
 
 setToTelegram :: Boolean -> Config -> Config
 setToTelegram x (Config cfg) = Config $ cfg { toTelegram = x }

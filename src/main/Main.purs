@@ -46,6 +46,9 @@ import Data.Argonaut.Core (stringifyWithIndent)
 import Web.Storage.Storage (getItem, removeItem)
 import Crypto.Jwt as Jwt
 import Effect.Ref as Ref
+import Store.Types (readLogLevel)
+import Data.Array (find)
+
 
 import Undefined
 
@@ -71,18 +74,19 @@ main cfg = do
     initResp <- initAppStore (_.apiBCorrespondentHost (getVal cfg)) $ map JWTToken jwt
     case initResp of
       Left err -> void $ runUI AppInitFailure.component { error: err } body
-      Right init -> do
+      Right init@{isjwtvalid, shaxs, loglevel, totelegram} -> do
 
         -- I am sick to the back teeth of changing css hash manualy
         -- let's make the process a bit self-generating
-        for_ (_.cssFiles (getVal cfg)) $ H.liftEffect <<< setCssLink (undefined init) (_.cssLink (getVal cfg))
+        cssSha <- H.liftEffect $ withMaybe $ map (_.value) (find (shaPred "") shaxs)
+        for_ (_.cssFiles (getVal cfg)) $ H.liftEffect <<< setCssLink cssSha (_.cssLink (getVal cfg))
 
   
         async <- H.liftEffect $ Async.newChannel
 
         telVar <- H.liftEffect $ Async.newChannel
 
-        logLevel <- H.liftEffect $ withMaybe $ undefined init
+        logLevel <- H.liftEffect $ withMaybe $ readLogLevel loglevel
 
         platform <- H.liftEffect $ withMaybe _platform
 
@@ -91,21 +95,20 @@ main cfg = do
         when (logLevel == Dev)
           $ H.liftEffect
           $ do
-              infoShow $ "init --> " <> show init
+              infoShow $ "init --> " <> printInit init
               infoShow $ "cfg --> " <> stringifyWithIndent 4 (encodeJson cfg)
 
-        user <- H.liftEffect $ getCurrentUser jwt $ undefined init
+        user <- H.liftEffect $ getCurrentUser jwt $ getJwtStatus isjwtvalid
 
         -- We now have the three pieces of information necessary to configure our app. Let's create
         -- a record that matches the `Store` type our application requires by filling in these three
         -- fields. If our environment type ever changes, we'll get a compiler error here.
+        frontSha <- H.liftEffect $ withMaybe $ map (_.value) (find (shaPred "") shaxs)
         let
           initialStore =
-            { config:
-                setShaCommit (undefined init)
-                  $ setIsCaptcha (fromMaybe false (undefined init))
-                  $
-                    setToTelegram (fromMaybe false (undefined init)) cfg
+            { config: 
+                setShaCommit frontSha $ 
+                setToTelegram totelegram cfg
             , error: Nothing
             , platform: platform
             , async: async

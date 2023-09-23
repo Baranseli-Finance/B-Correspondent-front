@@ -79,7 +79,7 @@ component = H.mkComponent
   handleAction :: Action -> H.HalogenM State Action ChildSlots Void AppM Unit
   handleAction Initialize = do
     logDebug $ loc <> " ---> root component init start .."
-    store@{ config: Config { isCaptcha, apiBCorrespondentHost }, user } <- getStore
+    store@{ config: Config { apiBCorrespondentHost }, user } <- getStore
     logDebug $ printStore store
 
     Fork.Telegram.init >>= Fork.Telegram.fork

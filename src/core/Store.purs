@@ -14,17 +14,17 @@ module Store
 
 import Prelude
 
-import BCorrespondent.Api.Foreign.Back
 import BCorrespondent.Data.Config (Config)
 import BCorrespondent.Api.Foreign.Back as Back
 import BCorrespondent.Capability.LogMessages (logError, logDebug)
 import BCorrespondent.Data.Route (Route)
 import BCorrespondent.Component.Async as Async
-import Store.Types
+import BCorrespondent.Api.Foreign.Request as Request
 
+import Store.Types
 import Halogen as H
 import Data.Maybe (Maybe(..))
-import Effect.Exception (Error, message)
+import Effect.Exception (Error, message, error)
 import Data.Argonaut.Core (stringify)
 import Data.Argonaut.Encode.Class (encodeJson)
 import Data.Maybe
@@ -99,5 +99,5 @@ reduce :: Store -> Action -> Store
 reduce store (WriteError err) = store { error = Just err }
 reduce store (UpdateJwtUser user) = store { user = user }
 
-initAppStore :: String -> Maybe Back.JWTToken -> Aff (Either Excep.Error String)
-initAppStore _ _ = undefined 
+initAppStore :: String -> Maybe Back.JWTToken -> Aff (Either Excep.Error Back.Init)
+initAppStore host token = map (map _.success) $ Request.make host Back.mkFrontApi $ Back.init token
