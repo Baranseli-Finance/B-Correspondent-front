@@ -35,6 +35,7 @@ data Route
   = Error500
   | Error404
   | Home
+  | SignIn
 
 derive instance genericRoute :: Generic Route _
 derive instance eqRoute :: Eq Route
@@ -44,6 +45,7 @@ instance Show Route where
   show Home = "home"
   show Error500 = "500"
   show Error404 = "404"
+  show SignIn = "sign_in"
 
 instance DecodeJson Route where
   decodeJson = genericDecodeJson
@@ -57,6 +59,7 @@ instance DecodeJson Route where
 routeCodec :: RouteDuplex' Route
 routeCodec = root $ sum
   { "Home": noArgs
+  , "SignIn": "auth" / "sign-in" / noArgs
   , "Error500": "500" / noArgs
   , "Error404": "404" / noArgs
   }

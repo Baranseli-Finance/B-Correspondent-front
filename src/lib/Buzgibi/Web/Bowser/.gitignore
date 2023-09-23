@@ -1,7 +1,0 @@
-node_modules/
-.idea/
-.nyc_output
-coverage
-dist
-bundled.js*
-es5.js*
