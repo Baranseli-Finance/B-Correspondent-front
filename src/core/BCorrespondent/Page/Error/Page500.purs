@@ -19,6 +19,7 @@ import Web.HTML.HTMLElement (toElement)
 import Web.DOM.Element (setClassName)
 import Web.HTML.HTMLDocument (body)
 import Halogen.HTML.Properties.Extended as HPExt
+import Web.HTML.HTMLDocument (setTitle)
 
 proxy = Proxy :: _ "error500"
 
@@ -37,6 +38,12 @@ component =
     }
   where
   handleAction Initialize = do
+    H.liftEffect $ 
+      window >>=
+        document >>= 
+          setTitle 
+            "BCorrespondent | \
+            \ Techincal failure"
     H.liftEffect $ do
       win <- window
       doc <- document win
