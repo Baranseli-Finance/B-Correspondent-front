@@ -91,8 +91,6 @@ main cfg = do
 
         wsVar <- H.liftEffect Async.empty
         
-        isLoginVar <- H.liftEffect Async.empty
-
         when (logLevel == Dev)
           $ H.liftEffect
           $ do
@@ -117,7 +115,6 @@ main cfg = do
             , logLevel: logLevel
             , user: user
             , wsVar: wsVar
-            , isLoginVar: isLoginVar
             }
 
         -- With our app environment ready to go, we can prepare the router to run as our root component.

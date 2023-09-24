@@ -1,8 +1,4 @@
-module BCorrespondent.Component.Auth.SignIn
-  ( component
-  , proxy
-  , slot
-  ) where
+module BCorrespondent.Component.Auth.SignIn (Output (..), component, proxy, slot) where
 
 import Prelude
 
@@ -30,7 +26,7 @@ import Web.Storage.Storage (setItem)
 import Web.HTML (window)
 import Store (Action(UpdateJwtUser))
 import Crypto.Jwt as Jwt
-import Effect.AVar as Async
+
 
 import Undefined
 
@@ -39,6 +35,8 @@ proxy = Proxy :: _ "auth_signIn"
 loc = "BCorrespondent.Component.Auth.SignIn"
 
 slot = HH.slot_ proxy unit component unit
+
+data Output = LoggedInSuccess Jwt.JwtUser
 
 data Action
   = MakeRequest Event
@@ -95,8 +93,7 @@ component =
           H.liftEffect $ window >>= localStorage >>= setItem "b-correspondent_jwt" token
           user <- H.liftEffect $ Jwt.parse token
           updateStore $ UpdateJwtUser (Just { jwtUser: user, token: Back.JWTToken token })
-          {isLoginVar} <- getStore
-          void $ H.liftEffect $ Async.tryPut unit isLoginVar
+          H.raise $ LoggedInSuccess user
 
 render { email, password, errMsg } =
   HH.div_

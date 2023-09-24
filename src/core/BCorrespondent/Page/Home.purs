@@ -13,7 +13,7 @@ import BCorrespondent.Data.Config
 import BCorrespondent.Component.HTML.Utils (css, safeHref, whenElem)
 import BCorrespondent.Page.Dashboard as Dashboard 
 import BCorrespondent.Component.Auth.SignIn as SignIn
-import BCorrespondent.Component.Subscription.Login as Subscription.Login
+import BCorrespondent.Component.Async as Async
 
 import Halogen.HTML.Properties.Extended as HPExt
 import Halogen as H
@@ -38,7 +38,7 @@ loc = "BCorrespondent.Page.Home"
 data Action
   = Initialize
   | WinResize Int
-  | Login
+  | HandleSignIn SignIn.Output
 
 type State =
   { winWidth :: Maybe Int
@@ -60,10 +60,12 @@ component =
         }
     }
   where
-  render { winWidth: Just _, platform: Just _, isUser: true } = 
-    HH.div_ [ HH.slot_ Dashboard.proxy unit Dashboard.component unit ]
+  render { winWidth: Just _, platform: Just _, isUser: true } =
+    HH.div_ [ HH.slot_ Async.proxy 0 Async.component unit, 
+              HH.slot_ Dashboard.proxy 1 Dashboard.component unit
+            ]
   render { winWidth: Just _, platform: Just _, isUser: false } = 
-    HH.div_ [ HH.slot_ SignIn.proxy unit SignIn.component unit ]
+    HH.div [ css "centre-container" ] [ HH.slot SignIn.proxy 0 SignIn.component unit HandleSignIn ]
   render _ = HH.div_ []
   handleAction Initialize = do
     H.liftEffect $ window >>= document >>= setTitle "BCorrespondent | Home"
@@ -74,7 +76,8 @@ component =
 
     void $ H.subscribe =<< WinResize.subscribe WinResize
 
-    Subscription.Login.subscribe loc $ handleAction Login
-
   handleAction (WinResize w) = H.modify_ _ { winWidth = pure w }
-  handleAction Login = H.modify_ _ { isUser = true }
+  handleAction (HandleSignIn (SignIn.LoggedInSuccess {email})) =
+    do H.modify_ _ { isUser = true }
+       let welcome = "Welcome to the service, " <> email
+       Async.send $ Async.mkOrdinary welcome Async.Success Nothing

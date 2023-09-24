@@ -14,10 +14,16 @@ import Effect (Effect)
 --     "exp": 1698064862.067158,
 --     "iat": 1695472862.067158
 --   },
---   "jwtuuid": "08ad0f83-d3a2-49ee-9348-47bf57e7674e"
+--   "jwtuuid": "08ad0f83-d3a2-49ee-9348-47bf57e7674e",
+--   "email": "..."
 -- }
 type JwtClaims = { exp :: Int, iat :: Int }
 
-type JwtUser = { ident :: Int, jwtuuid :: String, jwtclaims :: JwtClaims }
+type JwtUser = 
+     { ident :: Int, 
+       jwtuuid :: String, 
+       email :: String, 
+       jwtclaims :: JwtClaims 
+     }
 
 foreign import parse :: String -> Effect JwtUser
