@@ -36,7 +36,7 @@ proxy = Proxy :: _ "auth_signIn"
 
 loc = "BCorrespondent.Component.Auth.SignIn"
 
-slot = HH.slot_ proxy unit component unit
+slot n = HH.slot proxy n component unit
 
 data Output = LoggedInSuccess Jwt.JwtUser
 

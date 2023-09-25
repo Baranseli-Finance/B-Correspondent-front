@@ -5,6 +5,7 @@ module BCorrespondent.Api.Foreign.Auth
   , ResponseAuthCode
   , ResponseAuthToken
   , login
+  , logout
   , mkAuthApi
   , resendCode
   , sendCode
@@ -16,7 +17,7 @@ import Prelude
 import BCorrespondent.Api.Foreign.Common
 
 import Effect (Effect)
-import Data.Function.Uncurried (Fn1, Fn3, runFn3, Fn4, runFn4)
+import Data.Function.Uncurried (Fn1, Fn3,  Fn2, runFn2, runFn3, Fn4, runFn4)
 import Effect.Aff.Compat as AC
 import Foreign.Object (Object)
 import Foreign (Foreign)
@@ -58,3 +59,8 @@ foreign import _resendCode :: Fn3 (forall a. Foreign -> (Foreign -> Either E.Err
 
 resendCode :: ResendCode -> AuthApi -> AC.EffectFnAff (Object ResponseAuthCode)
 resendCode = runFn3 _resendCode withError
+
+foreign import _logout :: Fn2 (forall a. Foreign -> (Foreign -> Either E.Error a) -> Either E.Error a) AuthApi (AC.EffectFnAff (Object Unit))
+
+logout :: AuthApi -> AC.EffectFnAff (Object Unit)
+logout = runFn2 _logout withError

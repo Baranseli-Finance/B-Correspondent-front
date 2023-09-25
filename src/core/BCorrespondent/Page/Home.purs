@@ -13,6 +13,7 @@ import BCorrespondent.Data.Config
 import BCorrespondent.Component.HTML.Utils (css, safeHref, whenElem)
 import BCorrespondent.Page.Dashboard as Dashboard 
 import BCorrespondent.Component.Auth.SignIn as SignIn
+import BCorrespondent.Component.Auth.SignOut as SignOut
 import BCorrespondent.Component.Async as Async
 
 import Halogen.HTML.Properties.Extended as HPExt
@@ -39,6 +40,7 @@ data Action
   = Initialize
   | WinResize Int
   | HandleSignIn SignIn.Output
+  | HandleDashboard SignOut.Output
 
 type State =
   { winWidth :: Maybe Int
@@ -62,10 +64,10 @@ component =
   where
   render { winWidth: Just _, platform: Just _, isUser: true } =
     HH.div_ [ HH.slot_ Async.proxy 0 Async.component unit, 
-              HH.slot_ Dashboard.proxy 1 Dashboard.component unit
+              SignOut.slot 1 HandleDashboard
             ]
   render { winWidth: Just _, platform: Just _, isUser: false } = 
-    HH.div [ css "centre-container" ] [ HH.slot SignIn.proxy 0 SignIn.component unit HandleSignIn ]
+    HH.div [ css "centre-container" ] [ SignIn.slot 0 HandleSignIn ]
   render _ = HH.div_ []
   handleAction Initialize = do
     H.liftEffect $ window >>= document >>= setTitle "BCorrespondent | Home"
@@ -81,3 +83,4 @@ component =
     do H.modify_ _ { isUser = true }
        let welcome = "Welcome to the service, " <> email
        Async.send $ Async.mkOrdinary welcome Async.Success Nothing
+  handleAction (HandleDashboard SignOut.LoggedOutSuccess) = H.modify_ _ { isUser = false }

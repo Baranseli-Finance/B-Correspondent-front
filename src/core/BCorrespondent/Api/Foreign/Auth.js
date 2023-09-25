@@ -32,3 +32,12 @@ export const _resendCode =
             })
         };
     }
+
+export const _logout =
+    function(withError, api) {
+        return function(onError, onOk) {
+            api.authLogoutPost().then(onOk).catch(resp => {
+                return withError(resp, onError)
+            })
+        };
+    }

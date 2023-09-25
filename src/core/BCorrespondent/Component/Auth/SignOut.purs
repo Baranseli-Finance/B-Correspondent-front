@@ -1,0 +1,58 @@
+module BCorrespondent.Component.Auth.SignOut (Output (..), component, proxy, slot) where
+
+import Prelude
+
+import BCorrespondent.Data.Config (Config(..))
+import BCorrespondent.Api.Foreign.Request as Request
+import BCorrespondent.Api.Foreign.Back as Back
+import BCorrespondent.Api.Foreign.Request.Handler (withError)
+
+import Halogen as H
+import Halogen.HTML as HH
+import Type.Proxy (Proxy(..))
+import Halogen.HTML.Events as HE
+import Halogen.HTML.Properties.Extended as HPExt
+import Web.Event.Event (preventDefault, Event)
+import Halogen.Store.Monad (getStore, updateStore)
+import Data.Traversable (for_)
+import Data.Maybe (Maybe (..))
+import Web.HTML.Window (localStorage)
+import Web.Storage.Storage (removeItem)
+import Web.HTML (window)
+import Store (Action(UpdateJwtUser))
+
+import Undefined
+
+proxy = Proxy :: _ "auth_signIn"
+
+loc = "BCorrespondent.Component.Auth.SignOut"
+
+slot n = HH.slot proxy n component unit
+
+data Output = LoggedOutSuccess
+
+data Action = MakeLogoutRequest Event
+
+component =
+  H.mkComponent
+    { initialState: identity
+    , render: const render
+    , eval: H.mkEval H.defaultEval
+      { handleAction = handleAction }
+    }
+    where
+      handleAction (MakeLogoutRequest ev) = do 
+        H.liftEffect $ preventDefault ev
+        { config: Config { apiBCorrespondentHost: host }, user } <- getStore
+        for_ user \{ token } -> do
+          resp <- Request.makeAuth (Just token) host Back.mkAuthApi $ Back.logout
+          withError resp \{ success: _ :: Unit } -> do
+            H.liftEffect $ 
+              window >>= 
+                localStorage >>= 
+                  removeItem 
+                  "b-correspondent_jwt"
+          updateStore $ UpdateJwtUser Nothing
+          H.raise $ LoggedOutSuccess
+
+render = HH.form [ HE.onSubmit MakeLogoutRequest ] [ HH.input [ HPExt.type_ HPExt.InputSubmit, HPExt.value "logout" ] ]
