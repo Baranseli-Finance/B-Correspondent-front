@@ -79,10 +79,9 @@ export const _printError = (err) => {
 export const withError = function(resp, onError) {
     let e = new Error();
     let mkMsg = '';
-    if (resp['error'] !== undefined) {  
+    if (resp['error'] !== undefined) {
         mkMsg += resp['error'];
-    }
-    else if (resp['type'] !== undefined && resp['type'] == 'error') {
+    } else if (resp['type'] !== undefined && resp['type'] == 'error') {
         mkMsg += JSON.stringify(resp['currentTarge']);
     } else if (resp['body']['combinator'] !== undefined) {
         mkMsg += "combinator " + resp['body']['combinator'] + " has failed with error " + resp['body']['error'];

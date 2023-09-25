@@ -46,7 +46,7 @@
   , "channel"
   , "web-storage"
   , "control"
-  -- , "integers"
+  , "integers"
   , "web-file"
   -- , "web-uievents" 
   -- , "assert"
