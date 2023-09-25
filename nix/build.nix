@@ -18,6 +18,7 @@ pkgs.mkShell {
     npm install querystring
     npm install superagent
     npm install crypto-js
+    npm install @fingerprintjs/fingerprintjs
     export PATH="./node_modules/.bin:$PATH"
    '';
   }

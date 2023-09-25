@@ -47,7 +47,10 @@ import Web.Storage.Storage (getItem, removeItem)
 import Crypto.Jwt as Jwt
 import Effect.Ref as Ref
 import Data.Array (find)
+import Web.Browser (getBrowserIdentifier)
 
+
+import Undefined
 
 main :: Cfg.Config -> Effect Unit
 main cfg = do
@@ -56,6 +59,7 @@ main cfg = do
   _platform <- map readPlatform $ runFn1 getPlatform ua
 
   HA.runHalogenAff do
+
     -- To run our Halogen app, we'll need two things:
     -- 1. An HTML element for Halogen to control
     -- 2. A component to mount at that HTML element, along with any arguments it requires
@@ -90,6 +94,8 @@ main cfg = do
         platform <- H.liftEffect $ withMaybe _platform
 
         wsVar <- H.liftEffect Async.empty
+
+        browserFp <- H.liftAff $ getBrowserIdentifier
         
         when (logLevel == Dev)
           $ H.liftEffect
@@ -115,6 +121,7 @@ main cfg = do
             , logLevel: logLevel
             , user: user
             , wsVar: wsVar
+            , browserFp: browserFp
             }
 
         -- With our app environment ready to go, we can prepare the router to run as our root component.
