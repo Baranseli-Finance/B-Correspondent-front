@@ -4,6 +4,7 @@ import Prelude
 
 import BCorrespondent.Component.HTML.Utils (css)
 import BCorrespondent.Component.Auth.SignOut as SignOut
+import BCorrespondent.Data.Home.Output
 
 import Halogen as H
 import Halogen.HTML as HH
@@ -29,6 +30,6 @@ component =
       { handleAction = handleAction }
     }
     where
-      handleAction (HandleSignOut SignOut.LoggedOutSuccess) = H.raise Logout
+      handleAction (HandleSignOut SignOut.Logout) = H.raise LoggedOutSuccess
 
 render = HH.div [ css "loading-container" ] [ HH.text "dashboard", SignOut.slot 0 HandleSignOut ]

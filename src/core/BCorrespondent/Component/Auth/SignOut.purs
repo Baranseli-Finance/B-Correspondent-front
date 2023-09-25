@@ -29,14 +29,16 @@ loc = "BCorrespondent.Component.Auth.SignOut"
 
 slot n = HH.slot proxy n component unit
 
-data Output = LoggedOutSuccess
-
 data Action = MakeLogoutRequest Event
+
+data Output = Logout
+
+type State = { user :: String }
 
 component =
   H.mkComponent
-    { initialState: identity
-    , render: const render
+    { initialState: const { user: mempty :: String }
+    , render: render
     , eval: H.mkEval H.defaultEval
       { handleAction = handleAction }
     }
@@ -53,6 +55,6 @@ component =
                   removeItem 
                   "b-correspondent_jwt"
           updateStore $ UpdateJwtUser Nothing
-          H.raise $ LoggedOutSuccess
+          H.raise Logout
 
-render = HH.form [ HE.onSubmit MakeLogoutRequest ] [ HH.input [ HPExt.type_ HPExt.InputSubmit, HPExt.value "logout" ] ]
+render _ = HH.form [ HE.onSubmit MakeLogoutRequest ] [ HH.input [ HPExt.type_ HPExt.InputSubmit, HPExt.value "logout" ] ]

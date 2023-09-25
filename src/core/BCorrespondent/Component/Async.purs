@@ -8,6 +8,7 @@ module BCorrespondent.Component.Async
   , proxy
   , send
   , withAffjax
+  , slot
   ) where
 
 import Prelude
@@ -44,6 +45,8 @@ import Undefined
 loc = "BCorrespondent.Component.Async"
 
 proxy = Proxy :: _ "async"
+
+slot n = HH.slot_ proxy n component unit
 
 data Action = Close Int | Add Async | Initialize
 

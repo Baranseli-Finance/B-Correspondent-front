@@ -1,4 +1,4 @@
-module BCorrespondent.Component.Auth.SignIn (Output (..), component, proxy, slot) where
+module BCorrespondent.Component.Auth.SignIn (component, proxy, slot) where
 
 import Prelude
 
@@ -10,6 +10,7 @@ import BCorrespondent.Api.Foreign.Request.Handler (onFailure)
 import BCorrespondent.Data.Config (Config(..))
 import BCorrespondent.Capability.LogMessages (logDebug)
 import BCorrespondent.Component.HTML.Utils (css, safeHref)
+import BCorrespondent.Data.Home.Output
 
 import Halogen as H
 import Halogen.HTML as HH
@@ -37,8 +38,6 @@ proxy = Proxy :: _ "auth_signIn"
 loc = "BCorrespondent.Component.Auth.SignIn"
 
 slot n = HH.slot proxy n component unit
-
-data Output = LoggedInSuccess Jwt.JwtUser
 
 data Action
   = MakeCodeRequest Event

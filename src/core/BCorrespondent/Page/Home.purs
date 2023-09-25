@@ -13,8 +13,8 @@ import BCorrespondent.Data.Config
 import BCorrespondent.Component.HTML.Utils (css, safeHref, whenElem)
 import BCorrespondent.Page.Dashboard as Dashboard 
 import BCorrespondent.Component.Auth.SignIn as SignIn
-import BCorrespondent.Component.Auth.SignOut as SignOut
 import BCorrespondent.Component.Async as Async
+import BCorrespondent.Data.Home.Output as Home.Output
 
 import Halogen.HTML.Properties.Extended as HPExt
 import Halogen as H
@@ -29,6 +29,7 @@ import Data.Maybe
 import Halogen.Store.Monad (getStore)
 import Data.Map as Map
 import System.Time (getTimestamp)
+import AppM (AppM)
 
 import Undefined
 
@@ -39,8 +40,7 @@ loc = "BCorrespondent.Page.Home"
 data Action
   = Initialize
   | WinResize Int
-  | HandleSignIn SignIn.Output
-  | HandleDashboard SignOut.Output
+  | HandleChild Home.Output.Output
 
 type State =
   { winWidth :: Maybe Int
@@ -48,6 +48,7 @@ type State =
   , isUser :: Boolean
   }
 
+component :: forall q . H.Component q Unit Void AppM
 component =
   H.mkComponent
     { initialState: const
@@ -63,11 +64,9 @@ component =
     }
   where
   render { winWidth: Just _, platform: Just _, isUser: true } =
-    HH.div_ [ HH.slot_ Async.proxy 0 Async.component unit, 
-              SignOut.slot 1 HandleDashboard
-            ]
+    HH.div_ [ Async.slot 0, Dashboard.slot 1 HandleChild ]        
   render { winWidth: Just _, platform: Just _, isUser: false } = 
-    HH.div [ css "centre-container" ] [ SignIn.slot 0 HandleSignIn ]
+    HH.div_ [ Async.slot 0, HH.div [ css "centre-container" ] [ SignIn.slot 1 HandleChild ] ]
   render _ = HH.div_ []
   handleAction Initialize = do
     H.liftEffect $ window >>= document >>= setTitle "BCorrespondent | Home"
@@ -79,8 +78,11 @@ component =
     void $ H.subscribe =<< WinResize.subscribe WinResize
 
   handleAction (WinResize w) = H.modify_ _ { winWidth = pure w }
-  handleAction (HandleSignIn (SignIn.LoggedInSuccess {email})) =
+  handleAction (HandleChild (Home.Output.LoggedInSuccess {email})) =
     do H.modify_ _ { isUser = true }
        let welcome = "Welcome to the service, " <> email
        Async.send $ Async.mkOrdinary welcome Async.Success Nothing
-  handleAction (HandleDashboard SignOut.LoggedOutSuccess) = H.modify_ _ { isUser = false }
+  handleAction (HandleChild Home.Output.LoggedOutSuccess) =
+    do H.modify_ _ { isUser = false }
+       let logout = "you have been logged out"
+       Async.send $ Async.mkOrdinary logout Async.Success Nothing
