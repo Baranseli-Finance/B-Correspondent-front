@@ -2,6 +2,7 @@ module BCorrespondent.Page.Home
   ( Action(..)
   , component
   , proxy
+  , slot
   ) where
 
 import Prelude
@@ -36,6 +37,8 @@ import Undefined
 proxy = Proxy :: _ "home"
 
 loc = "BCorrespondent.Page.Home"
+
+slot = HH.slot_ proxy unit component unit
 
 data Action
   = Initialize

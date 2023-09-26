@@ -14,7 +14,7 @@ import BCorrespondent.Api.Foreign.Request as Request
 import BCorrespondent.Api.Foreign.Back as Back
 import BCorrespondent.Api.Foreign.Request.Handler (onFailure)
 import BCorrespondent.Capability.Navigate (navigate)
-import BCorrespondent.Data.Route (Route (Home, Error404))
+import BCorrespondent.Data.Route (Route (Error404))
 
 import Halogen as H
 import Halogen.HTML as HH
@@ -30,6 +30,7 @@ import Web.HTML.Window (localStorage)
 import Web.Storage.Storage (removeItem)
 import Web.HTML (window)
 import Store (Action(UpdateJwtUser))
+import Effect.Exception (Error)
 
 import Undefined
 
@@ -37,9 +38,9 @@ proxy = Proxy :: _ "auth_set_password"
 
 loc = "BCorrespondent.Component.Auth.SetPassword"
 
-slot s = HH.slot proxy unit component {key: s}
+slot n s = HH.slot proxy n component {key: s}
 
-data Output = Server50x | PasswordNotChanged 
+data Output = Server50x Error | PasswordNotChanged | Ok
 
 data Action =
        Initialize
@@ -84,7 +85,7 @@ component =
                 {key: key, password: value}
             let onError e = do 
                   H.modify_ _ { password = Nothing, againPassword = Nothing }
-                  H.raise Server50x
+                  H.raise $ Server50x e
             onFailure resp onError \{success: isOK} ->
               if isOK 
               then do
@@ -94,7 +95,7 @@ component =
                       removeItem 
                         jwtName
                 updateStore $ UpdateJwtUser Nothing
-                navigate Home
+                H.raise Ok
               else 
                 do H.modify_ _ { password = Nothing, againPassword = Nothing }
                    H.raise PasswordNotChanged
@@ -117,7 +118,7 @@ render {key, password, againPassword} =
             [ HPExt.type_ HPExt.InputPassword
             , HE.onValueInput FillPassword
             , HPExt.value $ fromMaybe mempty password
-            , HPExt.placeholder "login"
+            , HPExt.placeholder "password"
             ]
           ]
       ,   HH.div_
@@ -125,7 +126,7 @@ render {key, password, againPassword} =
             [ HPExt.type_ HPExt.InputPassword
             , HE.onValueInput FillAgainPassword
             , HPExt.value $ fromMaybe mempty againPassword
-            , HPExt.placeholder "password"
+            , HPExt.placeholder "again password"
             ]
           ]
       ,   HH.input [ HPExt.type_ HPExt.InputSubmit, HPExt.value "reset" ]

@@ -16,6 +16,7 @@ import Prelude
 import BCorrespondent.Component.Utils (OpaqueSlot)
 import BCorrespondent.Data.Route (Route(..), routeCodec)
 import BCorrespondent.Page.Home as Home
+import BCorrespondent.Page.ResetPassword as ResetPassword 
 import BCorrespondent.Page.Error.Page500 as Page500
 import BCorrespondent.Page.Error.Page404 as Page404
 import BCorrespondent.Capability.Navigate
@@ -63,6 +64,7 @@ type ChildSlots =
   ( home :: OpaqueSlot Unit
   , error500 :: OpaqueSlot Unit
   , error404 :: OpaqueSlot Unit
+  , reset_password :: OpaqueSlot Unit
   )
 
 component :: H.Component Query Unit Void AppM
@@ -103,7 +105,7 @@ component = H.mkComponent
 
 render :: State -> H.ComponentHTML Action ChildSlots AppM
 render { route: Nothing } = HTML.Loader.html
-render { route: Just r@Home } =  HH.slot_ Home.proxy unit Home.component unit
-render { route: Just r@(NewPassword _) } = undefined
+render { route: Just r@Home } = Home.slot
+render { route: Just r@(NewPassword key) } = ResetPassword.slot key
 render { route: Just Error500 } = HH.slot_ Page500.proxy unit Page500.component unit
 render { route: Just Error404 } = HH.slot_ Page404.proxy unit Page404.component unit
