@@ -41,3 +41,21 @@ export const _logout =
             })
         };
     }
+
+export const _resetPasswordLink =
+    function(withError, api) {
+        return function(onError, onOk) {
+            api.authPasswordResetLinkPut().then(onOk).catch(resp => {
+                return withError(resp, onError)
+            })
+        };
+    }
+
+export const _setNewPassword =
+    function(withError, body, api) {
+        return function(onError, onOk) {
+            api.authPasswordResetPost(body).then(onOk).catch(resp => {
+                return withError(resp, onError)
+            })
+        };
+    }

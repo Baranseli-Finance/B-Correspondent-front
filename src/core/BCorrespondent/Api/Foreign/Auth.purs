@@ -1,6 +1,7 @@
 module BCorrespondent.Api.Foreign.Auth
   ( AuthApi
   , AuthType(..)
+  , NewPassword
   , ResendCode
   , ResponseAuthCode
   , ResponseAuthToken
@@ -8,7 +9,9 @@ module BCorrespondent.Api.Foreign.Auth
   , logout
   , mkAuthApi
   , resendCode
+  , resetPasswordLink
   , sendCode
+  , setNewPassword
   )
   where
 
@@ -64,3 +67,15 @@ foreign import _logout :: Fn2 (forall a. Foreign -> (Foreign -> Either E.Error a
 
 logout :: AuthApi -> AC.EffectFnAff (Object Unit)
 logout = runFn2 _logout withError
+
+foreign import _resetPasswordLink :: Fn2 (forall a. Foreign -> (Foreign -> Either E.Error a) -> Either E.Error a) AuthApi (AC.EffectFnAff (Object Foreign))
+
+resetPasswordLink :: AuthApi -> AC.EffectFnAff (Object Foreign)
+resetPasswordLink = runFn2 _resetPasswordLink withError
+
+type NewPassword = { key :: String, password :: String }
+
+foreign import _setNewPassword :: Fn3 (forall a. Foreign -> (Foreign -> Either E.Error a) -> Either E.Error a) NewPassword AuthApi (AC.EffectFnAff (Object Boolean))
+
+setNewPassword :: NewPassword -> AuthApi -> AC.EffectFnAff (Object Boolean)
+setNewPassword = runFn3 _setNewPassword withError

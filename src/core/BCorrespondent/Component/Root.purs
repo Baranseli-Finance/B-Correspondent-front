@@ -104,5 +104,6 @@ component = H.mkComponent
 render :: State -> H.ComponentHTML Action ChildSlots AppM
 render { route: Nothing } = HTML.Loader.html
 render { route: Just r@Home } =  HH.slot_ Home.proxy unit Home.component unit
+render { route: Just r@(NewPassword _) } = undefined
 render { route: Just Error500 } = HH.slot_ Page500.proxy unit Page500.component unit
 render { route: Just Error404 } = HH.slot_ Page404.proxy unit Page404.component unit

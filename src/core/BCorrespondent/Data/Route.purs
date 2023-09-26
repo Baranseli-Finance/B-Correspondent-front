@@ -18,7 +18,7 @@ import Prelude hiding ((/))
 
 import Data.Either (note)
 import Data.Generic.Rep (class Generic)
-import Routing.Duplex (RouteDuplex', as, root)
+import Routing.Duplex (RouteDuplex', as, root, param)
 import Routing.Duplex.Generic (noArgs, sum)
 import Routing.Duplex.Generic.Syntax ((/))
 import Data.Show
@@ -35,6 +35,7 @@ data Route
   = Error500
   | Error404
   | Home
+  | NewPassword String
 
 derive instance genericRoute :: Generic Route _
 derive instance eqRoute :: Eq Route
@@ -42,6 +43,7 @@ derive instance ordRoute :: Ord Route
 
 instance Show Route where
   show Home = "home"
+  show (NewPassword _) = "new password"
   show Error500 = "500"
   show Error404 = "404"
 
@@ -57,6 +59,7 @@ instance DecodeJson Route where
 routeCodec :: RouteDuplex' Route
 routeCodec = root $ sum
   { "Home": noArgs
+  , "NewPassword": "auth" / "password" / "reset" / param "key"
   , "Error500": "500" / noArgs
   , "Error404": "404" / noArgs
   }
