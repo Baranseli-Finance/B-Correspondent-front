@@ -22,7 +22,7 @@ type JwtClaims = { exp :: Int, iat :: Int }
 type JwtUser = 
      { ident :: Int, 
        jwtuuid :: String, 
-       email :: String, 
+       login :: String, 
        jwtclaims :: JwtClaims 
      }
 

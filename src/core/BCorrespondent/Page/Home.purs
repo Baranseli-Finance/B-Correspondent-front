@@ -78,9 +78,9 @@ component =
     void $ H.subscribe =<< WinResize.subscribe WinResize
 
   handleAction (WinResize w) = H.modify_ _ { winWidth = pure w }
-  handleAction (HandleChild (Home.Output.LoggedInSuccess {email})) =
+  handleAction (HandleChild (Home.Output.LoggedInSuccess {login})) =
     do H.modify_ _ { isUser = true }
-       let welcome = "Welcome to the service, " <> email
+       let welcome = "Welcome to the service, " <> login
        Async.send $ Async.mkOrdinary welcome Async.Success Nothing
   handleAction (HandleChild Home.Output.LoggedOutSuccess) =
     do H.modify_ _ { isUser = false }
