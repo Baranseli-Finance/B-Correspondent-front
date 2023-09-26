@@ -12,7 +12,7 @@ import Type.Proxy (Proxy(..))
 
 import Undefined
 
-proxy = Proxy :: _ "home"
+proxy = Proxy :: _ "dashboard"
 
 loc = "BCorrespondent.Page.Dashboard"
 

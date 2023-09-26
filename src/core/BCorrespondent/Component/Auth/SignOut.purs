@@ -23,7 +23,7 @@ import Store (Action(UpdateJwtUser))
 
 import Undefined
 
-proxy = Proxy :: _ "auth_signIn"
+proxy = Proxy :: _ "auth_signOut"
 
 loc = "BCorrespondent.Component.Auth.SignOut"
 

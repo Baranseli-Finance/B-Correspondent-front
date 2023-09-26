@@ -126,16 +126,13 @@ instance Navigate AppM where
 instance LogMessages AppM where
   logMessage log = do
     { config: Config { toTelegram }, telegramVar, logLevel } <- getStore
-    let telegramLevel = reason log == Error || reason log == Info
+    let telegramLevel = 
+          reason log == Error || 
+          reason log == Info
     when
       ( toTelegram &&
           telegramLevel
-      )
-      $ void
-      $ liftAff
-      $ void
-      $ Async.send (_.output telegramVar)
-      $ message log
+      ) $ void $ liftAff $ void $ Async.send (_.output telegramVar) $ message log
     let
       mkLog =
         case reason log of
