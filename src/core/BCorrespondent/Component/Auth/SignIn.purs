@@ -79,7 +79,7 @@ component =
     H.liftEffect $ preventDefault ev
     s@{ login, password } <- H.get
     logDebug $ loc <> " state ---> " <> show s
-    { config: Config { apiBCorrespondentHost }, browserFp } <- getStore
+    { config: Config { apiBCorrespondentHost: host }, browserFp } <- getStore
     let
       mkCred (Just login) (Just password)
         | length password > 0 =
@@ -92,7 +92,7 @@ component =
         H.modify_ _ { errMsg = Just "login or password is empty" }
         logDebug $ loc <> "login or password is empty"
       Just cred -> do
-        resp <- Request.make apiBCorrespondentHost Back.mkAuthApi $ Back.sendCode cred
+        resp <- Request.make host Back.mkAuthApi $ Back.sendCode cred
         let
           onError e =
             H.modify_ _
@@ -120,16 +120,16 @@ component =
     H.liftEffect $ preventDefault ev
     {hash, code} <- H.get
     for_ code \c -> do 
-      { config: Config { apiBCorrespondentHost } } <- getStore
+      { config: Config { apiBCorrespondentHost: host }, jwtName } <- getStore
       let codeBody = { code: c, hash: fromMaybe undefined hash }
-      resp <- Request.make apiBCorrespondentHost Back.mkAuthApi $ Back.login codeBody
+      resp <- Request.make host Back.mkAuthApi $ Back.login codeBody
       let onError e = H.modify_ _ { errMsg = Just $ message e, code = Nothing }
       onFailure resp onError $ 
         \{success: token} -> do
             H.liftEffect $ 
               window >>= 
                 localStorage >>= 
-                  setItem "b-correspondent_jwt" token
+                  setItem jwtName token
             user <- H.liftEffect $ Jwt.parse token
             updateStore $ 
               UpdateJwtUser $ Just 
@@ -141,9 +141,9 @@ component =
     H.liftEffect $ preventDefault ev
     {hash} <- H.get
     for_ hash \hash -> do 
-      { config: Config { apiBCorrespondentHost }, browserFp } <- getStore
+      { config: Config { apiBCorrespondentHost: host }, browserFp } <- getStore
       let body = { browserFp: browserFp, hash: hash }
-      resp <- Request.make apiBCorrespondentHost Back.mkAuthApi $ Back.resendCode body
+      resp <- Request.make host Back.mkAuthApi $ Back.resendCode body
       let onError e = H.modify_ _ { errMsg = Just $ message e }
       onFailure resp onError \{ success: hash :: String, warnings: ws } ->
         if Array.length ws > 0

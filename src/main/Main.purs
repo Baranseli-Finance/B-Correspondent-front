@@ -69,7 +69,7 @@ main cfg = do
     body <- HA.awaitBody
 
     -- try getting an User's JWTToken
-    jwt <- H.liftEffect $ getJWTfromStorage
+    jwt <- H.liftEffect $ getJWTfromStorage $ _.jwtName (getVal cfg)
 
     -- request the backend to send initial values (such as static content) required to get the app running
     initResp <- initAppStore (_.apiBCorrespondentHost (getVal cfg)) $ map JWTToken jwt
@@ -103,7 +103,7 @@ main cfg = do
               infoShow $ "init --> " <> printInit init
               infoShow $ "cfg --> " <> stringifyWithIndent 4 (encodeJson cfg)
 
-        user <- H.liftEffect $ getCurrentUser jwt $ getJwtStatus isjwtvalid
+        user <- H.liftEffect $ getCurrentUser (_.jwtName (getVal cfg)) jwt $ getJwtStatus isjwtvalid
 
         -- We now have the three pieces of information necessary to configure our app. Let's create
         -- a record that matches the `Store` type our application requires by filling in these three
@@ -122,6 +122,7 @@ main cfg = do
             , user: user
             , wsVar: wsVar
             , browserFp: browserFp
+            , jwtName: _.jwtName (getVal cfg)
             }
 
         -- With our app environment ready to go, we can prepare the router to run as our root component.
@@ -195,14 +196,14 @@ withMaybe :: forall a. Maybe a -> Effect a
 withMaybe Nothing = throwError $ Excep.error "value has been resolved into nothing"
 withMaybe (Just a) = pure a
 
-getJWTfromStorage :: Effect (Maybe String)
-getJWTfromStorage = window >>= localStorage >>= getItem "b-correspondent_jwt"
+getJWTfromStorage :: String -> Effect (Maybe String)
+getJWTfromStorage jwtName = window >>= localStorage >>= getItem jwtName
 
-getCurrentUser :: Maybe String -> Maybe JWTStatus -> Effect (Maybe User)
-getCurrentUser jwt (Just Valid) =
+getCurrentUser :: String -> Maybe String -> Maybe JWTStatus -> Effect (Maybe User)
+getCurrentUser _ jwt (Just Valid) =
   for jwt \token -> do
     user <- Jwt.parse token
     pure $ { jwtUser: user, token: JWTToken token }
-getCurrentUser _ (Just Invalid) = (window >>= localStorage >>= removeItem "b-correspondent_jwt") *> pure Nothing
-getCurrentUser _ (Just Skip) = pure Nothing
-getCurrentUser _ _ = throwError $ Excep.error $ "value has been resolved into nothing"
+getCurrentUser jwtName _ (Just Invalid) = (window >>= localStorage >>= removeItem jwtName) *> pure Nothing
+getCurrentUser _ _ (Just Skip) = pure Nothing
+getCurrentUser _ _ _ = throwError $ Excep.error $ "value has been resolved into nothing"

@@ -45,7 +45,7 @@ component =
     where
       handleAction (MakeLogoutRequest ev) = do 
         H.liftEffect $ preventDefault ev
-        { config: Config { apiBCorrespondentHost: host }, user } <- getStore
+        { config: Config { apiBCorrespondentHost: host }, user, jwtName } <- getStore
         for_ user \{ token } -> do
           resp <- Request.makeAuth (Just token) host Back.mkAuthApi $ Back.logout
           withError resp \{ success: _ :: Unit } -> do
@@ -53,7 +53,7 @@ component =
               window >>= 
                 localStorage >>= 
                   removeItem 
-                  "b-correspondent_jwt"
+                    jwtName
           updateStore $ UpdateJwtUser Nothing
           H.raise Logout
 

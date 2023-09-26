@@ -67,6 +67,7 @@ type Store =
   , wsVar :: AVar (Array WS)
     -- browser fingerprint
   , browserFp :: String
+  , jwtName :: String
   }
 
 printStore store =
@@ -83,6 +84,7 @@ printStore store =
     <> show (_.user store)
     <> ", wsVar: <AVar>"
     <> ", browserFp: " <> (_.browserFp store)
+    <> ", jwtName: " <> (_.jwtName store)
 
 -- | Ordinarily we'd write an initialStore function, but in our case we construct
 -- | all three values in our initial store during app initialization. For that

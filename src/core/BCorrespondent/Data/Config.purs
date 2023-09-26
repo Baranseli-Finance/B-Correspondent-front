@@ -27,6 +27,7 @@ type ConfigVal =
   , cssLink :: String
   , traceLocation :: String
   , cssFiles :: Array String
+  , jwtName :: String
   }
 
 newtype Config = Config ConfigVal
@@ -46,6 +47,7 @@ instance EncodeJson Config where
         , traceLocation
         , cssFiles
         , apiBCorrespondentHostWS
+        , jwtName
         }
     ) =
     "telegramBot" := telegramBot
@@ -58,6 +60,7 @@ instance EncodeJson Config where
       ~> "traceLocation" := traceLocation
       ~> "cssFiles" := cssFiles
       ~> "apiBCorrespondentHostWS" := apiBCorrespondentHostWS
+      ~> "jwtName" := jwtName
       ~> jsonEmptyObject
 
 instance DecodeJson Config where
@@ -73,7 +76,19 @@ instance DecodeJson Config where
     traceLocation <- obj .: "traceLocation"
     cssFiles <- obj .: "cssFiles"
     apiBCorrespondentHostWS <- obj .: "apiBCorrespondentHostWS"
-    pure $ Config $ { telegramBot, telegramChat, telegramHost, toTelegram, apiBCorrespondentHost, sha256Commit, cssLink, traceLocation, cssFiles, apiBCorrespondentHostWS }
+    jwtName <- obj .: "jwtName"
+    pure $ Config { 
+      telegramBot, 
+      telegramChat, 
+      telegramHost, 
+      toTelegram, 
+      apiBCorrespondentHost, 
+      sha256Commit, 
+      cssLink, 
+      traceLocation, 
+      cssFiles, 
+      apiBCorrespondentHostWS, 
+      jwtName }
 
 setShaCommit :: String -> Config -> Config
 setShaCommit x (Config cfg) = Config $ cfg { sha256Commit = x }
