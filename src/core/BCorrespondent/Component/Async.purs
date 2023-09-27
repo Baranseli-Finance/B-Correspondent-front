@@ -34,7 +34,7 @@ import Data.Functor ((<#>))
 import Data.Tuple (Tuple(..))
 import Data.List (zip, fromFoldable, length)
 import Data.Array ((..))
-import System.Time (getTimestamp, timestampToDate)
+import System.Time (getTimestamp, timestampToDate, dateToTimestamp)
 import Affjax.Web as AX
 import Affjax.StatusCode as AX
 import Data.Either (Either(..))
@@ -50,7 +50,7 @@ slot n = HH.slot_ proxy n component unit
 
 data Action = Close Int | Add Async | Initialize
 
-type AsyncWithTM = { async :: Async, tm :: Int }
+type AsyncWithTM = { async :: Async, tm :: String }
 
 type State = { xs :: Map.Map Int AsyncWithTM }
 
@@ -85,6 +85,18 @@ component =
       for_ val $ \x -> do
         logDebug $ loc <> " ---> async val " <> show x
         handleAction $ Add x
+
+    void $ H.fork $ forever $ do
+      H.liftAff $ Aff.delay $ Aff.Milliseconds 1000.0
+      {xs} <- H.get
+      curr <- H.liftEffect getTimestamp
+      let ys = Map.toUnfoldable xs
+      for_ (ys :: Array (Tuple Int AsyncWithTM)) 
+        \(Tuple idx {tm: d}) -> do
+           tm <- H.liftEffect $ dateToTimestamp d 
+           when (curr - tm > 30) $
+             handleAction (Close idx) 
+
   handleAction (Add e@{ val: v }) = do
     let
       isAdded (Exception _) _ = true

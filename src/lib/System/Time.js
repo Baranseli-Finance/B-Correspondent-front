@@ -8,5 +8,7 @@ export const timestampToDate = tm => () => {
     // multiplied by 1000 so that the argument is in milliseconds, not seconds.
     var date = new Date(tm * 1000);
     // Will display time in 10:30:23 format
-    return date.getHours() + ":" + date.getMinutes() + ":" + date.getSeconds() + ", " + date.toDateString();
+    return date.toDateString() + ' ' + date.getHours() + ":" + date.getMinutes() + ":" + date.getSeconds() ;
 }
+
+export const dateToTimestamp = date => () => { return (new Date(date).getTime()) / 1000; }
