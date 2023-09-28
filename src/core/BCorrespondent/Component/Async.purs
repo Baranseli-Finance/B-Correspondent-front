@@ -54,7 +54,7 @@ type AsyncWithTM = { async :: Async, tm :: String }
 
 type State = { xs :: Map.Map Int AsyncWithTM }
 
-data Level = Warning | Success | Info
+data Level = Warning | Success | Info | Error
 
 data Value = Exception Error | Ordinary String Level
 
@@ -111,11 +111,17 @@ component =
           newXs =
             case m of
               Just { key } ->
-                if key + 1 < 10 then Map.insert (key + 1) { async: e, tm: tm } (_.xs s)
-                else Map.insert key { async: e, tm: tm } $ recalculateIdx $ Map.delete 1 (_.xs s)
+                if key + 1 < 10 
+                then 
+                  Map.insert (key + 1) { async: e, tm: tm } (_.xs s)
+                else 
+                  Map.insert key { async: e, tm: tm } $ 
+                    recalculateIdx $ 
+                      Map.delete 1 (_.xs s)
               Nothing -> Map.singleton 1 { async: e, tm: tm }
         s { xs = newXs }
-  handleAction (Close idx) = H.modify_ \s -> s { xs = recalculateIdx $ Map.delete idx (_.xs s) }
+  handleAction (Close idx) = 
+    H.modify_ \s -> s { xs = recalculateIdx $ Map.delete idx (_.xs s) }
 
 render { xs } =
   HH.div_ $
@@ -134,6 +140,7 @@ render { xs } =
   mkStyle val =
     case val of
       Exception _ -> "alert-danger"
+      Ordinary _ Error -> "alert-danger"
       Ordinary _ Warning -> "alert-warning"
       Ordinary _ Success -> "alert-success"
       Ordinary _ Info -> "alert-info"
