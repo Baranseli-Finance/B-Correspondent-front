@@ -4,11 +4,13 @@ let
    python3 = pkgs.python3;
    python = pkgs.python;
    git = pkgs.git;
-   ps = pkgs.purescript;
    jdk = pkgs.jdk;
+   ps = import ./purescript.nix { inherit pkgs; };
 in
-pkgs.mkShell { 
+pkgs.mkShell {
+
   buildInputs = [ git nodejs ps jdk python3 ];
+  NIX_PATH = "nixpkgs=" + pkgs.path;
   shellHook = ''
     npm install spago
     npm install purs-tidy
@@ -19,6 +21,6 @@ pkgs.mkShell {
     npm install superagent
     npm install crypto-js
     npm install @fingerprintjs/fingerprintjs
-    export PATH="./node_modules/.bin:$PATH"
+    export PATH=${ps}:$PATH
    '';
   }

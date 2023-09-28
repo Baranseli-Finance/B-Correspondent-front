@@ -4,7 +4,7 @@
     "@openapitools/openapi-generator-cli": "^2.7.0",
     "esbuild": "0.17.19",
     "openapi": "^1.0.1",
-    "purescript": "0.15.9",
+    "purescript": "0.15.10",
     "spago": "^0.20.9"
   },
   "scripts": {
@@ -15,6 +15,7 @@
     "api": "./scripts/api.sh api.b-correspondent.app api-back.json Back"
   },
   "dependencies": {
+    "@fingerprintjs/fingerprintjs": "^4.1.0",
     "babel": "^6.23.0",
     "crypto-js": "^4.1.1",
     "data.either": "^1.5.2",
