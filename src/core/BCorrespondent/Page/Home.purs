@@ -66,26 +66,49 @@ component =
         }
     }
   where
-  render { winWidth: Just _, platform: Just _, isUser: true } =
-    HH.div_ [ Async.slot 0, Dashboard.slot 1 HandleChild ]        
-  render { winWidth: Just _, platform: Just _, isUser: false } = 
-    HH.div_ [ Async.slot 0, HH.div [ css "centre-container" ] [ SignIn.slot 1 HandleChild ] ]
+  render { winWidth: Just _, platform: Just _, isUser } =
+    HH.div_ 
+    [ Async.slot 0,
+      if isUser 
+      then Dashboard.slot 1 HandleChild
+      else 
+        HH.div 
+        [ css "centre-container" ] 
+        [ SignIn.slot 1 HandleChild ]
+    ]
   render _ = HH.div_ []
   handleAction Initialize = do
-    H.liftEffect $ window >>= document >>= setTitle "BCorrespondent | Home"
     { platform, user } <- getStore
+    H.liftEffect $ 
+      window >>= 
+        document >>= 
+          setTitle
+            (if isJust user 
+            then "BCorrespondent | Dashboard"
+            else "BCorrespondent | Home")
     w <- H.liftEffect $ window >>= innerWidth
-
-    H.modify_ _ { platform = pure platform, winWidth = pure w, isUser = isJust user }
-
+    H.modify_ _ 
+      { platform = pure platform, 
+        winWidth = pure w, 
+        isUser = isJust user 
+      }
     void $ H.subscribe =<< WinResize.subscribe WinResize
-
   handleAction (WinResize w) = H.modify_ _ { winWidth = pure w }
   handleAction (HandleChild (Home.Output.LoggedInSuccess {login})) =
     do H.modify_ _ { isUser = true }
+       H.liftEffect $ 
+         window >>= 
+           document >>= 
+             setTitle 
+             "Correspondent | Dashboard"
        let welcome = "Welcome to the service, " <> login
        Async.send $ Async.mkOrdinary welcome Async.Success Nothing
   handleAction (HandleChild Home.Output.LoggedOutSuccess) =
     do H.modify_ _ { isUser = false }
+       H.liftEffect $ 
+         window >>= 
+           document >>= 
+             setTitle 
+             "Correspondent | Home"
        let logout = "you have been logged out"
        Async.send $ Async.mkOrdinary logout Async.Success Nothing

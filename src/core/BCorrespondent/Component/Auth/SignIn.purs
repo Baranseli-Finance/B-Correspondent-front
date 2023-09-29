@@ -136,7 +136,8 @@ component =
   handleAction (MakeLoginRequest ev) = do
     H.liftEffect $ preventDefault ev
     {hash, code} <- H.get
-    when (map getDigists code == Just 6) $
+    if map getDigists code == Just 6
+    then
       for_ code \c -> do 
         { config: Config { apiBCorrespondentHost: host }, jwtName } <- getStore
         let codeBody = { code: c, hash: fromMaybe undefined hash }
@@ -155,6 +156,7 @@ component =
                     token: Back.JWTToken token 
                   }
               H.raise $ LoggedInSuccess user
+    else H.modify_ _ { errMsg = Just "code must be a 6-digits number" }
   handleAction (MakeResendCodeRequest ev) = do 
     H.liftEffect $ preventDefault ev
     {hash} <- H.get
