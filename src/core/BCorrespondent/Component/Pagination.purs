@@ -12,25 +12,20 @@ import Prelude
 
 import BCorrespondent.Component.HTML.Utils (css, safeHref)
 import BCorrespondent.Capability.LogMessages (logDebug)
-import BCorrespondent.Data.Route (routeCodec, Route)
+import BCorrespondent.Data.Route (Route)
 
 import Halogen as H
 import Halogen.HTML as HH
 import Type.Proxy (Proxy(..))
 import Halogen.HTML.Properties.Extended as HPExt
-import Data.Array
-import Data.Maybe (maybe, Maybe(..), isNothing)
-import Data.Foldable (for_)
+import Data.Array (cons, find, length, snoc)
+import Data.Maybe (maybe, Maybe(..))
 import Data.Int (toNumber, ceil, rem)
 import Web.UIEvent.MouseEvent (MouseEvent, toEvent)
 import Web.Event.Event (preventDefault)
 import Halogen.HTML.Events as HE
-import Halogen.Store.Monad (getStore)
-import Effect.Ref as Ref
-import Data.Int (rem)
 import Routing.Duplex (print)
 
-import Undefined
 
 proxy = Proxy :: _ "pagination"
 
@@ -82,10 +77,7 @@ component (mkRoute :: String -> Route) =
     logDebug $ loc <> " ---> received from parent " <> show input
     { currenPage, perpage, total } <- H.get
     when (rem input.total perpage == 1) $
-      H.modify_ _
-        { total = input.total
-        , segment = calculateCurrentSegment currenPage input.total perpage
-        }
+      H.modify_ _ { total = input.total, segment = calculateCurrentSegment currenPage input.total perpage }
   
 render _ { segment: Nothing } = HH.div_ []
 render mkRoute { currenPage, segment: Just { xs, next } } =
