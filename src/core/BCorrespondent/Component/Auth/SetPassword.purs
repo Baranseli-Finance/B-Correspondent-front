@@ -44,7 +44,7 @@ data Output = Server50x Error | PasswordNotChanged | Ok
 
 data Action =
        Initialize
-     | MakeSetPassRequest Event 
+     | MakeSetPassRequest Event
      | FillPassword String 
      | FillAgainPassword String
 

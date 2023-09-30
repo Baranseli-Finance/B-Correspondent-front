@@ -1,4 +1,4 @@
-module BCorrespondent.Component.Auth.SignOut (Output (..), component, proxy, slot) where
+module BCorrespondent.Component.Auth.SignOut (component, proxy, slot) where
 
 import Prelude
 
@@ -6,6 +6,7 @@ import BCorrespondent.Data.Config (Config(..))
 import BCorrespondent.Api.Foreign.Request as Request
 import BCorrespondent.Api.Foreign.Back as Back
 import BCorrespondent.Api.Foreign.Request.Handler (withError)
+import BCorrespondent.Data.Dashboard.Output (Output (LoggedOut))
 
 import Halogen as H
 import Halogen.HTML as HH
@@ -31,8 +32,6 @@ slot n = HH.slot proxy n component unit
 
 data Action = MakeLogoutRequest Event
 
-data Output = Logout
-
 type State = { user :: String }
 
 component =
@@ -55,6 +54,6 @@ component =
                   removeItem 
                     jwtName
           updateStore $ UpdateJwtUser Nothing
-          H.raise Logout
+          H.raise LoggedOut
 
 render _ = HH.form [ HE.onSubmit MakeLogoutRequest ] [ HH.input [ HPExt.type_ HPExt.InputSubmit, HPExt.value "logout" ] ]
