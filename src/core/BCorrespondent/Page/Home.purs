@@ -112,3 +112,6 @@ component =
              "Correspondent | Home"
        let logout = "you have been logged out"
        Async.send $ Async.mkOrdinary logout Async.Success Nothing
+  handleAction (HandleChild Home.Output.PasswordResetLinkSend) = do 
+    let ok = "password reset link has been sent"
+    Async.send $ Async.mkOrdinary ok Async.Success Nothing

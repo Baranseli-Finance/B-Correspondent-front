@@ -4,4 +4,7 @@ import Prelude
 
 import Data.Maybe (Maybe)
 
-data Output = LoggedOut | ResetPassword (Maybe Int)
+data Output = 
+       LoggedOut 
+     | ResetPasswordTimeLeft Int
+     | ResetPasswordOk

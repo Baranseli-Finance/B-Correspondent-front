@@ -48,7 +48,7 @@ component =
           resp <- Request.makeAuth (Just token) host Back.mkAuthApi Back.resetPasswordLink
           withError resp \{success: (o :: Foreign)} -> do 
             if isNull o
-            then H.raise $ Dashboard.ResetPassword Nothing
-            else H.raise $ Dashboard.ResetPassword $ Just $ unsafeFromForeign o
+            then H.raise $ Dashboard.ResetPasswordOk
+            else H.raise $ Dashboard.ResetPasswordTimeLeft $ unsafeFromForeign o
 
 render = HH.form [ HE.onSubmit MakeResetLinkRequest ] [ HH.input [ HPExt.type_ HPExt.InputSubmit, HPExt.value "reset link" ] ]

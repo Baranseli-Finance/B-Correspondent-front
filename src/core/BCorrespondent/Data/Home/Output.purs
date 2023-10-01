@@ -4,4 +4,7 @@ import Prelude
 
 import Crypto.Jwt as Jwt
 
-data Output = LoggedInSuccess Jwt.JwtUser | LoggedOutSuccess
+data Output = 
+       LoggedInSuccess Jwt.JwtUser 
+     | LoggedOutSuccess 
+     | PasswordResetLinkSend

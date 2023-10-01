@@ -13,7 +13,7 @@ import Halogen.HTML as HH
 import Halogen.HTML.Properties.Extended as HPExt
 import Type.Proxy (Proxy(..))
 import AppM (AppM)
-import Data.Maybe (Maybe (Nothing), isNothing, fromMaybe)
+import Data.Maybe (Maybe (..), isNothing, fromMaybe)
 
 import Undefined
 
@@ -41,8 +41,13 @@ component =
         H.raise Home.LoggedOutSuccess
       handleAction 
         (HandleChild 
-          (Dashboard.ResetPassword tmleft)) = 
-        H.modify_ _ { tmleft = tmleft }
+          (Dashboard.ResetPasswordTimeLeft tmleft)) = 
+        H.modify_ _ { tmleft = Just tmleft }
+      handleAction 
+        (HandleChild 
+          (Dashboard.ResetPasswordOk)) = do
+        H.modify_ _ { tmleft = Nothing }
+        H.raise Home.PasswordResetLinkSend
 
 render { tmleft } = 
   HH.div 
