@@ -35,8 +35,14 @@ component =
       { handleAction = handleAction }
     }
     where
-      handleAction (HandleChild Dashboard.LoggedOut) = H.raise Home.LoggedOutSuccess
-      handleAction (HandleChild (Dashboard.ResetPassword tmleft)) = H.modify_ _ { tmleft = tmleft }
+      handleAction 
+        (HandleChild 
+          Dashboard.LoggedOut) = 
+        H.raise Home.LoggedOutSuccess
+      handleAction 
+        (HandleChild 
+          (Dashboard.ResetPassword tmleft)) = 
+        H.modify_ _ { tmleft = tmleft }
 
 render { tmleft } = 
   HH.div 
@@ -50,7 +56,8 @@ render { tmleft } =
       [ HPExt.style "margin-bottom: 10px;" ] 
       [ HH.span [ HPExt.style "color: red" ] 
         [ HH.text $ 
-            "the next attemp to send a reset link is in " <> 
+            "the next attemp to send \ 
+            \ a reset link is in " <> 
             show  (fromMaybe undefined tmleft) <> " sec" 
         ]
       ]

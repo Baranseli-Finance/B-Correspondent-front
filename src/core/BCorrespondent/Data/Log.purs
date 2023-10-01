@@ -44,7 +44,11 @@ import Data.Maybe (Maybe(..))
 -- | format that we can search later on or use to set filters in an external service like Splunk
 -- | or Rollbar. Let's start with a piece of metadata to help us differentiate debugging messages,
 -- | status information, warnings, and and errors.
-data LogReason = Debug | Info | Warn | Error
+data LogReason = 
+        Debug 
+      | Info 
+      | Warn 
+      | Error
 
 derive instance eqLogReason :: Eq LogReason
 derive instance ordLogReason :: Ord LogReason
@@ -98,17 +102,20 @@ mkLog logReason inputMessage = do
   now <- nowDateTime
 
   locResp <-
-    if logReason == Info then map (rmap Just) $ liftAff $ AX.get AX.json "https://api.db-ip.com/v2/free/self"
+    if logReason == Info 
+    then map (rmap Just) $ liftAff $ AX.get AX.json "https://api.db-ip.com/v2/free/self"
     else pure $ Right Nothing
   let -- Will produce a header like "{DEBUG: 2018-10-25 11:25:29 AM]\nMessage contents..."
     headerWith start = fold [ "[", start, ": ", formatTimestamp now, "]\n", inputMessage ]
 
     -- Writes the header with the correct log reason
-    formattedLog = headerWith case logReason of
-      Debug -> "DEBUG"
-      Info -> "INFO"
-      Warn -> "WARNING"
-      Error -> "ERROR"
+    formattedLog = 
+      headerWith 
+        case logReason of
+          Debug -> "DEBUG"
+          Info -> "INFO"
+          Warn -> "WARNING"
+          Error -> "ERROR"
     loc =
       case locResp of
         Right (Just resp) -> stringify $ _.body resp
