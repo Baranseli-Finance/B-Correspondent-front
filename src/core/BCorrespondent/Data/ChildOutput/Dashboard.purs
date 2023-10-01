@@ -1,4 +1,4 @@
-module BCorrespondent.Data.Dashboard.Output ( Output(..)) where
+module BCorrespondent.Data.ChildOutput.Dashboard ( Output(..)) where
 
 import Prelude
 

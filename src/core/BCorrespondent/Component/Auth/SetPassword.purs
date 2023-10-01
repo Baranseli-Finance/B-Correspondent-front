@@ -31,6 +31,7 @@ import Web.Storage.Storage (removeItem)
 import Web.HTML (window)
 import Store (Action(UpdateJwtUser))
 import Effect.Exception (Error)
+import Data.String (length)
 
 import Undefined
 
@@ -99,8 +100,20 @@ component =
               else 
                 do H.modify_ _ { password = Nothing, againPassword = Nothing }
                    H.raise PasswordNotChanged
-      handleAction (FillPassword x) = H.modify_ _ { password = Just x }
-      handleAction (FillAgainPassword x) =  H.modify_ _ { againPassword = Just x }
+      handleAction (FillPassword x) = 
+        H.modify_ _ 
+          { password = 
+              if length x > 0 
+              then Just x 
+              else Nothing 
+          }
+      handleAction (FillAgainPassword x) =  
+        H.modify_ _ 
+          { againPassword = 
+              if length x > 0 
+              then Just x 
+              else Nothing 
+          }
 
 render {key, password, againPassword} =
   HH.div_

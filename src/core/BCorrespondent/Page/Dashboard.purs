@@ -5,8 +5,8 @@ import Prelude
 import BCorrespondent.Component.HTML.Utils (css)
 import BCorrespondent.Component.Auth.SignOut as SignOut
 import BCorrespondent.Component.Auth.SendResetPassLink as SendResetPassLink
-import BCorrespondent.Data.Dashboard.Output as Dashboard
-import BCorrespondent.Data.Home.Output as Home
+import BCorrespondent.Data.ChildOutput.Dashboard as Dashboard
+import BCorrespondent.Data.ChildOutput.Home as Home
 
 import Halogen as H
 import Halogen.HTML as HH

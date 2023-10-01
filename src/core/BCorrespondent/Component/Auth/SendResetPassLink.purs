@@ -7,7 +7,7 @@ import BCorrespondent.Data.Config (Config(..))
 import BCorrespondent.Api.Foreign.Request as Request
 import BCorrespondent.Api.Foreign.Back as Back
 import BCorrespondent.Api.Foreign.Request.Handler (withError)
-import BCorrespondent.Data.Dashboard.Output as  Dashboard
+import BCorrespondent.Data.ChildOutput.Dashboard as Dashboard
 
 import Halogen as H
 import Halogen.HTML as HH

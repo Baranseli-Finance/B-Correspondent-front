@@ -15,7 +15,7 @@ import BCorrespondent.Component.HTML.Utils (css, safeHref, whenElem)
 import BCorrespondent.Page.Dashboard as Dashboard 
 import BCorrespondent.Component.Auth.SignIn as SignIn
 import BCorrespondent.Component.Async as Async
-import BCorrespondent.Data.Home.Output as Home.Output
+import BCorrespondent.Data.ChildOutput.Home as Home.Output
 
 import Halogen.HTML.Properties.Extended as HPExt
 import Halogen as H

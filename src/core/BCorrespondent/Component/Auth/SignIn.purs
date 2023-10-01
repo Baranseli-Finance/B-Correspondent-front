@@ -10,7 +10,7 @@ import BCorrespondent.Api.Foreign.Request.Handler (onFailure)
 import BCorrespondent.Data.Config (Config(..))
 import BCorrespondent.Capability.LogMessages (logDebug)
 import BCorrespondent.Component.HTML.Utils (css, safeHref)
-import BCorrespondent.Data.Home.Output
+import BCorrespondent.Data.ChildOutput.Home
 
 import Halogen as H
 import Halogen.HTML as HH
