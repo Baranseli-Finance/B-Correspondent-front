@@ -48,12 +48,13 @@
   , "control"
   , "integers"
   , "web-file"
-  -- , "web-uievents" 
-  -- , "assert"
+  , "web-uievents" 
+  , "assert"
   , "refs"
   , "media-types"
   , "arraybuffer-types"
   , "partial"
+  , "decimals"
   ]
 , packages = ./packages.dhall
 , sources = [ "src/**/*.purs", "test/**/*.purs" ]
