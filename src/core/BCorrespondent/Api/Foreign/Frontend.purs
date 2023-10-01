@@ -43,7 +43,14 @@ printSha { key, value } = "{ \"key\": " <> key <> ", \"value\": " <> value <> " 
 shaPred :: String -> Sha -> Boolean
 shaPred s {key} = s == key
 
-type Init = { isjwtvalid :: String, shaxs :: Array Sha, level :: String, totelegram :: Boolean }
+type Init = 
+     { isjwtvalid :: String, 
+       shaxs :: Array Sha, 
+       level :: String, 
+       totelegram :: Boolean,
+       telegramchat :: String,
+       telegrambot :: String 
+     }
 
 printShaxs xs = 
   case uncons xs of 
@@ -51,11 +58,13 @@ printShaxs xs =
       printSha head <> printShaxs tail
     Nothing -> mempty
 
-printInit {isjwtvalid, shaxs, level, totelegram} = 
+printInit {isjwtvalid, shaxs, level, totelegram, telegramchat, telegrambot} = 
   "{ \"isjwtvalid\": " <> isjwtvalid <> 
   ", \"shaxs\": [ " <> printShaxs shaxs <> "] " <>
   ", \"level\": " <> level <>
-  ", \"totelegram\": " <> show totelegram <> " }"
+  ", \"totelegram\": " <> show totelegram <>
+  ", \"telegramchat\": " <> telegramchat <>
+  ", \"telegrambot\": " <> telegrambot <> " }"
 
 getJwtStatus :: String -> Maybe JWTStatus
 getJwtStatus "valid" = Just Valid

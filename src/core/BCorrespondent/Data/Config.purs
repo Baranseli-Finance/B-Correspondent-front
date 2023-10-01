@@ -3,8 +3,11 @@ module BCorrespondent.Data.Config
   , ConfigVal
   , getVal
   , setShaCommit
+  , setTelegramBot
+  , setTelegramChat
   , setToTelegram
-  ) where
+  )
+  where
 
 import Prelude
 
@@ -95,3 +98,9 @@ setShaCommit x (Config cfg) = Config $ cfg { sha256Commit = x }
 
 setToTelegram :: Boolean -> Config -> Config
 setToTelegram x (Config cfg) = Config $ cfg { toTelegram = x }
+
+setTelegramChat :: String -> Config -> Config
+setTelegramChat x (Config cfg) = Config $ cfg { telegramChat = x }
+
+setTelegramBot :: String -> Config -> Config
+setTelegramBot x (Config cfg) = Config $ cfg { telegramBot = x }

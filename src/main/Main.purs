@@ -75,7 +75,7 @@ main cfg = do
     initResp <- initAppStore (_.apiBCorrespondentHost (getVal cfg)) $ map JWTToken jwt
     case initResp of
       Left err -> void $ runUI AppInitFailure.component { error: err } body
-      Right init@{isjwtvalid, shaxs, level, totelegram} -> do
+      Right init@{isjwtvalid, shaxs, level, totelegram, telegramchat, telegrambot} -> do
 
         H.liftEffect $ logShow $ printInit init
 
@@ -111,8 +111,10 @@ main cfg = do
         frontSha <- H.liftEffect $ withMaybe $ map (_.value) (find (shaPred "B-Correspondent-front") shaxs)
         let
           initialStore =
-            { config: 
-                setShaCommit frontSha $ 
+            { config:
+                setShaCommit frontSha $
+                setTelegramBot telegrambot $
+                setTelegramChat telegramchat $
                 setToTelegram totelegram cfg
             , error: Nothing
             , platform: platform

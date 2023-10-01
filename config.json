@@ -1,6 +1,6 @@
 {
-    "telegramBot": "bot2096396660:AAFgPJkIGmBOgbWuzvyejPJJo7-HpFgr2CY",
-    "telegramChat": "-934720023",
+    "telegramBot": "",
+    "telegramChat": "",
     "telegramHost": "https://api.telegram.org/",
     "apiBCorrespondentHost": "http://127.0.0.1:12000",
     "apiBCorrespondentHostWS": "ws://127.0.0.1:12000",
