@@ -39,7 +39,7 @@ component =
             Aff.delay $ 
               Aff.Milliseconds 1000.0
           {interval: val} <- H.get
-          when (val > 0) $ do
+          when (val - 1 >= 0) $ do
             H.modify_ _ { interval = val - 1 }
-            handleAction (Tick val)
+            handleAction $ Tick (val - 1)
       handleAction (Tick x) = H.raise $ Emit x

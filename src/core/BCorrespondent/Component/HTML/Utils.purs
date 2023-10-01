@@ -1,10 +1,12 @@
 module BCorrespondent.Component.HTML.Utils
-  ( css
+  ( chooseElem
+  , css
   , maybeElem
   , safeHref
   , whenElem
   , whenElemf
-  ) where
+  )
+  where
 
 import Prelude
 
@@ -38,3 +40,6 @@ whenElemf cond f = if cond then f unit else HH.text ""
 
 whenElem :: forall p i. Boolean -> HH.HTML p i -> HH.HTML p i
 whenElem cond el = if cond then el else HH.div_ []
+
+chooseElem :: forall p i. Boolean -> HH.HTML p i -> HH.HTML p i -> HH.HTML p i
+chooseElem cond elOk elNo = if cond then elOk else elNo
