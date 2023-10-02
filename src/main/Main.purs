@@ -1,6 +1,6 @@
 module Main (main) where
 
-import Prelude (Unit, bind, discard, flip, map, pure, show, unit, void, when, ($), (/=), (<<<), (<>), (>>=), (==), (*>))
+import Prelude (Unit, bind, discard, flip, map, pure, show, unit, void, when, ($), (/=), (<<<), (<>), (>>=), (==), (*>), mempty)
 
 import BCorrespondent.Api.Foreign.Back
 import BCorrespondent.Data.Route (routeCodec)
@@ -75,15 +75,23 @@ main cfg = do
     initResp <- initAppStore (_.apiBCorrespondentHost (getVal cfg)) $ map JWTToken jwt
     case initResp of
       Left err -> void $ runUI AppInitFailure.component { error: err } body
-      Right init@{isjwtvalid, shaxs, level, totelegram, telegramchat, telegrambot} -> do
+      Right init@{isjwtvalid, shaxs, level, totelegram, telegramchat, telegrambot, loadcsslocally} -> do
 
         H.liftEffect $ logShow $ printInit init
 
         -- I am sick to the back teeth of changing css hash manualy
         -- let's make the process a bit self-generating
-        cssSha <- H.liftEffect $ withMaybe $ map (_.value) (find (shaPred "B-Correspondent-css") shaxs)
-        for_ (_.cssFiles (getVal cfg)) $ H.liftEffect <<< setCssLink cssSha (_.cssLink (getVal cfg))
-
+        cssSha <- H.liftEffect $ withMaybe $ 
+          if loadcsslocally
+          then pure mempty
+          else map (_.value) $ 
+                 flip find shaxs $ 
+                   shaPred "B-Correspondent-css"
+        let cssPath = 
+              if loadcsslocally 
+              then "app/css" 
+              else _.cssLink (getVal cfg)
+        for_ (_.cssFiles (getVal cfg)) $ H.liftEffect <<< setCssLink cssSha cssPath
   
         async <- H.liftEffect $ Async.newChannel
 

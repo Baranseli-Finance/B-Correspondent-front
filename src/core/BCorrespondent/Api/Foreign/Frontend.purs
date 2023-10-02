@@ -49,7 +49,8 @@ type Init =
        level :: String, 
        totelegram :: Boolean,
        telegramchat :: String,
-       telegrambot :: String 
+       telegrambot :: String,
+       loadcsslocally :: Boolean
      }
 
 printShaxs xs = 
@@ -58,13 +59,22 @@ printShaxs xs =
       printSha head <> printShaxs tail
     Nothing -> mempty
 
-printInit {isjwtvalid, shaxs, level, totelegram, telegramchat, telegrambot} = 
+printInit 
+  {isjwtvalid, 
+   shaxs, 
+   level, 
+   totelegram, 
+   telegramchat, 
+   telegrambot, 
+   loadcsslocally
+  } = 
   "{ \"isjwtvalid\": " <> isjwtvalid <> 
   ", \"shaxs\": [ " <> printShaxs shaxs <> "] " <>
   ", \"level\": " <> level <>
   ", \"totelegram\": " <> show totelegram <>
   ", \"telegramchat\": " <> telegramchat <>
-  ", \"telegrambot\": " <> telegrambot <> " }"
+  ", \"telegrambot\": " <> telegrambot <>
+  ", \"loadCssLocally\": " <> show loadcsslocally <> " }"
 
 getJwtStatus :: String -> Maybe JWTStatus
 getJwtStatus "valid" = Just Valid
