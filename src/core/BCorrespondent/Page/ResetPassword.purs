@@ -6,10 +6,8 @@ import BCorrespondent.Component.Auth.SetPassword as Auth.SetPassword
 import BCorrespondent.Data.Route (Route(Error500, Home))
 import BCorrespondent.Capability.Navigate (navigate)
 import BCorrespondent.Component.Timer as Timer 
-import BCorrespondent.Data.ChildOutput.ResetPasswordLink as Output
 import BCorrespondent.Component.HTML.Utils (css)
 import BCorrespondent.Component.Auth.SignOut as SignOut
-import BCorrespondent.Data.ChildOutput.Home
 import BCorrespondent.Component.Async as Async
 import BCorrespondent.Component.HTML.Utils (chooseElem)
 
@@ -30,7 +28,7 @@ loc = "BCorrespondent.Page.ResetPassword"
 slot k = HH.slot_ proxy unit (component k) unit
 
 data Action = 
-       HandleChild Output.Output 
+       HandleChildSetPass Auth.SetPassword.Output 
      | HandleChildResetPasswordLink Timer.Output
 
 type State = { isOk :: Boolean, timeleft :: Maybe Int }
@@ -47,15 +45,15 @@ component key =
       { handleAction = handleAction }
     }
     where
-      handleAction (HandleChild (Output.Server50x e)) = 
+      handleAction (HandleChildSetPass (Auth.SetPassword.Server50x e)) = 
         updateStore (WriteError e) *> navigate Error500
-      handleAction (HandleChild Output.PasswordNotChanged) = 
+      handleAction (HandleChildSetPass Auth.SetPassword.PasswordNotChanged) = 
         Async.send $ 
           Async.mkOrdinary 
             "password not changed" 
             Async.Warning 
             Nothing
-      handleAction (HandleChild Output.PasswordOk) =
+      handleAction (HandleChildSetPass Auth.SetPassword.PasswordOk) =
         H.modify_ _ { isOk = true }
       handleAction (HandleChildResetPasswordLink (Timer.Emit sec)) = do
         when (sec == 0) $ navigate Home
@@ -74,4 +72,4 @@ render key { isOk, timeleft } =
           \ You'll be redirected to home in " <> 
           show (fromMaybe 5 timeleft) <> " sec"
       ]
-    no = HH.div_  [Auth.SetPassword.slot 1 key HandleChild]
+    no = HH.div_  [Auth.SetPassword.slot 1 key HandleChildSetPass]

@@ -1,4 +1,4 @@
-module BCorrespondent.Component.Auth.SetPassword ( component, proxy, slot ) where
+module BCorrespondent.Component.Auth.SetPassword ( Output (..), component, proxy, slot ) where
 
 import Prelude
 
@@ -9,7 +9,6 @@ import BCorrespondent.Api.Foreign.Back as Back
 import BCorrespondent.Api.Foreign.Request.Handler (onFailure)
 import BCorrespondent.Capability.Navigate (navigate)
 import BCorrespondent.Data.Route (Route (Error404))
-import BCorrespondent.Data.ChildOutput.ResetPasswordLink as ResetPasswordLink
 
 import Halogen as H
 import Halogen.HTML as HH
@@ -26,6 +25,7 @@ import Web.Storage.Storage (removeItem)
 import Web.HTML (window)
 import Store (Action(UpdateJwtUser))
 import Data.String (length)
+import Effect.Exception (Error)
 
 import Undefined
 
@@ -34,6 +34,8 @@ proxy = Proxy :: _ "auth_set_password"
 loc = "BCorrespondent.Component.Auth.SetPassword"
 
 slot n s = HH.slot proxy n component {key: s}
+
+data Output = Server50x Error | PasswordNotChanged | PasswordOk
 
 data Action =
        Initialize
@@ -78,7 +80,7 @@ component =
                 {key: key, password: value}
             let onError e = do 
                   H.modify_ _ { password = Nothing, againPassword = Nothing }
-                  H.raise $ ResetPasswordLink.Server50x e
+                  H.raise $ Server50x e
             onFailure resp onError \{success: isOK} ->
               if isOK 
               then do
@@ -88,10 +90,10 @@ component =
                       removeItem 
                         jwtName
                 updateStore $ UpdateJwtUser Nothing
-                H.raise ResetPasswordLink.PasswordOk
+                H.raise PasswordOk
               else 
                 do H.modify_ _ { password = Nothing, againPassword = Nothing }
-                   H.raise ResetPasswordLink.PasswordNotChanged
+                   H.raise PasswordNotChanged
       handleAction (FillPassword x) = 
         H.modify_ _ 
           { password = 

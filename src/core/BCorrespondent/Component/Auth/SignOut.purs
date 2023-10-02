@@ -1,4 +1,4 @@
-module BCorrespondent.Component.Auth.SignOut (component, proxy, slot) where
+module BCorrespondent.Component.Auth.SignOut (Output (..), component, proxy, slot) where
 
 import Prelude
 
@@ -6,7 +6,6 @@ import BCorrespondent.Data.Config (Config(..))
 import BCorrespondent.Api.Foreign.Request as Request
 import BCorrespondent.Api.Foreign.Back as Back
 import BCorrespondent.Api.Foreign.Request.Handler (withError)
-import BCorrespondent.Data.ChildOutput.Dashboard (Output (LoggedOut))
 
 import Halogen as H
 import Halogen.HTML as HH
@@ -31,6 +30,8 @@ loc = "BCorrespondent.Component.Auth.SignOut"
 slot n = HH.slot proxy n component unit
 
 data Action = MakeLogoutRequest Event
+
+data Output = LoggedOut
 
 type State = { user :: String }
 

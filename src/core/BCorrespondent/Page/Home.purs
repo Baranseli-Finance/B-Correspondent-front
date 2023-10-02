@@ -15,7 +15,6 @@ import BCorrespondent.Component.HTML.Utils (css, safeHref, whenElem)
 import BCorrespondent.Page.Dashboard as Dashboard 
 import BCorrespondent.Component.Auth.SignIn as SignIn
 import BCorrespondent.Component.Async as Async
-import BCorrespondent.Data.ChildOutput.Home as Home.Output
 
 import Halogen.HTML.Properties.Extended as HPExt
 import Halogen as H
@@ -43,7 +42,8 @@ slot = HH.slot_ proxy unit component unit
 data Action
   = Initialize
   | WinResize Int
-  | HandleChild Home.Output.Output
+  | HandleChildDashboard Dashboard.Output
+  | HandleChildSignIn SignIn.Output
 
 type State =
   { winWidth :: Maybe Int
@@ -70,11 +70,11 @@ component =
     HH.div_ 
     [ Async.slot 0,
       if isUser 
-      then Dashboard.slot 1 HandleChild
+      then Dashboard.slot 1 HandleChildDashboard
       else 
         HH.div 
         [ css "centre-container" ] 
-        [ SignIn.slot 1 HandleChild ]
+        [ SignIn.slot 1 HandleChildSignIn ]
     ]
   render _ = HH.div_ []
   handleAction Initialize = do
@@ -94,7 +94,7 @@ component =
       }
     void $ H.subscribe =<< WinResize.subscribe WinResize
   handleAction (WinResize w) = H.modify_ _ { winWidth = pure w }
-  handleAction (HandleChild (Home.Output.LoggedInSuccess {login})) =
+  handleAction (HandleChildSignIn (SignIn.LoggedInSuccess {login})) =
     do H.modify_ _ { isUser = true }
        H.liftEffect $ 
          window >>= 
@@ -103,7 +103,7 @@ component =
              "Correspondent | Dashboard"
        let welcome = "Welcome to the service, " <> login
        Async.send $ Async.mkOrdinary welcome Async.Success Nothing
-  handleAction (HandleChild Home.Output.LoggedOutSuccess) =
+  handleAction (HandleChildDashboard Dashboard.SignOutForward) =
     do H.modify_ _ { isUser = false }
        H.liftEffect $ 
          window >>= 
@@ -112,6 +112,6 @@ component =
              "Correspondent | Home"
        let logout = "you have been logged out"
        Async.send $ Async.mkOrdinary logout Async.Success Nothing
-  handleAction (HandleChild Home.Output.PasswordResetLinkSend) = do 
+  handleAction (HandleChildDashboard Dashboard.RssetLinkForward) = do 
     let ok = "password reset link has been sent"
     Async.send $ Async.mkOrdinary ok Async.Success Nothing

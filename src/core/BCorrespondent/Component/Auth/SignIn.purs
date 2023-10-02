@@ -1,4 +1,4 @@
-module BCorrespondent.Component.Auth.SignIn (component, proxy, slot) where
+module BCorrespondent.Component.Auth.SignIn (Output (..), component, proxy, slot) where
 
 import Prelude
 
@@ -10,7 +10,6 @@ import BCorrespondent.Api.Foreign.Request.Handler (onFailure)
 import BCorrespondent.Data.Config (Config(..))
 import BCorrespondent.Capability.LogMessages (logDebug)
 import BCorrespondent.Component.HTML.Utils (css, safeHref)
-import BCorrespondent.Data.ChildOutput.Home
 
 import Halogen as H
 import Halogen.HTML as HH
@@ -49,6 +48,8 @@ data Action
   | FillLogin String
   | FillPassword String
   | FillCode String
+
+data Output = LoggedInSuccess Jwt.JwtUser
 
 type State =
   { login :: Maybe String

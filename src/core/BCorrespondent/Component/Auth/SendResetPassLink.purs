@@ -1,4 +1,4 @@
-module BCorrespondent.Component.Auth.SendResetPassLink (proxy, slot, component) where
+module BCorrespondent.Component.Auth.SendResetPassLink (Output (..), proxy, slot, component) where
 
 import Prelude
 
@@ -7,7 +7,6 @@ import BCorrespondent.Data.Config (Config(..))
 import BCorrespondent.Api.Foreign.Request as Request
 import BCorrespondent.Api.Foreign.Back as Back
 import BCorrespondent.Api.Foreign.Request.Handler (withError)
-import BCorrespondent.Data.ChildOutput.Dashboard as Dashboard
 
 import Halogen as H
 import Halogen.HTML as HH
@@ -33,6 +32,8 @@ slot n = HH.slot proxy n component unit
 
 data Action = MakeResetLinkRequest Event
 
+data Output = ResetPasswordOk | ResetPasswordTimeLeft Int
+
 component =
   H.mkComponent
     { initialState: identity
@@ -48,7 +49,7 @@ component =
           resp <- Request.makeAuth (Just token) host Back.mkAuthApi Back.resetPasswordLink
           withError resp \{success: (o :: Foreign)} -> do 
             if isNull o
-            then H.raise $ Dashboard.ResetPasswordOk
-            else H.raise $ Dashboard.ResetPasswordTimeLeft $ unsafeFromForeign o
+            then H.raise ResetPasswordOk
+            else H.raise $ ResetPasswordTimeLeft $ unsafeFromForeign o
 
 render = HH.form [ HE.onSubmit MakeResetLinkRequest ] [ HH.input [ HPExt.type_ HPExt.InputSubmit, HPExt.value "reset link" ] ]

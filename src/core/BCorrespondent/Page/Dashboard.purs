@@ -5,8 +5,6 @@ import Prelude
 import BCorrespondent.Component.HTML.Utils (css)
 import BCorrespondent.Component.Auth.SignOut as SignOut
 import BCorrespondent.Component.Auth.SendResetPassLink as SendResetPassLink
-import BCorrespondent.Data.ChildOutput.Dashboard as Dashboard
-import BCorrespondent.Data.ChildOutput.Home as Home
 
 import Halogen as H
 import Halogen.HTML as HH
@@ -23,7 +21,11 @@ loc = "BCorrespondent.Page.Dashboard"
 
 slot n = HH.slot proxy n component unit
 
-data Output = HandleChild Dashboard.Output
+data Acion =
+        HandleChildSignOut SignOut.Output 
+      | HandleChildResetLink SendResetPassLink.Output
+
+data Output = SignOutForward | RssetLinkForward
 
 type State = { tmleft :: Maybe Int }
 
@@ -36,25 +38,25 @@ component =
     }
     where
       handleAction 
-        (HandleChild 
-          Dashboard.LoggedOut) = 
-        H.raise Home.LoggedOutSuccess
+        (HandleChildSignOut 
+          SignOut.LoggedOut) = 
+        H.raise SignOutForward
       handleAction 
-        (HandleChild 
-          (Dashboard.ResetPasswordTimeLeft tmleft)) = 
+        (HandleChildResetLink 
+          (SendResetPassLink.ResetPasswordTimeLeft tmleft)) = 
         H.modify_ _ { tmleft = Just tmleft }
       handleAction 
-        (HandleChild 
-          (Dashboard.ResetPasswordOk)) = do
+        (HandleChildResetLink 
+          (SendResetPassLink.ResetPasswordOk)) = do
         H.modify_ _ { tmleft = Nothing }
-        H.raise Home.PasswordResetLinkSend
+        H.raise RssetLinkForward
 
 render { tmleft } = 
   HH.div 
   [ css "loading-container" ] 
   [ HH.text "dashboard",
-    SignOut.slot 0 HandleChild,
-    SendResetPassLink.slot 1 HandleChild,
+    SignOut.slot 0 HandleChildSignOut,
+    SendResetPassLink.slot 1 HandleChildResetLink,
     if isNothing tmleft then HH.div_ []
     else 
       HH.div 
