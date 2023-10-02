@@ -11,7 +11,7 @@ import BCorrespondent.Page.Subscription.WinResize as WinResize
 import BCorrespondent.Capability.LogMessages (logDebug)
 import BCorrespondent.Data.Route as Route
 import BCorrespondent.Data.Config
-import BCorrespondent.Component.HTML.Utils (css, safeHref, whenElem)
+import BCorrespondent.Component.HTML.Utils (css, safeHref, chooseElem)
 import BCorrespondent.Page.Dashboard as Dashboard 
 import BCorrespondent.Component.Auth.SignIn as SignIn
 import BCorrespondent.Component.Async as Async
@@ -66,17 +66,6 @@ component =
         }
     }
   where
-  render { winWidth: Just _, platform: Just _, isUser } =
-    HH.div_ 
-    [ Async.slot 0,
-      if isUser 
-      then Dashboard.slot 1 HandleChildDashboard
-      else 
-        HH.div 
-        [ css "centre-container" ] 
-        [ SignIn.slot 1 HandleChildSignIn ]
-    ]
-  render _ = HH.div_ []
   handleAction Initialize = do
     { platform, user } <- getStore
     H.liftEffect $ 
@@ -115,3 +104,15 @@ component =
   handleAction (HandleChildDashboard Dashboard.RssetLinkForward) = do 
     let ok = "password reset link has been sent"
     Async.send $ Async.mkOrdinary ok Async.Success Nothing
+
+render { winWidth: Just _, platform: Just _, isUser } =
+  HH.div_ [ Async.slot 0, body ]
+  where 
+    body = 
+      chooseElem 
+        isUser
+        (Dashboard.slot 1 HandleChildDashboard) $
+        HH.div 
+         [ css "centre-container" ]
+         [ SignIn.slot 1 HandleChildSignIn ]
+render _ = HH.div_ []
