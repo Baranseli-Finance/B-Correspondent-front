@@ -1,4 +1,4 @@
-module BCorrespondent.Component.Auth.SendResetPassLink (Output (..), proxy, slot, component) where
+module BCorrespondent.Component.Auth.SendResetPassLink (Output (..), slot) where
 
 import Prelude
 

@@ -1,4 +1,4 @@
-module BCorrespondent.Component.Auth.SignOut (Output (..), component, proxy, slot) where
+module BCorrespondent.Component.Auth.SignOut (Output (..), slot) where
 
 import Prelude
 

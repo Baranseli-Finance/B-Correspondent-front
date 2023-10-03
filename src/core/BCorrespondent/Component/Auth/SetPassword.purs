@@ -1,4 +1,4 @@
-module BCorrespondent.Component.Auth.SetPassword ( Output (..), component, proxy, slot ) where
+module BCorrespondent.Component.Auth.SetPassword ( Output (..), slot ) where
 
 import Prelude
 

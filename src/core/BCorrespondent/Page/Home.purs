@@ -104,6 +104,9 @@ component =
   handleAction (HandleChildDashboard Dashboard.RssetLinkForward) = do 
     let ok = "password reset link has been sent"
     Async.send $ Async.mkOrdinary ok Async.Success Nothing
+  handleAction (HandleChildDashboard (Dashboard.FilesUploaded fs)) = do
+    let ok = "files has been uploaded: " <> show fs
+    Async.send $ Async.mkOrdinary ok Async.Success Nothing
 
 render { winWidth: Just _, platform: Just _, isUser } =
   HH.div_ [ Async.slot 0, body ]

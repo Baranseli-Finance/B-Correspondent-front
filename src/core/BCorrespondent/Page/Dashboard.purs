@@ -1,17 +1,18 @@
-module BCorrespondent.Page.Dashboard (Output (..), component, proxy, slot) where
+module BCorrespondent.Page.Dashboard (Output (..), slot) where
 
 import Prelude
 
-import BCorrespondent.Component.HTML.Utils (css)
+import BCorrespondent.Component.HTML.Utils (css, maybeElem)
 import BCorrespondent.Component.Auth.SignOut as SignOut
 import BCorrespondent.Component.Auth.SendResetPassLink as SendResetPassLink
+import BCorrespondent.Component.FileUploader as FileUploader 
 
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Properties.Extended as HPExt
 import Type.Proxy (Proxy(..))
 import AppM (AppM)
-import Data.Maybe (Maybe (..), isNothing, fromMaybe)
+import Data.Maybe (Maybe (..), isJust, fromMaybe)
 
 import Undefined
 
@@ -24,8 +25,9 @@ slot n = HH.slot proxy n component unit
 data Acion =
         HandleChildSignOut SignOut.Output 
       | HandleChildResetLink SendResetPassLink.Output
+      | HandleChildFileUploader FileUploader.Output
 
-data Output = SignOutForward | RssetLinkForward
+data Output = SignOutForward | RssetLinkForward | FilesUploaded (Array Int)
 
 type State = { tmleft :: Maybe Int }
 
@@ -50,6 +52,11 @@ component =
           (SendResetPassLink.ResetPasswordOk)) = do
         H.modify_ _ { tmleft = Nothing }
         H.raise RssetLinkForward
+      handleAction 
+        (HandleChildFileUploader 
+          (FileUploader.FileIds fs)) = do
+        H.raise $ FilesUploaded fs
+        H.tell FileUploader.proxy 2 $ FileUploader.EraseFile
 
 render { tmleft } = 
   HH.div 
@@ -57,15 +64,12 @@ render { tmleft } =
   [ HH.text "dashboard",
     SignOut.slot 0 HandleChildSignOut,
     SendResetPassLink.slot 1 HandleChildResetLink,
-    if isNothing tmleft then HH.div_ []
-    else 
+    FileUploader.slot 2 "test" HandleChildFileUploader,
+    maybeElem tmleft \left ->
       HH.div 
       [ HPExt.style "margin-bottom: 10px;" ] 
       [ HH.span [ HPExt.style "color: red" ] 
-        [ HH.text $ 
-            "the next attemp to send \ 
-            \ a reset link is in " <> 
-            show  (fromMaybe undefined tmleft) <> " sec" 
+        [ HH.text $ "the next attempt is in " <> show left <> " sec" 
         ]
       ]
   ]
