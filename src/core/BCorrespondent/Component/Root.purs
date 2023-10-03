@@ -81,27 +81,28 @@ component = H.mkComponent
   handleAction :: Action -> H.HalogenM State Action ChildSlots Void AppM Unit
   handleAction Initialize = do
     logDebug $ loc <> " ---> root component init start .."
-    store@{ config: Config { apiBCorrespondentHost }, user } <- getStore
+    store <- getStore
     logDebug $ printStore store
 
     Fork.Telegram.init >>= Fork.Telegram.fork
 
+    let msg = " ---> root component init is about to be completed .."
+    let mkDest (Right route) = 
+          logDebug (loc <> msg) *> 
+            navigate route
+        mkDest (Left EndOfPath) = navigate Home
+        mkDest (Left _) = navigate Error404
+
     -- first we'll get the route the user landed on
-    from <- (RD.parse routeCodec) <$> liftEffect getHash
     -- then we'll navigate to the new route (also setting the hash)
-    logDebug $ loc <> " ---> root component init is about to be completed .."
-    case from of
-      Right route -> navigate route
-      Left EndOfPath -> navigate Home
-      Left _ -> navigate Error404
+    mkDest =<< ((RD.parse routeCodec) <$> liftEffect getHash)
 
   handleQuery :: forall a. Query a -> H.HalogenM State Action ChildSlots Void AppM (Maybe a)
   handleQuery (Navigate dest a) = do
     logDebug $ loc <> " ---> routing to " <> show dest
     store <- getStore
     logDebug $ printStore store
-    H.modify_ _ { route = pure dest }
-    pure $ Just a
+    map (const (Just a)) $ H.modify_ _ { route = pure dest }
 
 render :: State -> H.ComponentHTML Action ChildSlots AppM
 render { route: Nothing } = HTML.Loader.html

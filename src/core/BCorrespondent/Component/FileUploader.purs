@@ -53,7 +53,7 @@ component =
   , render: const $ render
   , eval: H.mkEval H.defaultEval
     { handleAction = handleAction,
-      handleQuery = handleQuery 
+      handleQuery = handleQuery
     }
   }
   where
@@ -66,13 +66,12 @@ component =
             Back.upload bucket file
           withError resp \{ success: ident :: Int } ->
             H.modify_ \s -> s { ids = ident : (_.ids s) }
-      {ids} <- H.get
-      H.raise $ FileIds ids
+      map (FileIds <<< _.ids) H.get >>= H.raise
     handleQuery 
       :: forall a . Query a 
       -> H.HalogenM State Action () Output AppM (Maybe a)
     handleQuery (EraseFile a) = do 
-      H.getRef (RefLabel "file") >>= 
+      H.getRef (RefLabel "file") >>=
         traverse_ (H.liftEffect <<< removeFile)
       map (const (Just a)) $ H.modify_ _ { ids = [] }
 
@@ -80,5 +79,6 @@ render =
   HH.input
     [ HPExt.type_ HPExt.InputFile
     , HE.onFileUpload Upload
+    , HPExt.multiple true
     , HPExt.ref $ RefLabel "file"
     ]
