@@ -76,9 +76,14 @@ component =
       map (const (Just a)) $ H.modify_ _ { ids = [] }
 
 render = 
-  HH.input
-    [ HPExt.type_ HPExt.InputFile
-    , HE.onFileUpload Upload
-    , HPExt.multiple true
-    , HPExt.ref $ RefLabel "file"
-    ]
+  HH.label 
+  [ HPExt.style "cursor: pointer" ] 
+  [  HH.text "chose files"
+  ,  HH.input
+     [ HPExt.type_ HPExt.InputFile
+     , HE.onFileUpload Upload
+     , HPExt.multiple true
+     , HPExt.style "display:none"
+     , HPExt.ref $ RefLabel "file"
+     ]
+  ]

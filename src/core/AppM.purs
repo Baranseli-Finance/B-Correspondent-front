@@ -129,10 +129,11 @@ instance LogMessages AppM where
     let telegramLevel = 
           reason log == Error || 
           reason log == Info
-    when
-      ( toTelegram &&
-          telegramLevel
-      ) $ void $ liftAff $ void $ Async.send (_.output telegramVar) $ message log
+    when (toTelegram && telegramLevel) $ 
+      liftAff $ 
+        void $ 
+          Async.send (_.output telegramVar) $ 
+            message log
     let
       mkLog =
         case reason log of
