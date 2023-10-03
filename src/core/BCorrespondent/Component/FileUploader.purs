@@ -1,8 +1,9 @@
 module BCorrespondent.Component.FileUploader
-  ( Output(..)
+  ( FileOutput
+  , Output(..)
   , Query(..)
-  , slot
   , proxy
+  , slot
   )
   where
 
@@ -21,7 +22,7 @@ import Halogen.HTML.Properties.Extended as HPExt
 import Web.DOM.Internal.Types (Element)
 import Effect (Effect)
 import Type.Proxy (Proxy(..))
-import Web.File.File (File)
+import Web.File.File (File, name)
 import Halogen.Store.Monad (getStore)
 import Data.Maybe (Maybe (..))
 import Data.Foldable (for_)
@@ -41,15 +42,17 @@ foreign import removeFile :: Element -> Effect Unit
 
 data Action = Upload (Array File)
 
-data Output = FileIds (Array Int)
+type FileOutput = { ident :: Int, title :: String }
 
-type State = { ids :: Array Int, bucket :: String }
+data Output = FileIds (Array FileOutput)
+
+type State = { files :: Array FileOutput, bucket :: String }
 
 data Query a = EraseFile a
 
 component =
   H.mkComponent
-  { initialState: \bucket -> { ids: [], bucket: bucket }
+  { initialState: \bucket -> { files: [], bucket: bucket }
   , render: const $ render
   , eval: H.mkEval H.defaultEval
     { handleAction = handleAction,
@@ -65,20 +68,22 @@ component =
           resp <- Request.makeAuth (Just token) host Back.mkFileApi $
             Back.upload bucket file
           withError resp \{ success: ident :: Int } ->
-            H.modify_ \s -> s { ids = ident : (_.ids s) }
-      map (FileIds <<< _.ids) H.get >>= H.raise
+            H.modify_ \s ->
+              let el = {ident: ident, title: name file } 
+              in s { files = el : _.files s }
+      map (FileIds <<< _.files) H.get >>= H.raise
     handleQuery 
       :: forall a . Query a 
       -> H.HalogenM State Action () Output AppM (Maybe a)
     handleQuery (EraseFile a) = do 
       H.getRef (RefLabel "file") >>=
         traverse_ (H.liftEffect <<< removeFile)
-      map (const (Just a)) $ H.modify_ _ { ids = [] }
+      map (const (Just a)) $ H.modify_ _ { files = [] }
 
 render = 
   HH.label 
   [ HPExt.style "cursor: pointer" ] 
-  [  HH.text "chose files"
+  [  HH.text "choose files"
   ,  HH.input
      [ HPExt.type_ HPExt.InputFile
      , HE.onFileUpload Upload

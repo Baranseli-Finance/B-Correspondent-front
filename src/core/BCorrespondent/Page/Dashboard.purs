@@ -27,7 +27,7 @@ data Acion =
       | HandleChildResetLink SendResetPassLink.Output
       | HandleChildFileUploader FileUploader.Output
 
-data Output = SignOutForward | RssetLinkForward | FilesUploaded (Array Int)
+data Output = SignOutForward | RssetLinkForward | FilesUploaded (Array FileUploader.FileOutput)
 
 type State = { tmleft :: Maybe Int }
 
