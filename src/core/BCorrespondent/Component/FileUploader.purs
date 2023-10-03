@@ -26,7 +26,7 @@ import Web.File.File (File, name)
 import Halogen.Store.Monad (getStore)
 import Data.Maybe (Maybe (..))
 import Data.Foldable (for_)
-import Data.Array ((:))
+import Data.Array ((:), length)
 import Data.Traversable (traverse_)
 import AppM (AppM)
 
@@ -46,14 +46,20 @@ type FileOutput = { ident :: Int, title :: String }
 
 data Output = FileIds (Array FileOutput)
 
-type State = { files :: Array FileOutput, bucket :: String }
+type State = 
+     { files :: Array FileOutput, 
+       bucket :: String, 
+       processed :: Int,
+       count :: Int
+     }
 
 data Query a = EraseFile a
 
 component =
   H.mkComponent
-  { initialState: \bucket -> { files: [], bucket: bucket }
-  , render: const $ render
+  { initialState: \bucket -> 
+      { files: [], bucket: bucket, processed: 0, count: 0 }
+  , render: render
   , eval: H.mkEval H.defaultEval
     { handleAction = handleAction,
       handleQuery = handleQuery
@@ -70,7 +76,7 @@ component =
           withError resp \{ success: ident :: Int } ->
             H.modify_ \s ->
               let el = {ident: ident, title: name file } 
-              in s { files = el : _.files s }
+              in s { files = el : _.files s, processed = _.processed s + 1, count = length fs }
       map (FileIds <<< _.files) H.get >>= H.raise
     handleQuery 
       :: forall a . Query a 
@@ -78,9 +84,9 @@ component =
     handleQuery (EraseFile a) = do 
       H.getRef (RefLabel "file") >>=
         traverse_ (H.liftEffect <<< removeFile)
-      map (const (Just a)) $ H.modify_ _ { files = [] }
+      map (const (Just a)) $ H.modify_ _ { files = [], processed = 0, count = 0 }
 
-render = 
+render { processed, count } = 
   HH.label 
   [ HPExt.style "cursor: pointer" ] 
   [  HH.text "choose files"
@@ -91,4 +97,7 @@ render =
      , HPExt.style "display:none"
      , HPExt.ref $ RefLabel "file"
      ]
+  , if processed == 0 
+     then HH.text mempty 
+     else HH.text $ "processed " <> show processed <> " of " <> show count
   ]
