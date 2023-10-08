@@ -76,7 +76,11 @@ component =
           withError resp \{ success: ident :: Int } ->
             H.modify_ \s ->
               let el = {ident: ident, title: name file } 
-              in s { files = el : _.files s, processed = _.processed s + 1, count = length fs }
+              in 
+                s { files = el : _.files s, 
+                    processed = _.processed s + 1, 
+                    count = length fs
+                  }
       map (FileIds <<< _.files) H.get >>= H.raise
     handleQuery 
       :: forall a . Query a 

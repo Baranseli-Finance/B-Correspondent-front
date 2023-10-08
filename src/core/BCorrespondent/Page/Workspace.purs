@@ -1,4 +1,4 @@
-module BCorrespondent.Page.Dashboard (Output (..), slot) where
+module BCorrespondent.Page.Workspace (Output (..), slot) where
 
 import Prelude
 
@@ -16,9 +16,9 @@ import Data.Maybe (Maybe (..), isJust, fromMaybe)
 
 import Undefined
 
-proxy = Proxy :: _ "dashboard"
+proxy = Proxy :: _ "workspace"
 
-loc = "BCorrespondent.Page.Dashboard"
+loc = "BCorrespondent.Page.Workspace"
 
 slot n = HH.slot proxy n component unit
 
@@ -61,7 +61,7 @@ component =
 render { tmleft } = 
   HH.div 
   [ css "loading-container" ] 
-  [ HH.text "dashboard",
+  [ HH.text "workspace",
     SignOut.slot 0 HandleChildSignOut,
     SendResetPassLink.slot 1 HandleChildResetLink,
     FileUploader.slot 2 "test" HandleChildFileUploader,

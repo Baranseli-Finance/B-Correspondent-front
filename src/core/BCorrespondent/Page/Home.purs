@@ -12,7 +12,7 @@ import BCorrespondent.Capability.LogMessages (logDebug)
 import BCorrespondent.Data.Route as Route
 import BCorrespondent.Data.Config
 import BCorrespondent.Component.HTML.Utils (css, safeHref, chooseElem)
-import BCorrespondent.Page.Dashboard as Dashboard 
+import BCorrespondent.Page.Workspace as Workspace 
 import BCorrespondent.Component.Auth.SignIn as SignIn
 import BCorrespondent.Component.Async as Async
 
@@ -42,7 +42,7 @@ slot = HH.slot_ proxy unit component unit
 data Action
   = Initialize
   | WinResize Int
-  | HandleChildDashboard Dashboard.Output
+  | HandleChildWorkspace Workspace.Output
   | HandleChildSignIn SignIn.Output
 
 type State =
@@ -73,7 +73,7 @@ component =
         document >>= 
           setTitle
             (if isJust user 
-            then "BCorrespondent | Dashboard"
+            then "BCorrespondent | Workspace"
             else "BCorrespondent | Home")
     w <- H.liftEffect $ window >>= innerWidth
     H.modify_ _ 
@@ -89,10 +89,10 @@ component =
          window >>= 
            document >>= 
              setTitle 
-             "Correspondent | Dashboard"
+             "Correspondent | Workspace"
        let welcome = "Welcome to the service, " <> login
        Async.send $ Async.mkOrdinary welcome Async.Success Nothing
-  handleAction (HandleChildDashboard Dashboard.SignOutForward) =
+  handleAction (HandleChildWorkspace Workspace.SignOutForward) =
     do H.modify_ _ { isUser = false }
        H.liftEffect $ 
          window >>= 
@@ -101,10 +101,10 @@ component =
              "Correspondent | Home"
        let logout = "you have been logged out"
        Async.send $ Async.mkOrdinary logout Async.Success Nothing
-  handleAction (HandleChildDashboard Dashboard.RssetLinkForward) = do 
+  handleAction (HandleChildWorkspace Workspace.RssetLinkForward) = do 
     let ok = "password reset link has been sent"
     Async.send $ Async.mkOrdinary ok Async.Success Nothing
-  handleAction (HandleChildDashboard (Dashboard.FilesUploaded fs)) = do
+  handleAction (HandleChildWorkspace (Workspace.FilesUploaded fs)) = do
     let ok = "files has been uploaded: " <> show fs
     Async.send $ Async.mkOrdinary ok Async.Success Nothing
 
@@ -114,7 +114,7 @@ render { winWidth: Just _, platform: Just _, isUser } =
     body = 
       chooseElem 
         isUser
-        (Dashboard.slot 1 HandleChildDashboard) $
+        (Workspace.slot 1 HandleChildWorkspace) $
         HH.div 
          [ css "centre-container" ]
          [ SignIn.slot 1 HandleChildSignIn ]
