@@ -2,6 +2,7 @@ module BCorrespondent.Page.Workspace (Output (..), slot) where
 
 import Prelude
 
+import BCorrespondent.Component.Workspace.User as Workspace.User 
 import BCorrespondent.Component.HTML.Utils (css, maybeElem)
 import BCorrespondent.Component.Auth.SignOut as SignOut
 import BCorrespondent.Component.Auth.SendResetPassLink as SendResetPassLink
@@ -58,18 +59,4 @@ component =
         H.raise $ FilesUploaded fs
         H.tell FileUploader.proxy 2 $ FileUploader.EraseFile
 
-render { tmleft } = 
-  HH.div 
-  [ css "loading-container" ] 
-  [ HH.text "workspace",
-    SignOut.slot 0 HandleChildSignOut,
-    SendResetPassLink.slot 1 HandleChildResetLink,
-    FileUploader.slot 2 "test" HandleChildFileUploader,
-    maybeElem tmleft \left ->
-      HH.div 
-      [ HPExt.style "margin-bottom: 10px;" ] 
-      [ HH.span [ HPExt.style "color: red" ] 
-        [ HH.text $ "the next attempt is in " <> show left <> " sec" 
-        ]
-      ]
-  ]
+render { tmleft } = HH.div_ [ HH.div [css "user-menu"] [ Workspace.User.slot 1 unit ] ]
