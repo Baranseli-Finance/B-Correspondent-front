@@ -109,13 +109,17 @@ component =
     Async.send $ Async.mkOrdinary ok Async.Success Nothing
 
 render { winWidth: Just _, platform: Just _, isUser } =
-  HH.div_ [ Async.slot 0, body ]
+  HH.div 
+  [HPExt.id "wrapper"]
+  [ HH.div [css "alert-container"] [Async.slot 0], 
+    HH.div [css "body-container"] [body] 
+  ]
   where 
     body = 
       chooseElem 
         isUser
         (Workspace.slot 1 HandleChildWorkspace) $
-        HH.div 
+        HH.div
          [ css "centre-container" ]
          [ SignIn.slot 1 HandleChildSignIn ]
 render _ = HH.div_ []

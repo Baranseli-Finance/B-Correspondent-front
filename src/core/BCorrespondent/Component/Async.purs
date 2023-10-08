@@ -127,15 +127,16 @@ render { xs } =
   HH.div_ $
     (Map.toUnfoldable xs) <#> \(Tuple k { async: { val, loc }, tm }) ->
       let
-        margin = show $ (k - 1) * 50
+        margin = show $ (k - 1) * 15
       in
         HH.div
           [ onClick $ const (Close k)
-          , css $ "alert " <> mkStyle val <> " alert-position"
-          , HP.style ("margin-top:" <> margin <> "px")
+          , css "alert"
+          , HP.style ("margin-top:" <> margin <> "px;cursor: pointer")
           , HP.role "alert"
           ]
-          [ HH.text (mkMsg val <> maybe mempty (\s -> " at " <> s) loc <> ", tm: " <> tm) ]
+          [ HH.p [HP.style "text-align: center", css (mkStyle val) ] 
+            [ HH.text (mkMsg val <> maybe mempty (\s -> " at " <> s) loc <> ", tm: " <> tm) ] ]
   where
   mkStyle val =
     case val of
