@@ -57,6 +57,7 @@ type State =
   , errMsg :: Maybe String
   , hash :: Maybe String
   , code :: Maybe Int
+  , stage :: String
   }
 
 
@@ -74,7 +75,8 @@ component =
         password: Nothing, 
         errMsg: Nothing, 
         hash: Nothing :: Maybe String,
-        code: Nothing :: Maybe Int 
+        code: Nothing :: Maybe Int,
+        stage: "Login"
     }
     , render: render
     , eval: H.mkEval H.defaultEval
@@ -121,7 +123,7 @@ component =
                     , login = Nothing
                     , password = Nothing
                     }
-          else H.modify_ _ { hash = Just hash, errMsg = Nothing }
+          else H.modify_ _ { hash = Just hash, errMsg = Nothing, stage = "Code" }
 
   handleAction (FillCode c) =
     case fromString c of 
@@ -173,17 +175,17 @@ component =
                in H.modify_ _ { errMsg = Just msg }
         else H.modify_ _ { hash = Just hash, errMsg = Nothing }
 
-render { login, password, errMsg, hash, code } =
+render { login, password, errMsg, hash, code, stage } =
   HH.div_
   [                            
-      HH.h4_ [ HH.text "Sign In" ]
+      HH.h4_ [ HH.text ("Sign in | " <> stage) ]
   ,   if isNothing errMsg then HH.div_ []
       else HH.div [ HPExt.style "margin-bottom: 10px;" ] [ HH.span [ HPExt.style "color: red" ] [ HH.text (fromMaybe undefined errMsg) ] ]
   ,   case hash of 
         Nothing ->
           HH.form [ HE.onSubmit MakeCodeRequest ]
           [ 
-              HH.div_
+              HH.div [HPExt.style "padding-bottom: 10px"]
               [ HH.input
                 [ HPExt.type_ HPExt.InputText
                 , HE.onValueInput FillLogin
@@ -191,7 +193,7 @@ render { login, password, errMsg, hash, code } =
                 , HPExt.placeholder "login"
                 ]
               ]
-          ,   HH.div_
+          ,   HH.div [HPExt.style "padding-bottom: 10px"]
               [ HH.input
                 [ HPExt.type_ HPExt.InputPassword
                 , HE.onValueInput FillPassword
@@ -199,14 +201,14 @@ render { login, password, errMsg, hash, code } =
                 , HPExt.placeholder "password"
                 ]
               ]
-          , HH.input [ HPExt.type_ HPExt.InputSubmit, HPExt.value "get code" ]
+          , HH.input [ HPExt.type_ HPExt.InputSubmit, HPExt.value "Get Code", HPExt.style "cursor: pointer" ]
           ]
         Just _ ->
           HH.div_ 
           [
               HH.form [ HE.onSubmit MakeLoginRequest ] 
               [
-                  HH.div_
+                  HH.div [HPExt.style "padding-bottom: 10px"]
                   [ HH.input
                     [ HPExt.type_ HPExt.InputText
                     , HE.onValueInput FillCode
@@ -214,9 +216,10 @@ render { login, password, errMsg, hash, code } =
                     , HPExt.placeholder "code"
                     ]
                   ]
-              ,   HH.input [ HPExt.type_ HPExt.InputSubmit, HPExt.value "send code" ]
+              ,   HH.div [HPExt.style "padding-bottom: 10px"] 
+                  [ HH.input [ HPExt.type_ HPExt.InputSubmit, HPExt.value "send code", HPExt.style "cursor: pointer" ] ]
               ]
           ,   HH.form [ HE.onSubmit MakeResendCodeRequest ] 
-              [ HH.input [ HPExt.type_ HPExt.InputSubmit, HPExt.value "haven't got code yet?" ] ]
+              [ HH.input [ HPExt.type_ HPExt.InputSubmit, HPExt.value "Haven't got code yet?", HPExt.style "cursor: pointer" ] ]
           ]
   ]
