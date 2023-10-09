@@ -14,6 +14,7 @@ import Halogen.HTML as HH
 import Halogen.HTML.Properties.Extended as HPExt
 import Halogen.Svg.Elements as Svg
 import Halogen.Svg.Attributes as Svg
+import Halogen.Svg.Attributes.Color as Svg
 import Type.Proxy (Proxy(..))
 import Data.Foldable (for_)
 import Data.Maybe (Maybe (..))
@@ -51,4 +52,7 @@ component =
           onFailure resp failure \{ success: {gaps} } -> pure unit
 
 render {error: Just e} = HH.text e
-render {error: Nothing} = Svg.svg [Svg.width (toNumber 1400), Svg.height (toNumber 900)] [ Svg.text [] [HH.text "dashboard"] ]
+render {error: Nothing} = 
+  Svg.svg 
+  [Svg.width (toNumber 1400), Svg.height (toNumber 900)]
+  [ Svg.text [Svg.x (toNumber 0), Svg.y (toNumber 15), Svg.fill (Svg.Named "black")] [HH.text "dashboard"] ]
