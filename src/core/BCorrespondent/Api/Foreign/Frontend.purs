@@ -1,9 +1,14 @@
 module BCorrespondent.Api.Foreign.Frontend
-  ( FrontApi
+  ( DailyBalanceSheet
+  , FrontApi
+  , GapItem
+  , GapItemTime
+  , GapItemUnit
   , Init
   , Sha
   , getJwtStatus
   , init
+  , initUserDashboardDailyBalanceSheet
   , mkFrontApi
   , printInit
   , shaPred
@@ -14,7 +19,7 @@ import Prelude
 
 import BCorrespondent.Api.Foreign.Common
 
-import Data.Function.Uncurried (Fn1, Fn3, runFn3)
+import Data.Function.Uncurried (Fn1, Fn3, runFn3, Fn2, runFn2)
 import Effect.Aff.Compat as AC
 import Foreign.Object (Object)
 import Data.Argonaut.Encode (encodeJson)
@@ -86,3 +91,16 @@ foreign import _init :: Fn3 (forall a. Foreign -> (Foreign -> Either E.Error a) 
 
 init :: Maybe JWTToken -> FrontApi -> AC.EffectFnAff (Object (Response Init))
 init token = runFn3 _init withError (fromMaybe jsonEmptyObject (map encodeJson token))
+
+type GapItemUnit = { status :: String, textualIdent :: String }
+
+type GapItemTime = { hour :: Int, min :: Int }
+
+type GapItem = { elements :: Array GapItemUnit, start :: GapItemTime, end :: GapItemTime }
+
+type DailyBalanceSheet = { gaps :: Array GapItem }
+
+foreign import _initUserDashboardDailyBalanceSheet :: Fn2 (forall a. Foreign -> (Foreign -> Either E.Error a) -> Either E.Error a) FrontApi (AC.EffectFnAff (Object (Response DailyBalanceSheet)))
+
+initUserDashboardDailyBalanceSheet :: FrontApi -> AC.EffectFnAff (Object (Response DailyBalanceSheet))
+initUserDashboardDailyBalanceSheet = runFn2 _initUserDashboardDailyBalanceSheet withError
