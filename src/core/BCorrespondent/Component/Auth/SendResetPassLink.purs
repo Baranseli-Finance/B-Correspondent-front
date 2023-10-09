@@ -52,4 +52,12 @@ component =
             then H.raise ResetPasswordOk
             else H.raise $ ResetPasswordTimeLeft $ unsafeFromForeign o
 
-render = HH.form [ HE.onSubmit MakeResetLinkRequest ] [ HH.input [ HPExt.type_ HPExt.InputSubmit, HPExt.value "reset link" ] ]
+render = 
+  HH.form 
+  [ HE.onSubmit MakeResetLinkRequest ] 
+  [ HH.input 
+    [ HPExt.type_ HPExt.InputSubmit, 
+      HPExt.style "cursor:pointer", 
+      HPExt.value "reset password" 
+    ] 
+  ]
