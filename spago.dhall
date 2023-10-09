@@ -55,6 +55,7 @@
   , "arraybuffer-types"
   , "partial"
   , "decimals"
+  , "halogen-svg-elems"
   ]
 , packages = ./packages.dhall
 , sources = [ "src/**/*.purs", "test/**/*.purs" ]

@@ -12,10 +12,13 @@ import Halogen.Store.Monad (getStore)
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Properties.Extended as HPExt
+import Halogen.Svg.Elements as Svg
+import Halogen.Svg.Attributes as Svg
 import Type.Proxy (Proxy(..))
 import Data.Foldable (for_)
 import Data.Maybe (Maybe (..))
 import Effect.Exception (message)
+import Data.Int (toNumber)
 
 import Undefined
 
@@ -48,4 +51,4 @@ component =
           onFailure resp failure \{ success: {gaps} } -> pure unit
 
 render {error: Just e} = HH.text e
-render {error: Nothing} = HH.text "dashboard"
+render {error: Nothing} = Svg.svg [Svg.width (toNumber 1400), Svg.height (toNumber 900)] [ Svg.text [] [HH.text "dashboard"] ]
