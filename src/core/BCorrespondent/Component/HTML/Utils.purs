@@ -3,9 +3,9 @@ module BCorrespondent.Component.HTML.Utils
   , css
   , maybeElem
   , safeHref
-  , stylishDiv
   , whenElem
   , whenElemf
+  , stylishDiv
   )
   where
 
