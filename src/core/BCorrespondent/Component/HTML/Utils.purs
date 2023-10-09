@@ -3,6 +3,7 @@ module BCorrespondent.Component.HTML.Utils
   , css
   , maybeElem
   , safeHref
+  , stylishDiv
   , whenElem
   , whenElemf
   )
@@ -43,3 +44,5 @@ whenElem cond el = if cond then el else HH.div_ []
 
 chooseElem :: forall p i. Boolean -> HH.HTML p i -> HH.HTML p i -> HH.HTML p i
 chooseElem cond elOk elNo = if cond then elOk else elNo
+
+stylishDiv props = HH.div props [] 

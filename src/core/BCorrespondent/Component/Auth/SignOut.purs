@@ -57,4 +57,12 @@ component =
           updateStore $ UpdateJwtUser Nothing
           H.raise LoggedOut
 
-render _ = HH.form [ HE.onSubmit MakeLogoutRequest ] [ HH.input [ HPExt.type_ HPExt.InputSubmit, HPExt.value "logout" ] ]
+render _ = 
+  HH.form 
+  [ HE.onSubmit MakeLogoutRequest ] 
+  [ HH.input 
+    [ HPExt.style "cursor:pointer", 
+      HPExt.type_ HPExt.InputSubmit, 
+      HPExt.value "logout" 
+    ]
+  ]

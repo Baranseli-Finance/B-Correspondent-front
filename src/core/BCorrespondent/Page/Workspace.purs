@@ -2,9 +2,9 @@ module BCorrespondent.Page.Workspace (Output (..), slot) where
 
 import Prelude
 
-import BCorrespondent.Component.Workspace.User as Workspace.User 
+import BCorrespondent.Component.Workspace.User as Workspace.User
+import BCorrespondent.Component.Workspace.User.Menu as Workspace.User.Menu
 import BCorrespondent.Component.HTML.Utils (css, maybeElem)
-import BCorrespondent.Component.Auth.SignOut as SignOut
 import BCorrespondent.Component.Auth.SendResetPassLink as SendResetPassLink
 import BCorrespondent.Component.FileUploader as FileUploader 
 
@@ -24,11 +24,11 @@ loc = "BCorrespondent.Page.Workspace"
 slot n = HH.slot proxy n component unit
 
 data Acion =
-        HandleChildSignOut SignOut.Output 
-      | HandleChildResetLink SendResetPassLink.Output
-      | HandleChildFileUploader FileUploader.Output
+        HandleChildWorkspaceUser Workspace.User.Menu.Output
+      | HandleChildWorkspace Workspace.User.Output
 
-data Output = SignOutForward | RssetLinkForward | FilesUploaded (Array FileUploader.FileOutput)
+
+data Output = SignOutForward 
 
 type State = { tmleft :: Maybe Int }
 
@@ -41,22 +41,17 @@ component =
     }
     where
       handleAction 
-        (HandleChildSignOut 
-          SignOut.LoggedOut) = 
+        (HandleChildWorkspaceUser 
+          Workspace.User.Menu.LoggedOut) = 
         H.raise SignOutForward
-      handleAction 
-        (HandleChildResetLink 
-          (SendResetPassLink.ResetPasswordTimeLeft tmleft)) = 
-        H.modify_ _ { tmleft = Just tmleft }
-      handleAction 
-        (HandleChildResetLink 
-          (SendResetPassLink.ResetPasswordOk)) = do
-        H.modify_ _ { tmleft = Nothing }
-        H.raise RssetLinkForward
-      handleAction 
-        (HandleChildFileUploader 
-          (FileUploader.FileIds fs)) = do
-        H.raise $ FilesUploaded fs
-        H.tell FileUploader.proxy 2 $ FileUploader.EraseFile
+      handleAction (HandleChildWorkspace Workspace.User.OpenDropDownMenu) = 
+        H.tell Workspace.User.Menu.proxy 1 $ Workspace.User.Menu.Open
 
-render { tmleft } = HH.div_ [ HH.div [css "user-menu"] [ Workspace.User.slot 1 unit ] ]
+render { tmleft } = 
+  HH.div_ 
+  [ 
+      HH.div [css "user-menu"] 
+      [ Workspace.User.slot 0 HandleChildWorkspace, 
+        Workspace.User.Menu.slot 1 HandleChildWorkspaceUser 
+      ] 
+  ]

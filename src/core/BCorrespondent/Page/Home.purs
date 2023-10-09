@@ -101,13 +101,7 @@ component =
              "Correspondent | Home"
        let logout = "you have been logged out"
        Async.send $ Async.mkOrdinary logout Async.Success Nothing
-  handleAction (HandleChildWorkspace Workspace.RssetLinkForward) = do 
-    let ok = "password reset link has been sent"
-    Async.send $ Async.mkOrdinary ok Async.Success Nothing
-  handleAction (HandleChildWorkspace (Workspace.FilesUploaded fs)) = do
-    let ok = "files has been uploaded: " <> show fs
-    Async.send $ Async.mkOrdinary ok Async.Success Nothing
-
+ 
 render { winWidth: Just _, platform: Just _, isUser } =
   HH.div 
   [HPExt.id "wrapper"]
