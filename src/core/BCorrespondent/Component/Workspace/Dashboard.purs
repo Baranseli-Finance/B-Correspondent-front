@@ -116,7 +116,7 @@ initTimeline from to =
 intToTimePiece :: forall a . BoundedEnum a => Int -> a
 intToTimePiece = fromMaybe undefined <<< toEnum
 
-populateTimeline timeline gaps = undefined
+populateTimeline timeline _ = timeline
 
 render {error: Just e} = HH.text e
 render {error: Nothing} = 

@@ -72,8 +72,8 @@ render { component } =
         Workspace.User.Menu.slot 1 HandleChildWorkspaceUser 
       ]
   ,   Workspace.Menu.slot 2 HandleChildWorkspaceMenu
-  ,   HH.div [css "workspace-body"] [ HH.div [css "centre-container"] [choseComponent component] ]
+  ,   HH.div [css "workspace-body"] [ HH.div [css "centre-container"] [chooseComponent component 3] ]
   ]
 
-choseComponent Dashboard = Workspace.Dashboard.slot 3
-choseComponent History = Workspace.History.slot 3
+chooseComponent Dashboard = Workspace.Dashboard.slot
+chooseComponent History = Workspace.History.slot
