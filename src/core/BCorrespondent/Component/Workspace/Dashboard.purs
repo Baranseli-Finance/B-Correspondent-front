@@ -19,12 +19,13 @@ import Type.Proxy (Proxy(..))
 import Data.Foldable (for_)
 import Data.Maybe (Maybe (..), fromMaybe)
 import Effect.Exception (message)
-import Data.Int (toNumber)
+import Data.Int (toNumber, even)
 import System.Time (addMinutes, nowTime)
 import Data.Time (hour, minute, Time (..), setHour, setMinute)
 import Data.Enum (toEnum, fromEnum, class BoundedEnum)
 import Data.Time.Component
-import Data.Array ((:), sort)
+import Data.Array ((:), sort, length, tail)
+
 
 import Undefined
 
@@ -119,7 +120,32 @@ intToTimePiece = fromMaybe undefined <<< toEnum
 populateTimeline timeline _ = timeline
 
 render {error: Just e} = HH.text e
-render {error: Nothing} = 
+render {error: Nothing, timeline} =
   Svg.svg 
-  [Svg.width (toNumber 1400), Svg.height (toNumber 900)]
-  [ Svg.text [Svg.x (toNumber 0), Svg.y (toNumber 15), Svg.fill (Svg.Named "black")] [HH.text "dashboard"] ]
+  [Svg.width (toNumber 1380), 
+   Svg.height (toNumber 900)]
+  [ Svg.text 
+    [Svg.x (toNumber ((1380 / 2) - 100)), 
+     Svg.y (toNumber 20), 
+     Svg.fill (Svg.Named "black")] 
+    [HH.text "dashboard"]
+  , Svg.g [] $ renderTimline (toNumber 0) 0 timeline  
+  ]
+
+renderTimline coordX idx xs = 
+  let width = toNumber 115
+      height = toNumber 850
+      coordY = toNumber 50
+      color = if even idx then "#E7E4E4" else "#DDDADA"
+      item = 
+             Svg.rect 
+             [Svg.fill (Svg.Named color), 
+              Svg.x coordX, 
+              Svg.y coordY, 
+              Svg.width width, 
+              Svg.height height 
+             ]
+  in case tail xs of
+       Just [_] -> [item]
+       Just ys -> item : renderTimline (coordX + width) (idx + 1) ys
+       Nothing -> []
