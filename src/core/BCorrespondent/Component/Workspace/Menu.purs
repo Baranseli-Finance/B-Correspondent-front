@@ -9,10 +9,19 @@ import Halogen.HTML as HH
 import Halogen.HTML.Properties.Extended as HPExt
 import Type.Proxy (Proxy(..))
 import Halogen.HTML.Events (onClick)
-import Data.Enum (class Enum, class BoundedEnum, fromEnum)
+import Data.Enum (class Enum, class BoundedEnum, fromEnum, toEnum)
 import Data.Generic.Rep (class Generic)
-import Data.Enum.Generic (genericSucc, genericPred, genericCardinality, genericToEnum, genericFromEnum)
+import Data.Enum.Generic 
+       (genericSucc, 
+        genericPred, 
+        genericCardinality, 
+        genericToEnum, 
+        genericFromEnum
+       )
 import Data.Bounded (class Bounded)
+import Data.Maybe (fromMaybe)
+
+import Undefined
 
 proxy = Proxy :: _ "workspace_menu"
 
@@ -20,9 +29,26 @@ loc = "BCorrespondent.Component.Workspace.Menu"
 
 slot n = HH.slot proxy n component unit
 
-data Output = Dashboard | History
+data Output = Dashboard | History | Wallet | TechSupport
 
-data Action = OpenDashboard | OpenHistory
+derive instance genericOutput :: Generic Output _
+derive instance eqOutput :: Eq Output
+derive instance ordOutput :: Ord Output
+
+instance Enum Output where
+  succ = genericSucc
+  pred = genericPred
+
+instance Bounded Output where
+  top = Dashboard
+  bottom = TechSupport
+
+instance BoundedEnum Output where
+  cardinality = genericCardinality
+  toEnum = genericToEnum
+  fromEnum = genericFromEnum
+
+data Action = OpenDashboard | OpenHistory | OpenWallet | OpenTechSupport
 
 derive instance genericAction :: Generic Action _
 derive instance eqAction :: Eq Action
@@ -34,7 +60,7 @@ instance Enum Action where
 
 instance Bounded Action where
   top = OpenDashboard
-  bottom = OpenHistory
+  bottom = OpenTechSupport
 
 instance BoundedEnum Action where
   cardinality = genericCardinality
@@ -52,9 +78,17 @@ component =
     }
     where
       handleAction OpenDashboard = 
-        H.modify_ _ { selected = fromEnum OpenDashboard } *> H.raise Dashboard
+        H.modify_ _ { selected = fromEnum OpenDashboard } *> 
+          H.raise (fromMaybe undefined (toEnum (fromEnum OpenDashboard)))
       handleAction OpenHistory = 
-        H.modify_ _ { selected = fromEnum OpenHistory } *> H.raise History
+        H.modify_ _ { selected = fromEnum OpenHistory } *> 
+          H.raise (fromMaybe undefined (toEnum (fromEnum OpenHistory)))
+      handleAction OpenWallet = 
+        H.modify_ _ { selected = fromEnum OpenWallet } *>  
+          H.raise (fromMaybe undefined (toEnum (fromEnum OpenWallet)))
+      handleAction OpenTechSupport = 
+        H.modify_ _ { selected = fromEnum OpenTechSupport } *>  
+          H.raise (fromMaybe undefined (toEnum (fromEnum OpenTechSupport)))
 
 render { selected } = 
   HH.div [css "workspace-menu"]
@@ -71,7 +105,15 @@ render { selected } =
           ,   HH.li [HPExt.style "padding-top:30px"]
               [ 
                 HH.div [onClick (const OpenHistory)] [ HH.i [css "fa fa-history", HPExt.style ("font-size:30px;color:white;" <> mkCursor 1 selected)] [] ]
-              ]    
+              ]
+          ,   HH.li [HPExt.style "padding-top:30px"]
+              [ 
+                HH.div [onClick (const OpenWallet)] [ HH.i [css "fa fa-wallet", HPExt.style ("font-size:30px;color:white;" <> mkCursor 2 selected)] [] ]
+              ]
+          ,   HH.li [HPExt.style "padding-top:30px"]
+              [ 
+                HH.div [onClick (const OpenTechSupport)] [ HH.i [css "fa fa-wrench", HPExt.style ("font-size:30px;color:white;" <> mkCursor 3 selected)] [] ]
+              ]           
           ]
       ]
   ]

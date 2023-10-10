@@ -10,6 +10,8 @@ import BCorrespondent.Component.FileUploader as FileUploader
 import BCorrespondent.Component.Workspace.Menu as Workspace.Menu
 import BCorrespondent.Component.Workspace.History as Workspace.History
 import BCorrespondent.Component.Workspace.Dashboard as Workspace.Dashboard
+import BCorrespondent.Component.Workspace.Wallet as Workspace.Wallet
+import BCorrespondent.Component.Workspace.TechSupport as Workspace.TechSupport
 
 import Halogen as H
 import Halogen.HTML as HH
@@ -34,7 +36,7 @@ data Acion =
 
 data Output = SignOutForward 
 
-data Component = Dashboard | History
+data Component = Dashboard | History | Wallet | TechSupport
 
 type State = { component :: Component }
 
@@ -61,6 +63,8 @@ component =
           case out of
             Workspace.Menu.Dashboard -> Dashboard
             Workspace.Menu.History -> History
+            Workspace.Menu.Wallet -> Wallet
+            Workspace.Menu.TechSupport -> TechSupport
         }
 
 render { component } = 
@@ -77,3 +81,5 @@ render { component } =
 
 chooseComponent Dashboard = Workspace.Dashboard.slot
 chooseComponent History = Workspace.History.slot
+chooseComponent Wallet = Workspace.Wallet.slot
+chooseComponent TechSupport = Workspace.TechSupport.slot
