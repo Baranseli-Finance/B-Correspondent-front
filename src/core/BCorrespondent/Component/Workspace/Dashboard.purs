@@ -24,8 +24,7 @@ import System.Time (addMinutes, nowTime)
 import Data.Time (hour, minute, Time (..), setHour, setMinute)
 import Data.Enum (toEnum, fromEnum, class BoundedEnum)
 import Data.Time.Component
-import Data.Array ((:), sort, length, tail)
-
+import Data.Array ((:), sort, length, tail, head)
 
 import Undefined
 
@@ -123,13 +122,13 @@ render {error: Just e} = HH.text e
 render {error: Nothing, timeline} =
   Svg.svg 
   [Svg.width (toNumber 1380), 
-   Svg.height (toNumber 900)]
+   Svg.height (toNumber 1000)]
   [ Svg.text 
     [Svg.x (toNumber ((1380 / 2) - 100)), 
      Svg.y (toNumber 20), 
      Svg.fill (Svg.Named "black")] 
-    [HH.text "dashboard"]
-  , Svg.g [] $ renderTimline (toNumber 0) 0 timeline  
+    [HH.text "Dashboard"]
+  , Svg.g [] $ renderTimline (toNumber 10) 0 timeline  
   ]
 
 renderTimline coordX idx xs = 
@@ -137,15 +136,37 @@ renderTimline coordX idx xs =
       height = toNumber 850
       coordY = toNumber 50
       color = if even idx then "#E7E4E4" else "#DDDADA"
-      item = 
+      gap = 
              Svg.rect 
              [Svg.fill (Svg.Named color), 
               Svg.x coordX, 
               Svg.y coordY, 
               Svg.width width, 
-              Svg.height height 
+              Svg.height height
              ]
+      tmCircle = Svg.circle [Svg.fill (Svg.Named "black"), Svg.cy (height + toNumber 50), Svg.cx coordX, Svg.r (toNumber 5) ]
+      lastTmCircle = Svg.circle [Svg.fill (Svg.Named "black"), Svg.cy (height + toNumber 50), Svg.cx (coordX + width), Svg.r (toNumber 5) ]
+      mkTm h m shiftX = 
+                Svg.text 
+                [Svg.x shiftX, 
+                Svg.y (height + toNumber 70), 
+                Svg.fill (Svg.Named "black")] 
+                [HH.text (show (h :: Int) <> ":" <> show (m :: Int))]
+      item h m = Svg.g [] [gap, tmCircle, mkTm h m (coordX - toNumber 10)]
   in case tail xs of
-       Just [_] -> [item]
-       Just ys -> item : renderTimline (coordX + width) (idx + 1) ys
+       Just [x] -> 
+         [Svg.g 
+          [] 
+          [gap, 
+           tmCircle, 
+           lastTmCircle, 
+           mkTm 
+           ((_.hour <<< _.start) x) 
+           ((_.min <<< _.start) x)
+           (coordX - toNumber 10),
+           mkTm 
+           ((_.hour <<< _.end) x) 
+           ((_.min <<< _.end) x)
+           (coordX + width - toNumber 10) ]]
+       Just ys -> fromMaybe [] $ flip map (head ys) \{start: {hour, min}} -> item hour min : renderTimline (coordX + width) (idx + 1) ys
        Nothing -> []
