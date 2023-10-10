@@ -24,7 +24,11 @@ import System.Time (addMinutes, nowTime)
 import Data.Time (hour, minute, Time (..), setHour, setMinute)
 import Data.Enum (toEnum, fromEnum, class BoundedEnum)
 import Data.Time.Component
-import Data.Array ((:), sort, length, uncons, head)
+import Data.Array ((:), sort, length, uncons, head, last, snoc)
+import Effect.Aff as Aff
+import Store (User)
+import Control.Monad.Rec.Class (forever)
+
 
 import Undefined
 
@@ -34,20 +38,26 @@ loc = "BCorrespondent.Component.Workspace.Dashboard"
 
 slot n = HH.slot_ proxy n component unit
 
-data Action = Initialize
+data Action = Initialize | Finalize | Update
 
 type State = 
      { error :: Maybe String, 
-       timeline :: Array Back.GapItem 
+       timeline :: Array Back.GapItem,
+       forkId :: Maybe H.ForkId 
      }
 
 component =
   H.mkComponent
-    { initialState: const { error: Nothing, timeline: [] }
+    { initialState: const 
+      { error: Nothing, 
+        timeline: [], 
+        forkId: Nothing 
+      }
     , render: render
     , eval: H.mkEval H.defaultEval
       { handleAction = handleAction
-      , initialize = pure Initialize 
+      , initialize = pure Initialize
+      , finalize = pure Finalize
       }
     }
     where 
@@ -67,9 +77,32 @@ component =
 
             let timeline = initTimeline timefromAdj timetoAdj
             logDebug $ loc <> " ---> init timeline " <> show timeline
+        
+            forkId <-  H.fork $ forever $ do
+               H.liftAff $ Aff.delay $ Aff.Milliseconds 300_000.0
+               handleAction Update 
 
             H.modify_ _ { timeline = populateTimeline timeline gaps }
 
+      handleAction Finalize = map (_.forkId) H.get >>= flip for_ H.kill
+      handleAction Update = do
+        { config: Config { apiBCorrespondentHost: host }, user } <- getStore
+        for_ (user :: Maybe User) \{ token } -> do
+          {timeline} <- H.get
+          for_ (last timeline) \{end: {hour, min}} -> do
+            let start = show hour <> "," <> show min
+            let endHour = if min + 5 > 59 then hour + 1 else hour
+            let endMin = if min + 5 > 59 then 5 else min + 5
+            let end = show endHour <> "," <> show endMin
+            resp <- Request.makeAuth (Just token) host Back.mkFrontApi $ 
+              Back.loadNextGap start end
+            onFailure resp undefined \{ success: item } -> do
+              logDebug $ loc <> " ---> update timeline from " <> start <> ", to " <> end 
+              H.modify_  \s@{timeline: x} -> 
+                s { timeline = 
+                      fromMaybe [] $ 
+                        flip map (uncons x) \{tail} -> 
+                          snoc tail item }
 
 initTimeline :: Time -> Time -> Array Back.GapItem
 initTimeline from to = 

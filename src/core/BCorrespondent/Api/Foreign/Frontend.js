@@ -23,3 +23,12 @@ function(withError, api) {
         })
     };
 }
+
+export const _loadNextGap =
+function(withError, from, to, api) {
+    return function(onError, onOk) {
+        api.frontendUserDashboardDailyBalanceSheetGapGet(from, to).then(onOk).catch(resp => {
+            return withError(resp, onError)
+        })
+    };
+}

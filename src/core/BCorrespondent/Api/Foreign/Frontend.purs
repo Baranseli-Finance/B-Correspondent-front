@@ -9,6 +9,7 @@ module BCorrespondent.Api.Foreign.Frontend
   , getJwtStatus
   , init
   , initUserDashboardDailyBalanceSheet
+  , loadNextGap
   , mkFrontApi
   , printInit
   , shaPred
@@ -19,7 +20,7 @@ import Prelude
 
 import BCorrespondent.Api.Foreign.Common
 
-import Data.Function.Uncurried (Fn1, Fn3, runFn3, Fn2, runFn2)
+import Data.Function.Uncurried (Fn1, Fn3, runFn3, Fn2, runFn2, runFn4, Fn4)
 import Effect.Aff.Compat as AC
 import Foreign.Object (Object)
 import Data.Argonaut.Encode (encodeJson)
@@ -104,3 +105,10 @@ foreign import _initUserDashboardDailyBalanceSheet :: Fn2 (forall a. Foreign -> 
 
 initUserDashboardDailyBalanceSheet :: FrontApi -> AC.EffectFnAff (Object (Response DailyBalanceSheet))
 initUserDashboardDailyBalanceSheet = runFn2 _initUserDashboardDailyBalanceSheet withError
+
+
+foreign import _loadNextGap :: Fn4 (forall a. Foreign -> (Foreign -> Either E.Error a) -> Either E.Error a) String String FrontApi (AC.EffectFnAff (Object (Response GapItem)))
+
+
+loadNextGap :: String -> String -> FrontApi -> AC.EffectFnAff (Object (Response GapItem))
+loadNextGap = runFn4 _loadNextGap withError
