@@ -2,6 +2,7 @@ module BCorrespondent.Component.Workspace.Dashboard (slot) where
 
 import Prelude
 
+import BCorrespondent.Component.HTML.Utils (cssSvg)
 import BCorrespondent.Data.Config (Config(..))
 import BCorrespondent.Capability.LogMessages (logDebug)
 import BCorrespondent.Api.Foreign.Request as Request
@@ -12,6 +13,7 @@ import Halogen.Store.Monad (getStore)
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Properties.Extended as HPExt
+import Halogen.HTML.Events (onClick)
 import Halogen.Svg.Elements as Svg
 import Halogen.Svg.Attributes as Svg
 import Halogen.Svg.Attributes.Color as Svg
@@ -38,7 +40,7 @@ loc = "BCorrespondent.Component.Workspace.Dashboard"
 
 slot n = HH.slot_ proxy n component unit
 
-data Action = Initialize | Finalize | Update
+data Action = Initialize | Finalize | Update | Backward | Forward
 
 type State = 
      { error :: Maybe String, 
@@ -104,6 +106,10 @@ component =
                         flip map (uncons x) \{tail} -> 
                           snoc tail item }
 
+      handleAction Backward = logDebug $ loc <> " --->  backward"
+      handleAction Forward = logDebug $ loc <> " --->  forward"
+
+
 initTimeline :: Time -> Time -> Array Back.GapItem
 initTimeline from to = 
   if hour from > hour to 
@@ -161,14 +167,36 @@ render {error: Nothing, timeline} =
      Svg.y (toNumber 20), 
      Svg.fill (Svg.Named "black")] 
     [HH.text "Dashboard"]
-  , Svg.g [] $ renderTimline (toNumber 10) 0 timeline  
+  , Svg.g [] $ mkBackwardButton : mkForwardButton : renderTimline (toNumber 10) 0 timeline 
+  ]
+
+mkBackwardButton = 
+  Svg.g [onClick (const Backward)] 
+  [
+    Svg.text 
+    [ cssSvg "timeline-travel-button",
+      Svg.x (toNumber ((1440 / 2) - 50)), 
+      Svg.y (toNumber 950), 
+      Svg.fill (Svg.Named "black")] 
+    [HH.text "backward"]
+  ]
+
+mkForwardButton =
+  Svg.g [onClick (const Forward)] 
+  [
+    Svg.text 
+    [ cssSvg "timeline-travel-button",
+      Svg.x (toNumber ((1440 / 2) + 50)), 
+      Svg.y (toNumber 950), 
+      Svg.fill (Svg.Named "black")] 
+    [HH.text "forward"]
   ]
 
 renderTimline coordX idx xs = 
   let width = toNumber 115
       height = toNumber 850
       coordY = toNumber 50
-      color = if even idx then "#E7E4E4" else "#DDDADA"
+      color = if even idx then "#e7e4e4" else "#dddada"
       gap = 
              Svg.rect 
              [Svg.fill (Svg.Named color), 

@@ -1,11 +1,12 @@
 module BCorrespondent.Component.HTML.Utils
   ( chooseElem
   , css
+  , cssSvg
   , maybeElem
   , safeHref
+  , stylishDiv
   , whenElem
   , whenElemf
-  , stylishDiv
   )
   where
 
@@ -15,12 +16,16 @@ import BCorrespondent.Data.Route (Route, routeCodec)
 import Data.Maybe (Maybe(..))
 import Halogen.HTML as HH
 import Halogen.HTML.Properties as HP
+import Halogen.Svg.Attributes as Svg
 import Routing.Duplex (print)
 
 -- | I get annoyed writing `class_ $ ClassName "..."` over and over again. This small utility saves
 -- | a few characters all over our HTML.
 css :: forall r i. String -> HH.IProp (class :: String | r) i
 css = HP.class_ <<< HH.ClassName
+
+cssSvg :: forall r i. String -> HH.IProp (class :: String | r) i
+cssSvg = Svg.class_ <<< HH.ClassName
 
 -- | We must provide a `String` to the "href" attribute, but we represent routes with the much
 -- | better `Route` type. This utility is a drop-in replacement for `href` that uses `Route`.
