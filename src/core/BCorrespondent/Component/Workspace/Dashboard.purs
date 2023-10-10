@@ -24,7 +24,7 @@ import System.Time (addMinutes, nowTime)
 import Data.Time (hour, minute, Time (..), setHour, setMinute)
 import Data.Enum (toEnum, fromEnum, class BoundedEnum)
 import Data.Time.Component
-import Data.Array ((:), sort, length, tail, head)
+import Data.Array ((:), sort, length, uncons, head)
 
 import Undefined
 
@@ -121,10 +121,10 @@ populateTimeline timeline _ = timeline
 render {error: Just e} = HH.text e
 render {error: Nothing, timeline} =
   Svg.svg 
-  [Svg.width (toNumber 1380), 
+  [Svg.width (toNumber 1440), 
    Svg.height (toNumber 1000)]
   [ Svg.text 
-    [Svg.x (toNumber ((1380 / 2) - 100)), 
+    [Svg.x (toNumber ((1440 / 2))), 
      Svg.y (toNumber 20), 
      Svg.fill (Svg.Named "black")] 
     [HH.text "Dashboard"]
@@ -153,11 +153,11 @@ renderTimline coordX idx xs =
                 Svg.fill (Svg.Named "black")] 
                 [HH.text (show (h :: Int) <> ":" <> show (m :: Int))]
       item h m = Svg.g [] [gap, tmCircle, mkTm h m (coordX - toNumber 10)]
-  in case tail xs of
-       Just [x] -> 
+  in case uncons xs of
+       Just {head: x, tail: []} -> 
          [Svg.g 
           [] 
-          [gap, 
+          [gap,
            tmCircle, 
            lastTmCircle, 
            mkTm 
@@ -168,5 +168,5 @@ renderTimline coordX idx xs =
            ((_.hour <<< _.end) x) 
            ((_.min <<< _.end) x)
            (coordX + width - toNumber 10) ]]
-       Just ys -> fromMaybe [] $ flip map (head ys) \{start: {hour, min}} -> item hour min : renderTimline (coordX + width) (idx + 1) ys
+       Just {head: {start: {hour, min}}, tail} -> item hour min : renderTimline (coordX + width) (idx + 1) tail
        Nothing -> []
