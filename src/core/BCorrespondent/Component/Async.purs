@@ -132,7 +132,7 @@ render { xs } =
         HH.div
           [ onClick $ const (Close k)
           , css "alert"
-          , HP.style ("margin-top:" <> margin <> "px;cursor: pointer")
+          , HP.style ("top:" <> margin <> "px;cursor: pointer")
           , HP.role "alert"
           ]
           [ HH.p [HP.style "text-align: center", css (mkStyle val) ] 
