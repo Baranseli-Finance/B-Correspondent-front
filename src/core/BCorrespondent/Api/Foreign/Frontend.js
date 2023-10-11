@@ -16,18 +16,27 @@ export const _init =
     }
 
 export const _initUserDashboardDailyBalanceSheet =
-function(withError, api) {
-    return function(onError, onOk) {
-        api.frontendUserDashboardDailyBalanceSheetInitGet().then(onOk).catch(resp => {
-            return withError(resp, onError)
-        })
-    };
-}
+    function(withError, api) {
+        return function(onError, onOk) {
+            api.frontendUserDashboardDailyBalanceSheetInitGet().then(onOk).catch(resp => {
+                return withError(resp, onError)
+            })
+        };
+    }
 
 export const _loadNextGap =
-function(withError, from, to, api) {
+    function(withError, from, to, api) {
+        return function(onError, onOk) {
+            api.frontendUserDashboardDailyBalanceSheetGapGet(from, to).then(onOk).catch(resp => {
+                return withError(resp, onError)
+            })
+        };
+    }
+
+export const _fetchTimelineForParticularHour =
+function(withError, direction, point, api) {
     return function(onError, onOk) {
-        api.frontendUserDashboardDailyBalanceSheetGapGet(from, to).then(onOk).catch(resp => {
+        api.frontendUserDashboardDailyBalanceSheetTimelineDirectionGet(direction, point).then(onOk).catch(resp => {
             return withError(resp, onError)
         })
     };

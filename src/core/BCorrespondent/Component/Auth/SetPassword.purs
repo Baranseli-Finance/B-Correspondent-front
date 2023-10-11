@@ -110,7 +110,7 @@ component =
           }
 
 render {key, password, againPassword} =
-  HH.div_
+  HH.div [HPExt.style "position:absolute;top:30%;left:45%"]
   [
       HH.h4_ [ HH.text "Reset password" ]
   ,   if password == againPassword then HH.div_ []
@@ -120,7 +120,7 @@ render {key, password, againPassword} =
                  [ HH.text "passwords mismatch" ] ]
   ,   HH.form [ HE.onSubmit MakeSetPassRequest ]
       [ 
-          HH.div_
+          HH.div [HPExt.style "padding-bottom: 10px"]
           [ HH.input
             [ HPExt.type_ HPExt.InputPassword
             , HE.onValueInput FillPassword
@@ -128,7 +128,7 @@ render {key, password, againPassword} =
             , HPExt.placeholder "password"
             ]
           ]
-      ,   HH.div_
+      ,   HH.div [HPExt.style "padding-bottom: 10px"]
           [ HH.input
             [ HPExt.type_ HPExt.InputPassword
             , HE.onValueInput FillAgainPassword

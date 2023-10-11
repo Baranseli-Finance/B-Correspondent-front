@@ -6,6 +6,7 @@ module BCorrespondent.Api.Foreign.Frontend
   , GapItemUnit
   , Init
   , Sha
+  , fetchTimelineForParticularHour
   , getJwtStatus
   , init
   , initUserDashboardDailyBalanceSheet
@@ -88,7 +89,7 @@ getJwtStatus "invalid" = Just Invalid
 getJwtStatus "skip" = Just Skip
 getJwtStatus _ = Nothing
 
-foreign import _init :: Fn3 (forall a. Foreign -> (Foreign -> Either E.Error a) -> Either E.Error a) Json FrontApi (AC.EffectFnAff (Object (Response Init)))
+foreign import _init :: Fn3 WithError Json FrontApi (AC.EffectFnAff (Object (Response Init)))
 
 init :: Maybe JWTToken -> FrontApi -> AC.EffectFnAff (Object (Response Init))
 init token = runFn3 _init withError (fromMaybe jsonEmptyObject (map encodeJson token))
@@ -101,14 +102,19 @@ type GapItem = { elements :: Array GapItemUnit, start :: GapItemTime, end :: Gap
 
 type DailyBalanceSheet = { gaps :: Array GapItem }
 
-foreign import _initUserDashboardDailyBalanceSheet :: Fn2 (forall a. Foreign -> (Foreign -> Either E.Error a) -> Either E.Error a) FrontApi (AC.EffectFnAff (Object (Response DailyBalanceSheet)))
+foreign import _initUserDashboardDailyBalanceSheet :: Fn2 WithError FrontApi (AC.EffectFnAff (Object (Response DailyBalanceSheet)))
 
 initUserDashboardDailyBalanceSheet :: FrontApi -> AC.EffectFnAff (Object (Response DailyBalanceSheet))
 initUserDashboardDailyBalanceSheet = runFn2 _initUserDashboardDailyBalanceSheet withError
 
 
-foreign import _loadNextGap :: Fn4 (forall a. Foreign -> (Foreign -> Either E.Error a) -> Either E.Error a) String String FrontApi (AC.EffectFnAff (Object (Response GapItem)))
+foreign import _loadNextGap :: Fn4 WithError String String FrontApi (AC.EffectFnAff (Object (Response GapItem)))
 
 
 loadNextGap :: String -> String -> FrontApi -> AC.EffectFnAff (Object (Response GapItem))
 loadNextGap = runFn4 _loadNextGap withError
+
+foreign import _fetchTimelineForParticularHour :: Fn4 WithError String String FrontApi (AC.EffectFnAff (Object (Response (Array GapItem))))
+
+fetchTimelineForParticularHour :: String -> String -> FrontApi -> AC.EffectFnAff (Object (Response (Array GapItem)))
+fetchTimelineForParticularHour = runFn4 _fetchTimelineForParticularHour withError

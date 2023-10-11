@@ -5,12 +5,14 @@ module BCorrespondent.Api.Foreign.Common
   , JWTToken(..)
   , Response
   , Success(..)
+  , WithError
   , fetchWS
   , getDataFromObj
   , getDataFromObjWS
   , mkApiClient
   , withError
-  ) where
+  )
+  where
 
 import Prelude
 
@@ -68,6 +70,8 @@ foreign import _mkApiClient :: Fn2 String String (Effect ApiClient)
 
 mkApiClient :: Maybe String -> String -> Effect ApiClient
 mkApiClient jwt = runFn2 _mkApiClient (fromMaybe undefined jwt)
+
+type WithError = forall a. Foreign -> (Foreign -> Either E.Error a) -> Either E.Error a
 
 foreign import withError :: forall a. Foreign -> (Foreign -> Either E.Error a) -> Either E.Error a
 

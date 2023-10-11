@@ -15,6 +15,10 @@ export const dateToTimestamp = date => () => {
     return (new Date(date).getTime()) / 1000;
 }
 
-export const now = () => { return Date.now(); }
+export const now = () => {
+    return Date.now();
+}
 
-export const _addMinutes = minutes => tm => () => { return  new Date(Date.now(tm) + minutes*60000); }
+export const _addMinutes = minutes => tm => () => {
+    return new Date(Date.now(tm) + minutes * 60000);
+}

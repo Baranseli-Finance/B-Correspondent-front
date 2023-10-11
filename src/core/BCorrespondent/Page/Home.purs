@@ -115,5 +115,7 @@ render { winWidth: Just _, platform: Just _, isUser } =
         (Workspace.slot 1 HandleChildWorkspace) $
         HH.div
          [ css "centre-container" ]
-         [ SignIn.slot 1 HandleChildSignIn ]
+         [ welcome, SignIn.slot 1 HandleChildSignIn ]
 render _ = HH.div_ []
+
+welcome = HH.div [] [HH.h2_ [HH.text "Welcome to B-Correspondent!"]]

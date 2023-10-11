@@ -102,7 +102,7 @@ component =
     let cred = mkCred login password
     case cred of
       Nothing -> do
-        H.modify_ _ { errMsg = Just "login or password is empty" }
+        H.modify_ _ { errMsg = Just "login or pass empty" }
         logDebug $ loc <> "login or password is empty"
       Just cred -> do
         resp <- Request.make host Back.mkAuthApi $ Back.sendCode cred
@@ -117,7 +117,7 @@ component =
           logDebug $ loc <> " code hash ---> " <> hash
           if Array.length ws > 0
           then for_ ws \tmLeft ->
-                 let msg = "the next attempt will be available in " <> tmLeft
+                 let msg = "the next attempt is in " <> tmLeft
                  in H.modify_ _
                     { errMsg = Just msg
                     , login = Nothing
@@ -135,7 +135,7 @@ component =
             then Just "code must be a 6-digits number" 
             else Nothing
         }
-      Nothing -> H.modify_ _ { errMsg = Just $ "code must contains numbers" }
+      Nothing -> H.modify_ _ { errMsg = Just $ "only numbers expected" }
   handleAction (MakeLoginRequest ev) = do
     H.liftEffect $ preventDefault ev
     {hash, code} <- H.get
@@ -159,7 +159,7 @@ component =
                     token: Back.JWTToken token 
                   }
               H.raise $ LoggedInSuccess user
-    else H.modify_ _ { errMsg = Just "code must be a 6-digits number" }
+    else H.modify_ _ { errMsg = Just "wrong code" }
   handleAction (MakeResendCodeRequest ev) = do 
     H.liftEffect $ preventDefault ev
     {hash} <- H.get
@@ -176,7 +176,7 @@ component =
         else H.modify_ _ { hash = Just hash, errMsg = Nothing }
 
 render { login, password, errMsg, hash, code, stage } =
-  HH.div_
+  HH.div [HPExt.style "position:absolute;top:30%;left:46%"]
   [                            
       HH.h4_ [ HH.text ("Sign in | " <> stage) ]
   ,   if isNothing errMsg then HH.div_ []

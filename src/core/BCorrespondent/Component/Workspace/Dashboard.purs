@@ -8,6 +8,7 @@ import BCorrespondent.Capability.LogMessages (logDebug)
 import BCorrespondent.Api.Foreign.Request as Request
 import BCorrespondent.Api.Foreign.Back as Back
 import BCorrespondent.Api.Foreign.Request.Handler (onFailure)
+import BCorrespondent.Component.Async as Async
 
 import Halogen.Store.Monad (getStore)
 import Halogen as H
@@ -45,7 +46,9 @@ data Action = Initialize | Finalize | Update | Backward | Forward
 type State = 
      { error :: Maybe String, 
        timeline :: Array Back.GapItem,
-       forkId :: Maybe H.ForkId 
+       forkId :: Maybe H.ForkId,
+       isBackward :: Boolean,
+       isForward :: Boolean
      }
 
 component =
@@ -53,7 +56,9 @@ component =
     { initialState: const 
       { error: Nothing, 
         timeline: [], 
-        forkId: Nothing 
+        forkId: Nothing,
+        isBackward: false,
+        isForward: false
       }
     , render: render
     , eval: H.mkEval H.defaultEval
@@ -98,7 +103,8 @@ component =
             let end = show endHour <> "," <> show endMin
             resp <- Request.makeAuth (Just token) host Back.mkFrontApi $ 
               Back.loadNextGap start end
-            onFailure resp undefined \{ success: item } -> do
+            let failure = Async.send <<< flip Async.mkException loc
+            onFailure resp failure \{ success: item } -> do
               logDebug $ loc <> " ---> update timeline from " <> start <> ", to " <> end 
               H.modify_  \s@{timeline: x} -> 
                 s { timeline = 
@@ -158,7 +164,7 @@ intToTimePiece = fromMaybe undefined <<< toEnum
 populateTimeline timeline _ = timeline
 
 render {error: Just e} = HH.text e
-render {error: Nothing, timeline} =
+render {error: Nothing, timeline, isBackward, isForward} =
   Svg.svg 
   [Svg.width (toNumber 1440), 
    Svg.height (toNumber 1000)]
@@ -167,25 +173,34 @@ render {error: Nothing, timeline} =
      Svg.y (toNumber 20), 
      Svg.fill (Svg.Named "black")] 
     [HH.text "Dashboard"]
-  , Svg.g [] $ mkBackwardButton : mkForwardButton : renderTimline (toNumber 10) 0 timeline 
+  , Svg.g [] $ 
+      mkBackwardButton isBackward : 
+      mkForwardButton isForward : 
+      renderTimline (toNumber 10) 0 timeline 
   ]
 
-mkBackwardButton = 
+mkBackwardButton isBackward = 
   Svg.g [onClick (const Backward)] 
   [
     Svg.text 
-    [ cssSvg "timeline-travel-button",
+    [ cssSvg $ 
+      if isBackward 
+      then "timeline-travel-button-active" 
+      else "timeline-travel-button-blocked",
       Svg.x (toNumber ((1440 / 2) - 50)), 
       Svg.y (toNumber 950), 
       Svg.fill (Svg.Named "black")] 
     [HH.text "backward"]
   ]
 
-mkForwardButton =
+mkForwardButton isForward =
   Svg.g [onClick (const Forward)] 
   [
     Svg.text 
-    [ cssSvg "timeline-travel-button",
+    [ cssSvg 
+      if isForward 
+      then "timeline-travel-button-active" 
+      else "timeline-travel-button-blocked",
       Svg.x (toNumber ((1440 / 2) + 50)), 
       Svg.y (toNumber 950), 
       Svg.fill (Svg.Named "black")] 
