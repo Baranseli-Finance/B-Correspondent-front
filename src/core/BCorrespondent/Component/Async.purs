@@ -54,7 +54,7 @@ type AsyncWithTM = { async :: Async, tm :: String }
 
 type State = { xs :: Map.Map Int AsyncWithTM }
 
-data Level = Warning | Success | Info | Error
+data Level = Warning | Success | Info | Error | Debug
 
 data Value = Exception Error | Ordinary String Level
 
@@ -145,6 +145,7 @@ render { xs } =
       Ordinary _ Warning -> "alert-warning"
       Ordinary _ Success -> "alert-success"
       Ordinary _ Info -> "alert-info"
+      Ordinary _ Debug -> mempty 
   mkMsg val =
     case val of
       Exception err -> message err

@@ -22,7 +22,7 @@ import Type.Proxy (Proxy(..))
 import Data.Foldable (for_)
 import Data.Maybe (Maybe (..), fromMaybe)
 import Effect.Exception (message)
-import Data.Int (toNumber, even)
+import Data.Int (toNumber, even, floor)
 import System.Time (addMinutes, nowTime)
 import Data.Time (hour, minute, Time (..), setHour, setMinute)
 import Data.Time as Time
@@ -170,7 +170,10 @@ component =
               logDebug $ loc <> " --->  forward. current point {" <> show (Time.hour time) <> ", " <> show minutesAdj <> "}"
               logDebug $ loc <> " --->  forward. current shift backwards " <> show stepsBackward 
 
-              let gap = fromEnum (Time.hour time) * 60 + minutesAdj - ((hour + stepsBackward) * 60 + min)
+              let diffMin = fromEnum (Time.hour time) * 60 + minutesAdj - ((hour + stepsBackward) * 60 + min)
+              let gap | diffMin == 0 = 0
+                      | diffMin < 60 = diffMin
+                      | otherwise = floor $ toNumber (diffMin / 60)
 
               logDebug $ loc <> " --->  forward. gap " <> show gap
 
@@ -204,17 +207,23 @@ component =
                   -- example: supposing the initial end point were 9.45, current time were 10.55
                   -- the gap is 10 min
                   -- new start point: 9.55 (9.45 + 10 min), end point 10.55
-                  gapLessThenHour = do 
-                    logDebug $ loc <> " --->  forward, gapLessThenHour"
-                    let newMin = addGapTomin min gap
-                    let newHour = addGapToHour newMin hour
-                    let point = show newHour <> "," <> show newMin
-                    doNoGap (setTime newMin newHour time) (setMinute (intToTimePiece minutesAdj) time) point
+                  gapLessThenHour 
+                    | stepsBackward > 1 = 
+                        let point = show hour <> "," <> show min
+                        in doNoGap ((setTime min hour) time) (setTime min (hour + 1) time) point
+                    | otherwise = do            
+                        logDebug $ loc <> " --->  forward, gapLessThenHour"
+                        let newMin = addGapTomin min gap
+                        let newHour = addGapToHour newMin hour
+                        let point = show newHour <> "," <> show newMin
+                        doNoGap (setTime newMin newHour time) (setMinute (intToTimePiece minutesAdj) time) point
               let -- in this case just add an hour and then two hours to the end point
                   -- example: supposing the initial end point were 9.45, current time were 11.50
                   -- we have a gap of 2 hour and 5 min, 
                   -- new start point: 10.45 (9.45 + 1 hour), end point 10.45 (9.45 + 2 hours)
-                  gapMoreThen2Hour = undefined
+                  gapMoreThen2Hour =
+                    let msg = "gapMoreThen2Hour hasn't been implemented yet. reload page"
+                    in Async.send $ Async.mkOrdinary msg Async.Debug (Just loc) 
 
               let doWithGap | gap < 60 = gapLessThenHour
                             | otherwise = gapMoreThen2Hour
