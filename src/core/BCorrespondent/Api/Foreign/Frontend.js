@@ -34,10 +34,10 @@ export const _loadNextGap =
     }
 
 export const _fetchTimelineForParticularHour =
-function(withError, direction, point, api) {
-    return function(onError, onOk) {
-        api.frontendUserDashboardDailyBalanceSheetTimelineDirectionGet(direction, point).then(onOk).catch(resp => {
-            return withError(resp, onError)
-        })
-    };
-}
+    function(withError, direction, point, api) {
+        return function(onError, onOk) {
+            api.frontendUserDashboardDailyBalanceSheetTimelineDirectionGet(direction, point).then(onOk).catch(resp => {
+                return withError(resp, onError)
+            })
+        };
+    }

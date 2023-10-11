@@ -6,6 +6,7 @@ module BCorrespondent.Api.Foreign.Frontend
   , GapItemTime
   , GapItemUnit
   , Init
+  , NextGap
   , Sha
   , fetchTimelineForParticularHour
   , getJwtStatus
@@ -109,10 +110,11 @@ initUserDashboardDailyBalanceSheet :: FrontApi -> AC.EffectFnAff (Object (Respon
 initUserDashboardDailyBalanceSheet = runFn2 _initUserDashboardDailyBalanceSheet withError
 
 
-foreign import _loadNextGap :: Fn4 WithError String String FrontApi (AC.EffectFnAff (Object (Response GapItem)))
+foreign import _loadNextGap :: Fn4 WithError String String FrontApi (AC.EffectFnAff (Object (Response NextGap)))
 
+type NextGap = { gap :: GapItem } 
 
-loadNextGap :: String -> String -> FrontApi -> AC.EffectFnAff (Object (Response GapItem))
+loadNextGap :: String -> String -> FrontApi -> AC.EffectFnAff (Object (Response NextGap))
 loadNextGap = runFn4 _loadNextGap withError
 
 foreign import _fetchTimelineForParticularHour :: Fn4 WithError String String FrontApi (AC.EffectFnAff (Object (Response (Array GapItem))))
