@@ -1,5 +1,6 @@
 module BCorrespondent.Api.Foreign.Frontend
   ( DailyBalanceSheet
+  , Direction(..)
   , FrontApi
   , GapItem
   , GapItemTime
@@ -116,5 +117,11 @@ loadNextGap = runFn4 _loadNextGap withError
 
 foreign import _fetchTimelineForParticularHour :: Fn4 WithError String String FrontApi (AC.EffectFnAff (Object (Response (Array GapItem))))
 
-fetchTimelineForParticularHour :: String -> String -> FrontApi -> AC.EffectFnAff (Object (Response (Array GapItem)))
-fetchTimelineForParticularHour = runFn4 _fetchTimelineForParticularHour withError
+
+data Direction = Backward | Forward
+
+showDirection Backward = "backward"
+showDirection Forward = "forward"
+
+fetchTimelineForParticularHour :: Direction -> String -> FrontApi -> AC.EffectFnAff (Object (Response (Array GapItem)))
+fetchTimelineForParticularHour direction = runFn4 _fetchTimelineForParticularHour withError (showDirection direction)

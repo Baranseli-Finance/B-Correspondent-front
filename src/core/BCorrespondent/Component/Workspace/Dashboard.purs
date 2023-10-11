@@ -25,12 +25,14 @@ import Effect.Exception (message)
 import Data.Int (toNumber, even)
 import System.Time (addMinutes, nowTime)
 import Data.Time (hour, minute, Time (..), setHour, setMinute)
+import Data.Time as Time
 import Data.Enum (toEnum, fromEnum, class BoundedEnum)
 import Data.Time.Component
 import Data.Array ((:), sort, length, uncons, head, last, snoc)
 import Effect.Aff as Aff
 import Store (User)
 import Control.Monad.Rec.Class (forever)
+import Control.Alt ((<|>))
 
 
 import Undefined
@@ -89,7 +91,12 @@ component =
                H.liftAff $ Aff.delay $ Aff.Milliseconds 300_000.0
                handleAction Update 
 
-            H.modify_ _ { timeline = populateTimeline timeline gaps }
+            H.modify_ _ { 
+              timeline = populateTimeline timeline gaps, 
+              isBackward = 
+                if fromEnum (hour timeto) == 0 
+                then false 
+                else true }
 
       handleAction Finalize = map (_.forkId) H.get >>= flip for_ H.kill
       handleAction Update = do
@@ -112,9 +119,38 @@ component =
                         flip map (uncons x) \{tail} -> 
                           snoc tail item }
 
-      handleAction Backward = logDebug $ loc <> " --->  backward"
+      handleAction Backward = do 
+        logDebug $ loc <> " --->  backward"
+        { config: Config { apiBCorrespondentHost: host }, user } <- getStore
+        for_ (user :: Maybe User) \{ token } -> do
+          {timeline} <- H.get
+          for_ (uncons timeline) \{head: {start: p@{hour, min}}} -> do
+            let point = show hour <> "," <> show min
+            resp <- Request.makeAuth (Just token) host Back.mkFrontApi $
+              Back.fetchTimelineForParticularHour Back.Backward point
+            let failure = Async.send <<< flip Async.mkException loc  
+            onFailure resp failure \{success: gaps} -> do
+               map (_.forkId) H.get >>= flip for_ H.kill
+               logDebug $ loc <> " --->  backward, gaps " <> show (gaps :: Array Back.GapItem)
+               time <- H.liftEffect $ nowTime
+               let newStartPoint | hour - 1 < 0 = setTime 0 0 time 
+                                 | otherwise = setTime min (hour - 1) time
+               let newEndPoint | hour - 1 < 0 =  setTime 0 1 time
+                               | otherwise = setTime min hour time
+
+               logDebug $ loc <> " --->  backward. new points " <> show newStartPoint <> ", " <> show newEndPoint
+
+               H.modify_ _ 
+                 { timeline =
+                     flip populateTimeline gaps $ 
+                       initTimeline newStartPoint newEndPoint,
+                   isBackward = if hour - 1 < 0 then false else true,
+                   isForward = true
+                 }
       handleAction Forward = logDebug $ loc <> " --->  forward"
 
+
+setTime m h time = setMinute (fromMaybe undefined (toEnum m <|> toEnum 0)) $ setHour (fromMaybe undefined (toEnum h <|> toEnum 0)) time
 
 initTimeline :: Time -> Time -> Array Back.GapItem
 initTimeline from to = 
