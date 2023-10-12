@@ -376,16 +376,15 @@ renderTimline coordX idx xs =
                 [HH.text (show (h :: Int) <> ":" <> show (m :: Int))]
       item h m xs = 
         Svg.g [] $ 
-          [gap, tmCircle, mkTm h m (coordX - toNumber 10)] <> 
-          populateTransactions coordX height width xs
+          [gap, mkTm h m (coordX - toNumber 10)] <> 
+          populateTransactions coordX height width xs <> 
+          [tmCircle]
   in case uncons xs of
        Nothing -> []
        Just {head: x, tail: []} -> 
          [Svg.g 
           [] $
           [gap,
-           tmCircle, 
-           lastTmCircle, 
            mkTm 
            ((_.hour <<< _.start) x) 
            ((_.min <<< _.start) x)
@@ -394,7 +393,8 @@ renderTimline coordX idx xs =
            ((_.hour <<< _.end) x) 
            ((_.min <<< _.end) x)
            (coordX + width - toNumber 10) ]] <> 
-           populateTransactions coordX height width (x^.Back._elements)
+           populateTransactions coordX height width (x^.Back._elements) <>
+           [tmCircle, lastTmCircle]
        Just {head: {elements, start: {hour, min}}, tail} -> 
          item hour min elements : renderTimline (coordX + width) (idx + 1) tail
 
@@ -413,7 +413,7 @@ populateTransactions x@coordX coordY width xs = go coordY xs
       [region y, 
        Svg.text 
        [cssSvg "timeline-transaction-region-item", 
-        Svg.x x, 
+        Svg.x (x + toNumber 3), 
         Svg.y (y + toNumber 25)] 
        [HH.text textualIdent]
       ]
