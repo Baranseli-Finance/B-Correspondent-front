@@ -43,7 +43,13 @@ loc = "BCorrespondent.Component.Workspace.Dashboard"
 
 slot n = HH.slot_ proxy n component unit
 
-data Action = Initialize | Finalize | Update | Backward | Forward
+data Action = 
+       Initialize 
+     | Finalize 
+     | Update 
+     | Backward 
+     | Forward
+     | FetchTransaction String
 
 type State = 
      { error :: Maybe String, 
@@ -252,6 +258,7 @@ component =
                 let point = show hour <> "," <> show min
                 in doNoGap (setTime min hour time) (setTime min (hour + 1) time) point
               else doWithGap
+      handleAction (FetchTransaction tr_ident) = logDebug $ loc <> "item ---> " <> tr_ident
 
 setTime m h = 
   setMinute (fromMaybe undefined (toEnum m <|> toEnum 0)) <<< 
@@ -409,8 +416,11 @@ populateTransactions x@coordX coordY width xs = go coordY xs
          Just {head: x, tail} -> 
            mkItem y x : go (y - height) tail
     mkItem y {textualIdent} = 
-      Svg.g [] 
-      [region y, 
+      Svg.g 
+      [ cssSvg "timeline-transaction-g", 
+        onClick (const (FetchTransaction textualIdent)) 
+      ] 
+      [region y,
        Svg.text 
        [cssSvg "timeline-transaction-region-item", 
         Svg.x (x + toNumber 3), 
@@ -418,7 +428,7 @@ populateTransactions x@coordX coordY width xs = go coordY xs
        [HH.text textualIdent]
       ]
     region y = 
-      Svg.rect 
+      Svg.rect
       [ cssSvg "timeline-transaction-region",
         Svg.x coordX, 
         Svg.y y, 
