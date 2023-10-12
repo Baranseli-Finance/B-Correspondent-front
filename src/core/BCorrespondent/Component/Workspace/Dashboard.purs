@@ -80,7 +80,8 @@ component =
       , finalize = pure Finalize
       }
     }
-    where 
+    where
+      delay = H.liftAff $ Aff.delay $ Aff.Milliseconds 300_000.0
       handleAction Initialize = do
         { config: Config { apiBCorrespondentHost: host }, user } <- getStore
         for_ user \{ token } -> do
@@ -103,9 +104,7 @@ component =
         
             forkId <-  H.fork $ do
                logDebug $ loc <> " ---> timeline updater has been activated"
-               forever $ do
-                 H.liftAff $ Aff.delay $ Aff.Milliseconds 300_000.0
-                 handleAction Update
+               forever $ delay *> handleAction Update
 
             timezone <- H.liftEffect getTimezone
 
@@ -209,11 +208,15 @@ component =
                         Back.fetchTimelineForParticularHour Back.Forward point
                       let failure = Async.send <<< flip Async.mkException loc  
                       onFailure resp failure \{success: gaps} -> do
-                        forkId <-  H.fork $ do
-                          logDebug $ loc <> " ---> timeline updater has been activated"
-                          forever $ do
-                            H.liftAff $ Aff.delay $ Aff.Milliseconds 300_000.0
-                            handleAction Update
+                        
+                        let checkForward = if stepsBackward - 1 == 0 then false else true
+
+                        forkId <- 
+                          if not checkForward
+                          then map Just $ H.fork $ do
+                                logDebug $ loc <> " ---> timeline updater has been activated"
+                                forever $ delay *> handleAction Update
+                         else pure Nothing
 
                         let newTimeline = 
                               flip populateTimeline gaps $ 
@@ -221,8 +224,8 @@ component =
                         logDebug $ loc <> " --->  forward. current timline " <> show newTimeline     
                         H.modify_ _ 
                           { timeline = newTimeline,
-                            isForward = if stepsBackward - 1 == 0 then false else true,
-                            forkId = Just forkId,
+                            isForward = checkForward,
+                            forkId = forkId,
                             stepsBackward = stepsBackward - 1,
                             isBackward = true
                           }
@@ -312,10 +315,10 @@ populateTimeline timeline xs =
     let elm = flip find xs \x -> _.start x == start && _.end x == end
     in fromMaybe curr $ flip map elm \{elements } -> curr # Back._elements .~ elements
 
+ -- x # Back._start <<< Back._hour %~ ((+) timezone) 
+--    # Back._end <<< Back._hour %~ ((+) timezone)
 applyTimezone :: Int -> Back.GapItem -> Back.GapItem
-applyTimezone timezone x = 
-  x # Back._start <<< Back._hour %~ ((+) timezone) 
-    # Back._end <<< Back._hour %~ ((+) timezone)
+applyTimezone _ x = x
 
 render {error: Just e} = HH.text e
 render {error: Nothing, timeline, isBackward, isForward, timezone} =
