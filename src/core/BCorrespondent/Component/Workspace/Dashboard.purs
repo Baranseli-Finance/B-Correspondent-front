@@ -4,11 +4,12 @@ import Prelude
 
 import BCorrespondent.Component.HTML.Utils (cssSvg)
 import BCorrespondent.Data.Config (Config(..))
-import BCorrespondent.Capability.LogMessages (logDebug)
+import BCorrespondent.Capability.LogMessages (logDebug, logError)
 import BCorrespondent.Api.Foreign.Request as Request
 import BCorrespondent.Api.Foreign.Back as Back
 import BCorrespondent.Api.Foreign.Request.Handler (onFailure)
 import BCorrespondent.Component.Async as Async
+import BCorrespondent.Component.Workspace.Dashboard.Transaction as Dashboard.Transaction
 
 import Halogen.Store.Monad (getStore)
 import Halogen as H
@@ -50,7 +51,7 @@ data Action =
      | Update 
      | Backward 
      | Forward
-     | FetchTransaction Int
+     | FetchTransaction Int (Maybe Back.GapItemUnitStatus)
 
 type State = 
      { error :: Maybe String, 
@@ -193,7 +194,7 @@ component =
 
               logDebug $ loc <> " --->  forward, diff " <> show diffMin
 
-              let gap | diffMin == 0 = 0
+              let gap | diffMin == 0 || diffMin == 60 = 0
                       | diffMin < 60 = diffMin
                       | otherwise = floor $ toNumber (diffMin / 60)
 
@@ -261,8 +262,11 @@ component =
               then
                 let point = show hour <> "," <> show min
                 in doNoGap (setTime min hour time) (setTime min (hour + 1) time) point
-              else doWithGap
-      handleAction (FetchTransaction tr_ident) = logDebug $ loc <> "item ---> " <> show tr_ident
+              else doWithGap       
+      handleAction (FetchTransaction ident status)
+        | status == Nothing = logError $ loc <> " ---> FetchTransaction, status unknown" 
+        | status == Just Back.Pending = logDebug $ loc <> " ---> FetchTransaction , pending, skip" 
+        | otherwise = H.tell Dashboard.Transaction.proxy 1 $ Dashboard.Transaction.Open ident
 
 setTime m h = 
   setMinute (fromMaybe undefined (toEnum m <|> toEnum 0)) <<< 
@@ -319,22 +323,6 @@ populateTimeline timeline xs =
 --    # Back._end <<< Back._hour %~ ((+) timezone)
 applyTimezone :: Int -> Back.GapItem -> Back.GapItem
 applyTimezone _ x = x
-
-render {error: Just e} = HH.text e
-render {error: Nothing, timeline, isBackward, isForward, timezone} =
-  Svg.svg 
-  [Svg.width (toNumber 1440), 
-   Svg.height (toNumber 1000)]
-  [ Svg.text 
-    [Svg.x (toNumber ((1440 / 2))), 
-     Svg.y (toNumber 20), 
-     Svg.fill (Svg.Named "black")] 
-    [HH.text "Dashboard"]
-  , Svg.g [] $ 
-      mkBackwardButton isBackward : 
-      mkForwardButton isForward :
-      renderTimline (toNumber 10) 0 (map (applyTimezone timezone) timeline)
-  ]
 
 mkBackwardButton isBackward = 
   Svg.g [onClick (const Backward)] 
@@ -426,7 +414,7 @@ populateTransactions x@coordX coordY width xs =
           if status == Just Back.Pending
           then "timeline-transaction-g-not-allowed" 
           else "timeline-transaction-g", 
-        onClick (const (FetchTransaction ident)) 
+        onClick (const (FetchTransaction ident status))
       ] 
       [region y status,
        Svg.text 
@@ -449,3 +437,23 @@ populateTransactions x@coordX coordY width xs =
           Svg.y y, 
           Svg.width width, 
           Svg.height height]
+
+render {error: Just e} = HH.text e
+render {error: Nothing, timeline, isBackward, isForward, timezone} =
+  HH.div_ 
+  [
+      Svg.svg 
+      [Svg.width (toNumber 1440), 
+      Svg.height (toNumber 1000)]
+      [ Svg.text 
+        [Svg.x (toNumber ((1440 / 2))), 
+        Svg.y (toNumber 20), 
+        Svg.fill (Svg.Named "black")] 
+        [HH.text "Dashboard"]
+      , Svg.g [] $ 
+          mkBackwardButton isBackward : 
+          mkForwardButton isForward :
+          renderTimline (toNumber 10) 0 (map (applyTimezone timezone) timeline)
+      ]
+  ,   Dashboard.Transaction.slot 1
+  ]
