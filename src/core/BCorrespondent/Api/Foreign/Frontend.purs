@@ -9,12 +9,14 @@ module BCorrespondent.Api.Foreign.Frontend
   , Init
   , NextGap
   , Sha
+  , Transaction
   , _elements
   , _end
   , _hour
   , _min
   , _start
   , fetchTimelineForParticularHour
+  , fetchTrnsaction
   , getJwtStatus
   , init
   , initUserDashboardDailyBalanceSheet
@@ -164,3 +166,12 @@ showDirection Forward = "forward"
 
 fetchTimelineForParticularHour :: Direction -> String -> FrontApi -> AC.EffectFnAff (Object (Response (Array GapItem)))
 fetchTimelineForParticularHour direction = runFn4 _fetchTimelineForParticularHour withError (showDirection direction)
+
+type Transaction = { field1 :: String }
+
+foreign import _fetchTransaction :: Fn2 WithError Int (AC.EffectFnAff (Object (Response Transaction)))
+
+fetchTrnsaction :: Int -> AC.EffectFnAff (Object (Response Transaction))
+fetchTrnsaction = runFn2 _fetchTransaction withError
+
+

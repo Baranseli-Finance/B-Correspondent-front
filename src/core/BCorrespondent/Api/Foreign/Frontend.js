@@ -41,3 +41,12 @@ export const _fetchTimelineForParticularHour =
             })
         };
     }
+
+export const _fetchTransaction =
+    function(withError, ident, api) {
+        return function(onError, onOk) {
+            api.frontendUserDashboardTimelineTransactionIdentGet(ident).then(onOk).catch(resp => {
+                return withError(resp, onError)
+            })
+        };
+    }
