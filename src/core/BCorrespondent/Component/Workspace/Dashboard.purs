@@ -51,7 +51,8 @@ type State =
        forkId :: Maybe H.ForkId,
        isBackward :: Boolean,
        isForward :: Boolean,
-       stepsBackward :: Int
+       stepsBackward :: Int,
+       timezone :: Int
      }
 
 component =
@@ -62,7 +63,8 @@ component =
         forkId: Nothing,
         isBackward: false,
         isForward: false,
-        stepsBackward: 0
+        stepsBackward: 0,
+        timezone: 0
       }
     , render: render
     , eval: H.mkEval H.defaultEval
@@ -79,6 +81,7 @@ component =
             Back.initUserDashboardDailyBalanceSheet
           let failure e = H.modify_ _ { error = Just $ "cannot load component: " <> message e }
           onFailure resp failure \{ success: {gaps} } -> do
+            logDebug $ loc <> " ---> timeline gaps " <> show (gaps :: Array Back.GapItem)
             timeto <- H.liftEffect $ nowTime
             let timetoAdj = setMinute (intToTimePiece (fromEnum (minute timeto) + mod (60 - fromEnum (minute timeto)) 5)) timeto
             timefrom <- H.liftEffect $ addMinutes (-60) timetoAdj
@@ -86,7 +89,9 @@ component =
 
             logDebug $ loc <> " ---> timeline start -> end: (" <> show timefromAdj <> ", " <> show timetoAdj <> ")"
 
-            let timeline = initTimeline timefromAdj timetoAdj
+            let timeline = 
+                  flip populateTimeline gaps $ 
+                    initTimeline timefromAdj timetoAdj
             logDebug $ loc <> " ---> init timeline " <> show timeline
         
             forkId <-  H.fork $ do
@@ -98,14 +103,13 @@ component =
             timezone <- H.liftEffect getTimezone
 
             H.modify_ _ 
-              { timeline = 
-                  map (applyTimezone timezone) $ 
-                  populateTimeline timeline gaps, 
+              { timeline = timeline, 
                 isBackward = 
                   if fromEnum (hour timeto) == 0 
                   then false 
                   else true,
-                forkId = Just forkId 
+                forkId = Just forkId,
+                timezone = timezone
               }
 
       handleAction Finalize = map (_.forkId) H.get >>= flip for_ H.kill
@@ -146,13 +150,10 @@ component =
                 let newEndPoint = setTime min hour time
 
                 logDebug $ loc <> " --->  backward. new points " <> show newStartPoint <> ", " <> show newEndPoint
-
-                timezone <- H.liftEffect getTimezone 
                  
                 let newTimeline = 
-                      map (applyTimezone timezone) $ 
-                        flip populateTimeline gaps $ 
-                          initTimeline newStartPoint newEndPoint
+                      flip populateTimeline gaps $ 
+                        initTimeline newStartPoint newEndPoint
                 logDebug $ loc <> " --->  backward. current timline " <> show newTimeline 
 
                 H.modify_ _ 
@@ -207,12 +208,9 @@ component =
                             H.liftAff $ Aff.delay $ Aff.Milliseconds 300_000.0
                             handleAction Update
 
-                        timezone <- H.liftEffect getTimezone  
-
                         let newTimeline = 
-                              map (applyTimezone timezone) $ 
-                                flip populateTimeline gaps $ 
-                                  initTimeline from to
+                              flip populateTimeline gaps $ 
+                                initTimeline from to
                         logDebug $ loc <> " --->  forward. current timline " <> show newTimeline     
                         H.modify_ _ 
                           { timeline = newTimeline,
@@ -255,7 +253,9 @@ component =
                 in doNoGap (setTime min hour time) (setTime min (hour + 1) time) point
               else doWithGap
 
-setTime m h time = setMinute (fromMaybe undefined (toEnum m <|> toEnum 0)) $ setHour (fromMaybe undefined (toEnum h <|> toEnum 0)) time
+setTime m h = 
+  setMinute (fromMaybe undefined (toEnum m <|> toEnum 0)) <<< 
+  setHour (fromMaybe undefined (toEnum h <|> toEnum 0))
 
 initTimeline :: Time -> Time -> Array Back.GapItem
 initTimeline from to = go from to []
@@ -302,8 +302,7 @@ intToTimePiece = fromMaybe bottom <<< toEnum
 populateTimeline timeline xs = 
   timeline <#> \curr@{ start, end} -> 
     let elm = flip find xs \x -> _.start x == start && _.end x == end
-    in fromMaybe curr $ flip map elm $ \{elements: el} -> curr { elements = el}
-
+    in fromMaybe curr $ flip map elm \{elements } -> curr # Back._elements .~ elements
 
 applyTimezone :: Int -> Back.GapItem -> Back.GapItem
 applyTimezone timezone x = 
@@ -311,7 +310,7 @@ applyTimezone timezone x =
     # Back._end <<< Back._hour %~ ((+) timezone)
 
 render {error: Just e} = HH.text e
-render {error: Nothing, timeline, isBackward, isForward} =
+render {error: Nothing, timeline, isBackward, isForward, timezone} =
   Svg.svg 
   [Svg.width (toNumber 1440), 
    Svg.height (toNumber 1000)]
@@ -323,7 +322,7 @@ render {error: Nothing, timeline, isBackward, isForward} =
   , Svg.g [] $ 
       mkBackwardButton isBackward : 
       mkForwardButton isForward :
-      renderTimline (toNumber 10) 0 timeline
+      renderTimline (toNumber 10) 0 (map (applyTimezone timezone) timeline)
   ]
 
 mkBackwardButton isBackward = 

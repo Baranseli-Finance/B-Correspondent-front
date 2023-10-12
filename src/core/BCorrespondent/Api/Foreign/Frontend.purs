@@ -8,6 +8,7 @@ module BCorrespondent.Api.Foreign.Frontend
   , Init
   , NextGap
   , Sha
+  , _elements
   , _end
   , _hour
   , _min
@@ -111,9 +112,9 @@ _min = lens _.min $ \el x -> el { min = x }
 type GapItem = { elements :: Array GapItemUnit, start :: GapItemTime, end :: GapItemTime }
 
 _start = lens _.start $ \el x -> el { start = x }
-
 _end = lens _.end $ \el x -> el { end = x }
-  
+_elements = lens _.elements $ \el x -> el { elements = x }
+
 type DailyBalanceSheet = { gaps :: Array GapItem }
 
 foreign import _initUserDashboardDailyBalanceSheet :: Fn2 WithError FrontApi (AC.EffectFnAff (Object (Response DailyBalanceSheet)))
