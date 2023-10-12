@@ -1,10 +1,12 @@
-module System.Time 
-  (getTimestamp, 
-   timestampToDate, 
-   dateToTimestamp, 
-   nowTime, 
-   addMinutes
-  ) where
+module System.Time
+  ( addMinutes
+  , dateToTimestamp
+  , getTimestamp
+  , getTimezone
+  , nowTime
+  , timestampToDate
+  )
+  where
 
 import Prelude
 
@@ -32,3 +34,5 @@ addMinutes :: Int -> Time -> Effect Time
 addMinutes secs tm = do
    old <- map (fromDateTime <<< modifyTime (const tm) <<< toDateTime) now
    map (time <<< toDateTime) $ _addMinutes secs old
+
+foreign import getTimezone :: Effect Int

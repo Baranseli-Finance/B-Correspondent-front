@@ -22,3 +22,5 @@ export const now = () => {
 export const _addMinutes = minutes => tm => () => {
     return new Date(Date.now(tm) + minutes * 60000);
 }
+
+export const getTimezone = () => { return (new Date().getTimezoneOffset() * (-1) / 60); }

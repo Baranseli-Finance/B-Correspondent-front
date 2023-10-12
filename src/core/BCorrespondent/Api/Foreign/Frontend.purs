@@ -8,6 +8,10 @@ module BCorrespondent.Api.Foreign.Frontend
   , Init
   , NextGap
   , Sha
+  , _end
+  , _hour
+  , _min
+  , _start
   , fetchTimelineForParticularHour
   , getJwtStatus
   , init
@@ -38,6 +42,7 @@ import Data.Map as Map
 import Data.Either (Either)
 import Effect.Exception as E
 import Data.Array (uncons)
+import Data.Lens (lens, Lens)
 
 import Undefined
 
@@ -100,8 +105,15 @@ type GapItemUnit = { status :: String, textualIdent :: String }
 
 type GapItemTime = { hour :: Int, min :: Int }
 
+_hour = lens _.hour $ \el x -> el { hour = x }
+_min = lens _.min $ \el x -> el { min = x }
+
 type GapItem = { elements :: Array GapItemUnit, start :: GapItemTime, end :: GapItemTime }
 
+_start = lens _.start $ \el x -> el { start = x }
+
+_end = lens _.end $ \el x -> el { end = x }
+  
 type DailyBalanceSheet = { gaps :: Array GapItem }
 
 foreign import _initUserDashboardDailyBalanceSheet :: Fn2 WithError FrontApi (AC.EffectFnAff (Object (Response DailyBalanceSheet)))

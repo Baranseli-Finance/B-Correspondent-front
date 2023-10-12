@@ -23,17 +23,17 @@ import Data.Foldable (for_)
 import Data.Maybe (Maybe (..), fromMaybe)
 import Effect.Exception (message)
 import Data.Int (toNumber, even, floor)
-import System.Time (addMinutes, nowTime)
+import System.Time (addMinutes, nowTime, getTimezone)
 import Data.Time (hour, minute, Time (..), setHour, setMinute)
 import Data.Time as Time
 import Data.Enum (toEnum, fromEnum, class BoundedEnum)
 import Data.Time.Component
-import Data.Array ((:), reverse, length, uncons, head, last, snoc)
+import Data.Array ((:), reverse, length, uncons, head, last, snoc, find)
 import Effect.Aff as Aff
 import Store (User)
 import Control.Monad.Rec.Class (forever)
 import Control.Alt ((<|>))
-
+import Data.Lens.Setter
 
 import Undefined
 
@@ -95,8 +95,12 @@ component =
                  H.liftAff $ Aff.delay $ Aff.Milliseconds 300_000.0
                  handleAction Update
 
+            timezone <- H.liftEffect getTimezone
+
             H.modify_ _ 
-              { timeline = populateTimeline timeline gaps, 
+              { timeline = 
+                  map (applyTimezone timezone) $ 
+                  populateTimeline timeline gaps, 
                 isBackward = 
                   if fromEnum (hour timeto) == 0 
                   then false 
@@ -143,7 +147,12 @@ component =
 
                 logDebug $ loc <> " --->  backward. new points " <> show newStartPoint <> ", " <> show newEndPoint
 
-                let newTimeline = flip populateTimeline gaps $ initTimeline newStartPoint newEndPoint
+                timezone <- H.liftEffect getTimezone 
+                 
+                let newTimeline = 
+                      map (applyTimezone timezone) $ 
+                        flip populateTimeline gaps $ 
+                          initTimeline newStartPoint newEndPoint
                 logDebug $ loc <> " --->  backward. current timline " <> show newTimeline 
 
                 H.modify_ _ 
@@ -170,7 +179,13 @@ component =
               logDebug $ loc <> " --->  forward. current point {" <> show (Time.hour time) <> ", " <> show minutesAdj <> "}"
               logDebug $ loc <> " --->  forward. current shift backwards " <> show stepsBackward 
 
-              let diffMin = fromEnum (Time.hour time) * 60 + minutesAdj - ((hour + stepsBackward) * 60 + min)
+              let diffMin = 
+                    fromEnum (Time.hour time) * 60 + 
+                    (minutes + mod (60 - minutes) 5) - 
+                    ((hour + stepsBackward) * 60 + min)
+
+              logDebug $ loc <> " --->  forward, diff " <> show diffMin
+
               let gap | diffMin == 0 = 0
                       | diffMin < 60 = diffMin
                       | otherwise = floor $ toNumber (diffMin / 60)
@@ -191,7 +206,13 @@ component =
                           forever $ do
                             H.liftAff $ Aff.delay $ Aff.Milliseconds 300_000.0
                             handleAction Update
-                        let newTimeline = flip populateTimeline gaps $ initTimeline from to
+
+                        timezone <- H.liftEffect getTimezone  
+
+                        let newTimeline = 
+                              map (applyTimezone timezone) $ 
+                                flip populateTimeline gaps $ 
+                                  initTimeline from to
                         logDebug $ loc <> " --->  forward. current timline " <> show newTimeline     
                         H.modify_ _ 
                           { timeline = newTimeline,
@@ -278,7 +299,16 @@ initTimeline from to = go from to []
 intToTimePiece :: forall a . BoundedEnum a => Int -> a
 intToTimePiece = fromMaybe bottom <<< toEnum
 
-populateTimeline timeline _ = timeline
+populateTimeline timeline xs = 
+  timeline <#> \curr@{ start, end} -> 
+    let elm = flip find xs \x -> _.start x == start && _.end x == end
+    in fromMaybe curr $ flip map elm $ \{elements: el} -> curr { elements = el}
+
+
+applyTimezone :: Int -> Back.GapItem -> Back.GapItem
+applyTimezone timezone x = 
+  x # Back._start <<< Back._hour %~ ((+) timezone) 
+    # Back._end <<< Back._hour %~ ((+) timezone)
 
 render {error: Just e} = HH.text e
 render {error: Nothing, timeline, isBackward, isForward} =
@@ -292,8 +322,8 @@ render {error: Nothing, timeline, isBackward, isForward} =
     [HH.text "Dashboard"]
   , Svg.g [] $ 
       mkBackwardButton isBackward : 
-      mkForwardButton isForward : 
-      renderTimline (toNumber 10) 0 timeline 
+      mkForwardButton isForward :
+      renderTimline (toNumber 10) 0 timeline
   ]
 
 mkBackwardButton isBackward = 
@@ -329,7 +359,7 @@ renderTimline coordX idx xs =
       height = toNumber 850
       coordY = toNumber 50
       color = if even idx then "#e7e4e4" else "#dddada"
-      gap = 
+      gap _ = 
              Svg.rect 
              [Svg.fill (Svg.Named color), 
               Svg.x coordX, 
@@ -345,12 +375,12 @@ renderTimline coordX idx xs =
                 Svg.y (height + toNumber 70), 
                 Svg.fill (Svg.Named "black")] 
                 [HH.text (show (h :: Int) <> ":" <> show (m :: Int))]
-      item h m = Svg.g [] [gap, tmCircle, mkTm h m (coordX - toNumber 10)]
+      item h m xs = Svg.g [] [gap xs, tmCircle, mkTm h m (coordX - toNumber 10)]
   in case uncons xs of
        Just {head: x, tail: []} -> 
          [Svg.g 
           [] 
-          [gap,
+          [gap (_.elements x),
            tmCircle, 
            lastTmCircle, 
            mkTm 
@@ -361,5 +391,6 @@ renderTimline coordX idx xs =
            ((_.hour <<< _.end) x) 
            ((_.min <<< _.end) x)
            (coordX + width - toNumber 10) ]]
-       Just {head: {start: {hour, min}}, tail} -> item hour min : renderTimline (coordX + width) (idx + 1) tail
+       Just {head: {elements, start: {hour, min}}, tail} -> 
+         item hour min elements : renderTimline (coordX + width) (idx + 1) tail
        Nothing -> []
