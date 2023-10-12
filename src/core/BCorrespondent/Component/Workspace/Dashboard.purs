@@ -415,22 +415,32 @@ populateTransactions x@coordX coordY width xs = go coordY xs
            [mkItem y x] 
          Just {head: x, tail} -> 
            mkItem y x : go (y - height) tail
-    mkItem y {textualIdent} = 
+    mkItem y {textualIdent, status: s} = 
       Svg.g 
-      [ cssSvg "timeline-transaction-g", 
+      [ cssSvg $ 
+          if status == Just Back.Pending
+          then "timeline-transaction-g-not-allowed" 
+          else "timeline-transaction-g", 
         onClick (const (FetchTransaction textualIdent)) 
       ] 
-      [region y,
+      [region y status,
        Svg.text 
        [cssSvg "timeline-transaction-region-item", 
         Svg.x (x + toNumber 3), 
         Svg.y (y + toNumber 25)] 
        [HH.text textualIdent]
       ]
-    region y = 
-      Svg.rect
-      [ cssSvg "timeline-transaction-region",
-        Svg.x coordX, 
-        Svg.y y, 
-        Svg.width width, 
-        Svg.height height]
+      where status = Back.readGapItemUnitStatus s
+    region y status =
+      let chooseColour Nothing = Svg.Named "#ffffff"
+          chooseColour (Just Back.Pending) = Svg.Named "#ffffff"
+          chooseColour (Just Back.ProcessedOk) = Svg.Named "#7ddF3a"
+          chooseColour (Just Back.ProcessedDecline) = Svg.Named "#ff5959"
+      in
+        Svg.rect
+        [ cssSvg "timeline-transaction-region",
+          Svg.fill $ chooseColour status,
+          Svg.x coordX, 
+          Svg.y y, 
+          Svg.width width, 
+          Svg.height height]

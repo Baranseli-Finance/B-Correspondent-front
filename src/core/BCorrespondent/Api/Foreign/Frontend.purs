@@ -5,6 +5,7 @@ module BCorrespondent.Api.Foreign.Frontend
   , GapItem
   , GapItemTime
   , GapItemUnit
+  , GapItemUnitStatus(..)
   , Init
   , NextGap
   , Sha
@@ -20,6 +21,7 @@ module BCorrespondent.Api.Foreign.Frontend
   , loadNextGap
   , mkFrontApi
   , printInit
+  , readGapItemUnitStatus
   , shaPred
   )
   where
@@ -44,6 +46,7 @@ import Data.Either (Either)
 import Effect.Exception as E
 import Data.Array (uncons)
 import Data.Lens (lens, Lens)
+import Data.Generic.Rep (class Generic)
 
 import Undefined
 
@@ -101,6 +104,22 @@ foreign import _init :: Fn3 WithError Json FrontApi (AC.EffectFnAff (Object (Res
 
 init :: Maybe JWTToken -> FrontApi -> AC.EffectFnAff (Object (Response Init))
 init token = runFn3 _init withError (fromMaybe jsonEmptyObject (map encodeJson token))
+
+data GapItemUnitStatus = Pending | ProcessedOk | ProcessedDecline
+
+derive instance genericGapItemUnitStatus :: Generic GapItemUnitStatus _
+derive instance eqGapItemUnitStatus :: Eq GapItemUnitStatus
+
+instance Show GapItemUnitStatus where
+  show Pending = "pending"
+  show ProcessedOk = "ok"
+  show ProcessedDecline = "declined"
+
+readGapItemUnitStatus :: String -> Maybe GapItemUnitStatus
+readGapItemUnitStatus "pending" = Just Pending
+readGapItemUnitStatus "processedOk" = Just ProcessedOk
+readGapItemUnitStatus "processedDecline" = Just ProcessedDecline
+readGapItemUnitStatus _ = Nothing
 
 type GapItemUnit = { status :: String, textualIdent :: String }
 
