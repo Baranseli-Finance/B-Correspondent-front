@@ -28,12 +28,12 @@ import Data.Time (hour, minute, Time (..), setHour, setMinute)
 import Data.Time as Time
 import Data.Enum (toEnum, fromEnum, class BoundedEnum)
 import Data.Time.Component
-import Data.Array ((:), reverse, length, uncons, head, last, snoc, find)
+import Data.Array ((:), reverse, length, uncons, head, last, snoc, find, concat)
 import Effect.Aff as Aff
 import Store (User)
 import Control.Monad.Rec.Class (forever)
 import Control.Alt ((<|>))
-import Data.Lens.Setter
+import Data.Lens
 
 import Undefined
 
@@ -358,14 +358,14 @@ renderTimline coordX idx xs =
       height = toNumber 850
       coordY = toNumber 50
       color = if even idx then "#e7e4e4" else "#dddada"
-      gap _ = 
-             Svg.rect 
-             [Svg.fill (Svg.Named color), 
-              Svg.x coordX, 
-              Svg.y coordY, 
-              Svg.width width, 
-              Svg.height height
-             ]
+      gap = 
+          Svg.rect 
+          [Svg.fill (Svg.Named color), 
+            Svg.x coordX, 
+            Svg.y coordY, 
+            Svg.width width, 
+            Svg.height height
+          ]
       tmCircle = Svg.circle [Svg.fill (Svg.Named "black"), Svg.cy (height + toNumber 50), Svg.cx coordX, Svg.r (toNumber 5) ]
       lastTmCircle = Svg.circle [Svg.fill (Svg.Named "black"), Svg.cy (height + toNumber 50), Svg.cx (coordX + width), Svg.r (toNumber 5) ]
       mkTm h m shiftX = 
@@ -374,12 +374,16 @@ renderTimline coordX idx xs =
                 Svg.y (height + toNumber 70), 
                 Svg.fill (Svg.Named "black")] 
                 [HH.text (show (h :: Int) <> ":" <> show (m :: Int))]
-      item h m xs = Svg.g [] [gap xs, tmCircle, mkTm h m (coordX - toNumber 10)]
+      item h m xs = 
+        Svg.g [] $ 
+          [gap, tmCircle, mkTm h m (coordX - toNumber 10)] <> 
+          populateTransactions coordX height width xs
   in case uncons xs of
+       Nothing -> []
        Just {head: x, tail: []} -> 
          [Svg.g 
-          [] 
-          [gap (_.elements x),
+          [] $
+          [gap,
            tmCircle, 
            lastTmCircle, 
            mkTm 
@@ -389,7 +393,34 @@ renderTimline coordX idx xs =
            mkTm 
            ((_.hour <<< _.end) x) 
            ((_.min <<< _.end) x)
-           (coordX + width - toNumber 10) ]]
+           (coordX + width - toNumber 10) ]] <> 
+           populateTransactions coordX height width (x^.Back._elements)
        Just {head: {elements, start: {hour, min}}, tail} -> 
          item hour min elements : renderTimline (coordX + width) (idx + 1) tail
-       Nothing -> []
+
+populateTransactions x@coordX coordY width xs = go coordY xs
+  where
+    height = toNumber 50
+    go y xs =
+      case uncons xs of
+         Nothing -> []
+         Just {head: x, tail: []} -> 
+           [mkItem y x] 
+         Just {head: x, tail} -> 
+           mkItem y x : go (y - height) tail
+    mkItem y {textualIdent} = 
+      Svg.g [] 
+      [region y, 
+       Svg.text 
+       [cssSvg "timeline-transaction-region-item", 
+        Svg.x x, 
+        Svg.y (y + toNumber 25)] 
+       [HH.text textualIdent]
+      ]
+    region y = 
+      Svg.rect 
+      [ cssSvg "timeline-transaction-region",
+        Svg.x coordX, 
+        Svg.y y, 
+        Svg.width width, 
+        Svg.height height]
