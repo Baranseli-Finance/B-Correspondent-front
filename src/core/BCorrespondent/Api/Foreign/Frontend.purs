@@ -121,7 +121,12 @@ readGapItemUnitStatus "processedOk" = Just ProcessedOk
 readGapItemUnitStatus "processedDecline" = Just ProcessedDecline
 readGapItemUnitStatus _ = Nothing
 
-type GapItemUnit = { status :: String, textualIdent :: String }
+type GapItemUnit = 
+     { status :: String, 
+       textualIdent :: String, 
+       ident :: Int, 
+       tm :: String
+     }
 
 type GapItemTime = { hour :: Int, min :: Int }
 

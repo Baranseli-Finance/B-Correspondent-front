@@ -28,12 +28,13 @@ import Data.Time (hour, minute, Time (..), setHour, setMinute)
 import Data.Time as Time
 import Data.Enum (toEnum, fromEnum, class BoundedEnum)
 import Data.Time.Component
-import Data.Array ((:), reverse, length, uncons, head, last, snoc, find, concat)
+import Data.Array ((:), reverse, length, uncons, head, last, snoc, find, concat, sortBy)
 import Effect.Aff as Aff
 import Store (User)
 import Control.Monad.Rec.Class (forever)
 import Control.Alt ((<|>))
 import Data.Lens
+import Data.Ord (compare)
 
 import Undefined
 
@@ -49,7 +50,7 @@ data Action =
      | Update 
      | Backward 
      | Forward
-     | FetchTransaction String
+     | FetchTransaction Int
 
 type State = 
      { error :: Maybe String, 
@@ -258,7 +259,7 @@ component =
                 let point = show hour <> "," <> show min
                 in doNoGap (setTime min hour time) (setTime min (hour + 1) time) point
               else doWithGap
-      handleAction (FetchTransaction tr_ident) = logDebug $ loc <> "item ---> " <> tr_ident
+      handleAction (FetchTransaction tr_ident) = logDebug $ loc <> "item ---> " <> show tr_ident
 
 setTime m h = 
   setMinute (fromMaybe undefined (toEnum m <|> toEnum 0)) <<< 
@@ -405,7 +406,8 @@ renderTimline coordX idx xs =
        Just {head: {elements, start: {hour, min}}, tail} -> 
          item hour min elements : renderTimline (coordX + width) (idx + 1) tail
 
-populateTransactions x@coordX coordY width xs = go coordY xs
+populateTransactions x@coordX coordY width xs = 
+  go coordY $ flip sortBy xs \x y -> compare (_.tm x :: String) (_.tm y)
   where
     height = toNumber 50
     go y xs =
@@ -415,13 +417,13 @@ populateTransactions x@coordX coordY width xs = go coordY xs
            [mkItem y x] 
          Just {head: x, tail} -> 
            mkItem y x : go (y - height) tail
-    mkItem y {textualIdent, status: s} = 
+    mkItem y {textualIdent, status: s, ident} = 
       Svg.g 
       [ cssSvg $ 
           if status == Just Back.Pending
           then "timeline-transaction-g-not-allowed" 
           else "timeline-transaction-g", 
-        onClick (const (FetchTransaction textualIdent)) 
+        onClick (const (FetchTransaction ident)) 
       ] 
       [region y status,
        Svg.text 
