@@ -10,11 +10,24 @@ module BCorrespondent.Api.Foreign.Frontend
   , NextGap
   , Sha
   , Transaction
+  , TransactionValue
+  , _amount
+  , _correspondentBank
+  , _correspondentBankSwiftSepaCode
+  , _currency
   , _elements
   , _end
   , _hour
+  , _ident
   , _min
+  , _senderAddress
+  , _senderBank
+  , _senderBankAccount
+  , _senderName
+  , _senderPhoneNumber
   , _start
+  , _swiftSepaCode
+  , _transaction
   , fetchTimelineForParticularHour
   , fetchTrnsaction
   , getJwtStatus
@@ -167,11 +180,39 @@ showDirection Forward = "forward"
 fetchTimelineForParticularHour :: Direction -> String -> FrontApi -> AC.EffectFnAff (Object (Response (Array GapItem)))
 fetchTimelineForParticularHour direction = runFn4 _fetchTimelineForParticularHour withError (showDirection direction)
 
-type Transaction = { field1 :: String }
+type Transaction = { transaction :: TransactionValue }
 
-foreign import _fetchTransaction :: Fn2 WithError Int (AC.EffectFnAff (Object (Response Transaction)))
+_transaction = lens _.transaction $ \el x -> el { transaction = x }
 
-fetchTrnsaction :: Int -> AC.EffectFnAff (Object (Response Transaction))
-fetchTrnsaction = runFn2 _fetchTransaction withError
+type TransactionValue = 
+     { correspondentBank :: String,
+       correspondentBankSwiftSepaCode :: String,
+       currency :: String,
+       ident :: String,
+       senderAddress :: String,
+       senderBank :: String,
+       senderBankAccount :: String,
+       senderName :: String,
+       senderPhoneNumber :: String,
+       swiftSepaCode :: String,
+       amount :: Number
+     }
+
+_correspondentBank = lens _.correspondentBank $ \el x -> el { correspondentBank = x }
+_correspondentBankSwiftSepaCode = lens _.correspondentBankSwiftSepaCode $ \el x -> el { correspondentBankSwiftSepaCode = x }
+_currency = lens _.currency $ \el x -> el { currency = x }
+_ident = lens _.ident $ \el x -> el { ident = x }
+_senderAddress = lens _.senderAddress $ \el x -> el { senderAddress = x }
+_senderBank = lens _.senderBank $ \el x -> el { senderBank = x }
+_senderBankAccount = lens _.senderBankAccount $ \el x -> el { senderBankAccount = x }
+_senderName = lens _.senderName $ \el x -> el { senderName = x }
+_senderPhoneNumber = lens _.senderPhoneNumber $ \el x -> el { senderPhoneNumber = x }
+_swiftSepaCode = lens _.swiftSepaCode $ \el x -> el { swiftSepaCode = x }
+_amount = lens _.amount $ \el x -> el { amount = x }
+
+foreign import _fetchTransaction :: Fn3 WithError Int FrontApi (AC.EffectFnAff (Object (Response Transaction)))
+
+fetchTrnsaction :: Int -> FrontApi -> AC.EffectFnAff (Object (Response Transaction))
+fetchTrnsaction = runFn3 _fetchTransaction withError
 
 
