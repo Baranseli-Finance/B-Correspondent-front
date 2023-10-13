@@ -8,6 +8,7 @@ import BCorrespondent.Api.Foreign.Back as Back
 import BCorrespondent.Api.Foreign.Request.Handler (onFailure)
 import BCorrespondent.Data.Config (Config(..))
 import BCorrespondent.Capability.LogMessages (logDebug)
+import BCorrespondent.Component.Async as Async
 
 import Halogen as H
 import Halogen.HTML as HH
@@ -58,7 +59,7 @@ component =
         map (const (Just a)) $ 
           for user \{ token } -> do
             resp <- Request.makeAuth (Just token) host Back.mkFrontApi $ Back.fetchTrnsaction ident
-            let failure _ = undefined
+            let failure e = Async.send $ Async.mkException e loc
             onFailure resp failure \{ success: x :: Back.Transaction } -> do 
               logDebug $ loc <> " transaction ---> " <> show x
               H.modify_ _ { isOpen = true, transaction = Just x }
@@ -131,5 +132,5 @@ transactionWin value =
      ]      
   ,  HH.form 
      [HPExt.style "padding-top:40px", HE.onSubmit Close ] 
-     [ HH.input [ HPExt.type_ HPExt.InputSubmit, HPExt.value "close", HPExt.style "cursor: pointer" ] ]
+     [ HH.input [ HPExt.type_ HPExt.InputSubmit, HPExt.value "close", HPExt.style "cursor: pointer;font-size:20px" ] ]
   ]
