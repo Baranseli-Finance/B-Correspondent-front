@@ -10,6 +10,8 @@ import BCorrespondent.Api.Foreign.Back as Back
 import BCorrespondent.Api.Foreign.Request.Handler (onFailure)
 import BCorrespondent.Component.Async as Async
 import BCorrespondent.Component.Workspace.Dashboard.Transaction as Dashboard.Transaction
+import BCorrespondent.Component.Subscription.WS as WS
+import BCorrespondent.Component.Subscription.WS.Types
 
 import Halogen.Store.Monad (getStore)
 import Halogen as H
@@ -37,6 +39,8 @@ import Control.Monad.Rec.Class (forever)
 import Control.Alt ((<|>))
 import Data.Lens
 import Data.Ord (compare)
+import Web.Socket as WS
+import Effect.AVar as Async
 
 import Undefined
 
@@ -53,6 +57,7 @@ data Action =
      | Backward 
      | Forward
      | FetchTransaction Int (Maybe Back.GapItemUnitStatus)
+     | UpdateTransaction Transaction
 
 type State = 
      { error :: Maybe String, 
@@ -113,6 +118,9 @@ component =
 
             timezone <- H.liftEffect getTimezone
 
+            WS.subscribe loc WS.dashboardUrl (Just (WS.showResource WS.Transaction)) 
+             \{success: new} -> handleAction $ UpdateTransaction new
+
             H.modify_ _ 
               { timeline = timeline,
                 institution = title, 
@@ -124,7 +132,6 @@ component =
                 timezone = timezone
               }
 
-      handleAction Finalize = map (_.forkId) H.get >>= flip for_ H.kill
       handleAction Update = do
         { config: Config { apiBCorrespondentHost: host }, user } <- getStore
         for_ (user :: Maybe User) \{ token } -> do
@@ -272,6 +279,19 @@ component =
         | status == Nothing = logError $ loc <> " ---> FetchTransaction, status unknown" 
         | status == Just Back.Pending = logDebug $ loc <> " ---> FetchTransaction , pending, skip" 
         | otherwise = H.tell Dashboard.Transaction.proxy 1 $ Dashboard.Transaction.Open ident
+     
+      handleAction (UpdateTransaction new) = logDebug $ loc <> " ---> update transaction " <> show new
+
+      handleAction Finalize = do
+        map (_.forkId) H.get >>= flip for_ H.kill
+        { wsVar } <- getStore
+        wsm <- H.liftEffect $ Async.tryTake wsVar
+        for_ wsm \xs ->
+          for_ xs \{ ws, forkId } -> do
+            H.kill forkId
+            H.liftEffect $ WS.close ws
+            logDebug $ loc <> " ---> ws has been killed"
+
 
 setTime m h = 
   setMinute (fromMaybe undefined (toEnum m <|> toEnum 0)) <<< 

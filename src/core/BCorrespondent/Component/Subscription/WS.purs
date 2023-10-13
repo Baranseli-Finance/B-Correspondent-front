@@ -1,4 +1,4 @@
-module BCorrespondent.Component.Subscription.WS (subscribe) where
+module BCorrespondent.Component.Subscription.WS ( Resource(..), subscribe, showResource, dashboardUrl) where
 
 import Prelude
 
@@ -20,13 +20,21 @@ import Data.Array ((:), singleton)
 
 import Undefined
 
+data Resource = Transaction | Wallet
+
+showResource :: Resource -> String
+showResource Transaction = "transaction"
+showResource Wallet = "wallet"
+
+dashboardUrl = "frontend/user/dashboard/daily-balance-sheet/notify/timeline"
+
 subscribe loc url trigger goCompHandle = do
   { config: Config { apiBCorrespondentHostWS }, user, wsVar } <- getStore
   logDebug $ loc <> " ---> ws url: " <> apiBCorrespondentHostWS <> "/" <> url
   ws <- H.liftEffect $ WS.create (apiBCorrespondentHostWS <> "/" <> url) []
   let
     isOpen = do
-      Aff.delay $ Aff.Milliseconds 1000.0
+      Aff.delay $ Aff.Milliseconds 100.0
       st <- H.liftEffect $ WS.readState ws
       if st == Open then pure true else isOpen
   H.liftAff $ unlessM isOpen $ pure unit
