@@ -280,7 +280,24 @@ component =
         | status == Just Back.Pending = logDebug $ loc <> " ---> FetchTransaction , pending, skip" 
         | otherwise = H.tell Dashboard.Transaction.proxy 1 $ Dashboard.Transaction.Open ident
      
-      handleAction (UpdateTransaction new) = logDebug $ loc <> " ---> update transaction " <> show new
+      handleAction (UpdateTransaction tr@{hour, min, textualIdent: ident, status: newStatus}) = do 
+        logDebug $ loc <> " ---> update transaction " <> show tr
+        {timeline} <- H.get
+        let newTimeline = 
+              flip map timeline \x ->
+                if x^.Back._start <<< Back._hour * 60 + 
+                   x^.Back._start <<< Back._min <= 
+                   hour * 60 + min
+                   && x^.Back._end <<< Back._hour * 
+                      60 + x^.Back._end <<< Back._min >= 
+                   hour * 60 + min
+                then x # Back._elements %~ \xs -> 
+                       flip map xs \el@{textualIdent} -> 
+                         if ident ==  textualIdent 
+                         then el { status = newStatus } 
+                         else el
+                else x
+        H.modify_ _ { timeline = newTimeline }
 
       handleAction Finalize = do
         map (_.forkId) H.get >>= flip for_ H.kill

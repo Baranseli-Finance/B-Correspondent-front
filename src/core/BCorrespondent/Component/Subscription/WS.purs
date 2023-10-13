@@ -17,6 +17,7 @@ import Halogen.Store.Monad (getStore)
 import Data.Traversable (for_)
 import Effect.AVar as Async
 import Data.Array ((:), singleton)
+import Data.Argonaut.Encode (encodeJson)
 
 import Undefined
 
@@ -46,7 +47,7 @@ subscribe loc url trigger goCompHandle = do
     resp <- makeWS ws
     onFailure resp (Async.send <<< flip Async.mkException loc) $ \_ -> do
       logDebug $ loc <> " ---> ws is open "
-      for_ trigger \init -> H.liftEffect $ ws `WS.send` init
+      for_ trigger \init -> H.liftEffect $ ws `WS.send` encodeJson init
       forkId <- H.fork $ forever $ do
         resp <- makeWS ws
         onFailure resp (Async.send <<< flip Async.mkException loc) goCompHandle
