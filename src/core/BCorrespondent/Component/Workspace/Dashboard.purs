@@ -94,10 +94,9 @@ component =
       handleAction Initialize = do
         { config: Config { apiBCorrespondentHost: host }, user } <- getStore
         for_ user \{ token } -> do
-          resp <- Request.makeAuth (Just token) host Back.mkFrontApi $ 
-            Back.initUserDashboardDailyBalanceSheet
+          resp <- Request.makeAuth (Just token) host Back.mkFrontApi $ Back.initDashboard
           let failure e = H.modify_ _ { error = Just $ "cannot load component: " <> message e }
-          onFailure resp failure \{ success: {institution: title, gaps} } -> do
+          onFailure resp failure \{ success: {dailyBalanceSheet: {institution: title, gaps}} } -> do
             logDebug $ loc <> " ---> timeline gaps " <> show (gaps :: Array Back.GapItem)
             logDebug $ loc <> " ---> timeline institution " <> title
             timeto <- H.liftEffect $ nowTime

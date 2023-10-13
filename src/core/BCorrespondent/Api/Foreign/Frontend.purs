@@ -32,7 +32,7 @@ module BCorrespondent.Api.Foreign.Frontend
   , fetchTrnsaction
   , getJwtStatus
   , init
-  , initUserDashboardDailyBalanceSheet
+  , initDashboard
   , loadNextGap
   , mkFrontApi
   , printInit
@@ -156,11 +156,12 @@ _elements = lens _.elements $ \el x -> el { elements = x }
 
 type DailyBalanceSheet = { institution :: String, gaps :: Array GapItem }
 
-foreign import _initUserDashboardDailyBalanceSheet :: Fn2 WithError FrontApi (AC.EffectFnAff (Object (Response DailyBalanceSheet)))
+type Dashboard = { dailyBalanceSheet :: DailyBalanceSheet }
 
-initUserDashboardDailyBalanceSheet :: FrontApi -> AC.EffectFnAff (Object (Response DailyBalanceSheet))
-initUserDashboardDailyBalanceSheet = runFn2 _initUserDashboardDailyBalanceSheet withError
+foreign import _initDashboard :: Fn2 WithError FrontApi (AC.EffectFnAff (Object (Response Dashboard)))
 
+initDashboard :: FrontApi -> AC.EffectFnAff (Object (Response Dashboard))
+initDashboard = runFn2 _initDashboard withError
 
 foreign import _loadNextGap :: Fn4 WithError String String FrontApi (AC.EffectFnAff (Object (Response NextGap)))
 

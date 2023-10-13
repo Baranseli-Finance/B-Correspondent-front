@@ -15,10 +15,10 @@ export const _init =
         };
     }
 
-export const _initUserDashboardDailyBalanceSheet =
+export const _initDashboard =
     function(withError, api) {
         return function(onError, onOk) {
-            api.frontendUserDashboardDailyBalanceSheetInitGet().then(onOk).catch(resp => {
+            api.frontendUserDashboardInitGet().then(onOk).catch(resp => {
                 return withError(resp, onError)
             })
         };
