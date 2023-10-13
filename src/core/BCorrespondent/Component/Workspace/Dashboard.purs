@@ -17,6 +17,7 @@ import Halogen.HTML as HH
 import Halogen.HTML.Properties.Extended as HPExt
 import Halogen.HTML.Events (onClick)
 import Halogen.Svg.Elements as Svg
+import Halogen.Svg.Attributes.FontSize as Svg
 import Halogen.Svg.Attributes as Svg
 import Halogen.Svg.Attributes.Color as Svg
 import Type.Proxy (Proxy(..))
@@ -56,6 +57,7 @@ data Action =
 type State = 
      { error :: Maybe String, 
        timeline :: Array Back.GapItem,
+       institution :: String,
        forkId :: Maybe H.ForkId,
        isBackward :: Boolean,
        isForward :: Boolean,
@@ -67,7 +69,8 @@ component =
   H.mkComponent
     { initialState: const 
       { error: Nothing, 
-        timeline: [], 
+        timeline: [],
+        institution: mempty, 
         forkId: Nothing,
         isBackward: false,
         isForward: false,
@@ -89,8 +92,9 @@ component =
           resp <- Request.makeAuth (Just token) host Back.mkFrontApi $ 
             Back.initUserDashboardDailyBalanceSheet
           let failure e = H.modify_ _ { error = Just $ "cannot load component: " <> message e }
-          onFailure resp failure \{ success: {gaps} } -> do
+          onFailure resp failure \{ success: {institution: title, gaps} } -> do
             logDebug $ loc <> " ---> timeline gaps " <> show (gaps :: Array Back.GapItem)
+            logDebug $ loc <> " ---> timeline institution " <> title
             timeto <- H.liftEffect $ nowTime
             let timetoAdj = setMinute (intToTimePiece (fromEnum (minute timeto) + mod (60 - fromEnum (minute timeto)) 5)) timeto
             timefrom <- H.liftEffect $ addMinutes (-60) timetoAdj
@@ -110,7 +114,8 @@ component =
             timezone <- H.liftEffect getTimezone
 
             H.modify_ _ 
-              { timeline = timeline, 
+              { timeline = timeline,
+                institution = title, 
                 isBackward = 
                   if fromEnum (hour timeto) == 0 
                   then false 
@@ -439,7 +444,7 @@ populateTransactions x@coordX coordY width xs =
           Svg.height height]
 
 render {error: Just e} = HH.text e
-render {error: Nothing, timeline, isBackward, isForward, timezone} =
+render {error: Nothing, timeline, isBackward, isForward, timezone, institution} =
   HH.div_ 
   [
       Svg.svg 
@@ -448,8 +453,9 @@ render {error: Nothing, timeline, isBackward, isForward, timezone} =
       [ Svg.text 
         [Svg.x (toNumber ((1440 / 2))), 
         Svg.y (toNumber 20), 
-        Svg.fill (Svg.Named "black")] 
-        [HH.text "Dashboard"]
+        Svg.fill (Svg.Named "black"),
+        Svg.fontSize Svg.XXLarge]
+        [HH.text institution]
       , Svg.g [] $ 
           mkBackwardButton isBackward : 
           mkForwardButton isForward :

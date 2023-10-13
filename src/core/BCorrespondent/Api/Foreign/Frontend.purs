@@ -154,7 +154,7 @@ _start = lens _.start $ \el x -> el { start = x }
 _end = lens _.end $ \el x -> el { end = x }
 _elements = lens _.elements $ \el x -> el { elements = x }
 
-type DailyBalanceSheet = { gaps :: Array GapItem }
+type DailyBalanceSheet = { institution :: String, gaps :: Array GapItem }
 
 foreign import _initUserDashboardDailyBalanceSheet :: Fn2 WithError FrontApi (AC.EffectFnAff (Object (Response DailyBalanceSheet)))
 
