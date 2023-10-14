@@ -2,13 +2,17 @@ module BCorrespondent.Component.Workspace.Dashboard.Gap (Query(..), slot, proxy)
 
 import Prelude
 
+import BCorrespondent.Api.Foreign.Back (GapItemAmount, Currency (..), decodeCurrency)
+import BCorrespondent.Component.HTML.Utils (whenElem)
+
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Properties.Extended as HPExt
 import Type.Proxy (Proxy(..))
 import AppM (AppM)
-import Data.Maybe (Maybe (..))
+import Data.Maybe (Maybe (..), fromMaybe)
 import Data.Functor (($>))
+import Data.Array (length)
 
 proxy = Proxy :: _ "workspace_dashboard_gap"
 
@@ -16,13 +20,18 @@ loc = "BCorrespondent.Component.Workspace.Dashboard.Gap"
 
 slot n = HH.slot_ proxy n component unit
 
-data Query a = Open {x :: Maybe Int, y :: Maybe Int} a
+data Query a = Open {x :: Maybe Int, y :: Maybe Int, amounts :: Array GapItemAmount} a
 
-type State = { x :: Maybe Int, y :: Maybe Int }
+type State = 
+     { x :: Maybe Int, 
+       y :: Maybe Int, 
+       amounts :: Array GapItemAmount 
+     }
 
 component =
   H.mkComponent
-    { initialState: const { x: Nothing, y: Nothing }
+    { initialState: 
+      const { x: Nothing, y: Nothing, amounts: [] }
     , render: render
     , eval: H.mkEval H.defaultEval
       { handleQuery = handleQuery }
@@ -31,15 +40,31 @@ component =
       handleQuery 
         :: forall a s . Query a
         -> H.HalogenM State Unit s Unit AppM (Maybe a)
-      handleQuery (Open coord a) = 
-        H.modify_ _ { x = _.x coord, y = _.y coord } $> Just a
+      handleQuery (Open query a) =
+        H.modify_ _ { x = _.x query, y = _.y query, amounts = _.amounts query } $> Just a
 
 render { x: Nothing, y: Nothing } = HH.div_ []
-render { x: Just xCoord, y: Just yCoord } = 
+render { x: Just xCoord, y: Just yCoord, amounts } = 
   let mkStyle = 
-        "width:200px;height:100px;background-color:black;position:absolute;left:" <> 
-        show (xCoord - 30) <> 
+        "width:200px;height:100px;\
+        \ background-color:white;\
+        \ border: solid 1px black; \
+        \ position:absolute;left:" <> 
+        show (xCoord - 30) <>
         "px;top:" <> 
         show (yCoord - 150) <> "px"
-  in HH.div [HPExt.style mkStyle] [HH.text "gap"]
+  in whenElem (length amounts > 0) $ 
+       HH.div [HPExt.style mkStyle] $ 
+         [HH.div_ [HH.text "Total amount"]] <> 
+         renderAmounts amounts
 render _ = HH.div_ []
+
+renderAmounts xs = 
+  flip map xs \{currency, value} -> 
+    HH.div_ 
+    [  HH.span 
+       [HPExt.style "position:relative;font-size:20px"] 
+       [HH.text (show (fromMaybe CurrencyNotResolved (decodeCurrency currency)))]
+    ,  HH.span [HPExt.style "font-size:20px; padding-left:10px"]
+       [HH.text (show value)]
+    ]

@@ -5,6 +5,7 @@ module BCorrespondent.Api.Foreign.Frontend
   , EnumResolvedWallet
   , FrontApi
   , GapItem
+  , GapItemAmount
   , GapItemTime
   , GapItemUnit
   , GapItemUnitStatus(..)
@@ -16,6 +17,7 @@ module BCorrespondent.Api.Foreign.Frontend
   , Wallet
   , WalletType(..)
   , _amount
+  , _amounts
   , _correspondentBank
   , _correspondentBankSwiftSepaCode
   , _currency
@@ -42,6 +44,7 @@ module BCorrespondent.Api.Foreign.Frontend
   , initDashboard
   , loadNextGap
   , mkFrontApi
+  , printGapItemAmount
   , printGapItemUnit
   , printInit
   , shaPred
@@ -165,11 +168,21 @@ type GapItemTime = { hour :: Int, min :: Int }
 _hour = lens _.hour $ \el x -> el { hour = x }
 _min = lens _.min $ \el x -> el { min = x }
 
-type GapItem = { elements :: Array GapItemUnit, start :: GapItemTime, end :: GapItemTime }
+type GapItemAmount = { currency :: Foreign, value :: Number }
+
+printGapItemAmount { currency, value } = "{currency: " <> show (decodeCurrency currency) <> ", value:" <> show value <> "}"
+
+type GapItem = 
+     { elements :: Array GapItemUnit, 
+       start :: GapItemTime, 
+       end :: GapItemTime,
+       amounts :: Array GapItemAmount
+     }
 
 _start = lens _.start $ \el x -> el { start = x }
 _end = lens _.end $ \el x -> el { end = x }
 _elements = lens _.elements $ \el x -> el { elements = x }
+_amounts = lens _.amounts $ \el x -> el { amounts = x }
 
 type DailyBalanceSheet = { institution :: String, gaps :: Array GapItem }
 

@@ -21,7 +21,7 @@ import Halogen.Store.Monad (getStore)
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Properties.Extended as HPExt
-import Halogen.HTML.Events (onClick, onMouseMove, onMouseOut)
+import Halogen.HTML.Events (onClick, onMouseMove, onMouseOut, onMouseEnter)
 import Halogen.Svg.Elements as Svg
 import Halogen.Svg.Attributes.FontSize as Svg
 import Halogen.Svg.Attributes as Svg
@@ -64,7 +64,7 @@ data Action =
      | FetchTransaction Int (Maybe Back.GapItemUnitStatus)
      | UpdateTransaction Transaction
      | UpdateWallet Wallet
-     | TotalAmountInGap Int MouseEvent
+     | TotalAmountInGap Int (Array Back.GapItemAmount) MouseEvent
      | CancelTotalAmountInGap
 
 type State = 
@@ -109,7 +109,8 @@ component =
           resp <- Request.makeAuth (Just token) host Back.mkFrontApi $ Back.initDashboard
           let failure e = H.modify_ _ { error = Just $ "cannot load component: " <> message e }
           onFailure resp failure \{ success: {dailyBalanceSheet: {institution: title, gaps}, wallets} } -> do
-            logDebug $ loc <> " ---> timeline gaps " <> show (map (\x -> x # Back._elements %~ map Back.printGapItemUnit) (gaps :: Array Back.GapItem))
+            logDebug $ loc <> " ---> timeline gaps " <> 
+              show (map (\x -> x # Back._elements %~ map Back.printGapItemUnit # Back._amounts %~ map Back.printGapItemAmount) (gaps :: Array Back.GapItem))
             logDebug $ loc <> " ---> timeline institution " <> title
             time <- H.liftEffect $ nowTime
             let adjMin = fromEnum (minute time) + mod (60 - fromEnum (minute time)) 5
@@ -122,7 +123,8 @@ component =
             let timeline = 
                   flip populateTimeline gaps $ 
                     initTimeline from to
-            logDebug $ loc <> " ---> init timeline " <> show (map (\x -> x # Back._elements %~ map Back.printGapItemUnit) timeline)
+            logDebug $ loc <> " ---> init timeline " <> 
+              show (map (\x -> x # Back._elements %~ map Back.printGapItemUnit # Back._amounts %~ map Back.printGapItemAmount) timeline)
         
             forkId <-  H.fork $ do
                logDebug $ loc <> " ---> timeline updater has been activated"
@@ -181,7 +183,8 @@ component =
               let failure = Async.send <<< flip Async.mkException loc  
               onFailure resp failure \{success: gaps} -> do
                 map (_.forkId) H.get >>= flip for_ H.kill
-                logDebug $ loc <> " --->  backward, gaps " <> show (map (\x -> x # Back._elements %~ map Back.printGapItemUnit) (gaps :: Array Back.GapItem))
+                logDebug $ loc <> " --->  backward, gaps " <> 
+                  show (map (\x -> x # Back._elements %~ map Back.printGapItemUnit # Back._amounts %~ map Back.printGapItemAmount) (gaps :: Array Back.GapItem))
                 time <- H.liftEffect $ nowTime
                 let newStartPoint | hour - 1 < 0 = setTime min 23 time 
                                   | otherwise = setTime min (hour - 1) time
@@ -192,7 +195,8 @@ component =
                 let newTimeline = 
                       flip populateTimeline gaps $ 
                         initTimeline newStartPoint newEndPoint
-                logDebug $ loc <> " --->  backward. current timline " <> show (map (\x -> x # Back._elements %~ map Back.printGapItemUnit) newTimeline)
+                logDebug $ loc <> " --->  backward. current timline " <> 
+                  show (map (\x -> x # Back._elements %~ map Back.printGapItemUnit # Back._amounts %~ map Back.printGapItemAmount) newTimeline)
 
                 H.modify_ _ 
                   { timeline = newTimeline,
@@ -251,7 +255,8 @@ component =
                         let newTimeline = 
                               flip populateTimeline gaps $ 
                                 initTimeline from to
-                        logDebug $ loc <> " --->  forward. current timline " <> show (map (\x -> x # Back._elements %~ map Back.printGapItemUnit) newTimeline) 
+                        logDebug $ loc <> " --->  forward. current timline " <> 
+                          show (map (\x -> x # Back._elements %~ map Back.printGapItemUnit # Back._amounts %~ map Back.printGapItemAmount) newTimeline) 
                         H.modify_ _ 
                           { timeline = newTimeline,
                             isForward = checkForward,
@@ -321,14 +326,17 @@ component =
         {wallets: old} <- H.get
         H.modify_ _ { wallets = flip map old \x -> if _.ident x == ident then x { amount = new } else x }
 
-      handleAction (TotalAmountInGap idx ev) = do
+      handleAction (TotalAmountInGap idx xs ev) = do
         H.tell Dashboard.Gap.proxy 2 $ 
-          Dashboard.Gap.Open { x: Just (clientX ev), y: Just (clientY ev) } 
+          Dashboard.Gap.Open { x: Just (clientX ev), y: Just (clientY ev), amounts: xs } 
         H.modify_ _ { currentGapIdx = idx }
+        
       handleAction CancelTotalAmountInGap = do 
+        logDebug $ loc <> " CancelTotalAmountInGap"
+        H.tell Dashboard.Gap.proxy 2 $
+          Dashboard.Gap.Open { x: Nothing, y: Nothing, amounts: [] }
         H.modify_ _ { currentGapIdx = -1 }
-        H.tell Dashboard.Gap.proxy 2 $ 
-          Dashboard.Gap.Open { x: Nothing, y: Nothing } 
+
 
       handleAction Finalize = do
         map (_.forkId) H.get >>= flip for_ H.kill
@@ -373,7 +381,7 @@ initTimeline from to = go from to []
        (minute from == minute to) = reverse xs
      go from to xs =
        let x = 
-              { elements: [], 
+              { elements: [],
                 start: { 
                   hour: fromEnum $ hour from, 
                   min: fromEnum $ minute from }, 
@@ -385,7 +393,8 @@ initTimeline from to = go from to []
                   min: 
                     if fromEnum (minute from) + 5 == 60 
                     then 0 
-                    else fromEnum (minute from) + 5 }
+                    else fromEnum (minute from) + 5 },
+                amounts: []   
               }
            newFrom = 
              setHour
@@ -404,7 +413,7 @@ intToTimePiece = fromMaybe bottom <<< toEnum
 populateTimeline timeline xs = 
   timeline <#> \curr@{ start, end} -> 
     let elm = flip find xs \x -> _.start x == start && _.end x == end
-    in fromMaybe curr $ flip map elm \{elements } -> curr # Back._elements .~ elements
+    in fromMaybe curr $ flip map elm \{elements, amounts } -> curr # Back._elements .~ elements # Back._amounts .~ amounts
 
  -- x # Back._start <<< Back._hour %~ ((+) timezone) 
 --    # Back._end <<< Back._hour %~ ((+) timezone)
@@ -465,16 +474,16 @@ renderTimline coordX idx xs currGap =
                 Svg.y (height + toNumber 70), 
                 Svg.fill (Svg.Named "black")] 
                 [HH.text (show (h :: Int) <> ":" <> show (m :: Int))]
-      item i h m xs = 
-        Svg.g [onMouseMove (TotalAmountInGap i), onMouseOut (const CancelTotalAmountInGap) ] $ 
+      item i h m xs ys = 
+        Svg.g [onMouseMove (TotalAmountInGap i xs), onMouseOut (const CancelTotalAmountInGap) ] $ 
           [gap, mkTm h m (coordX - toNumber 10)] <> 
-          populateTransactions coordX height width xs <> 
+          populateTransactions coordX height width ys <> 
           [tmCircle]
   in case uncons xs of
        Nothing -> []
        Just {head: x, tail: []} -> 
          [Svg.g 
-          [onMouseMove (TotalAmountInGap idx), onMouseOut (const CancelTotalAmountInGap) ] $
+          [onMouseMove (TotalAmountInGap idx (_.amounts x)), onMouseOut (const CancelTotalAmountInGap) ] $
           [gap,
            mkTm 
            ((_.hour <<< _.start) x) 
@@ -486,8 +495,8 @@ renderTimline coordX idx xs currGap =
            (coordX + width - toNumber 10) ]] <> 
            populateTransactions coordX height width (x^.Back._elements) <>
            [tmCircle, lastTmCircle]
-       Just {head: {elements, start: {hour, min}}, tail} -> 
-         item idx hour min elements : renderTimline (coordX + width) (idx + 1) tail currGap
+       Just {head: {amounts, elements, start: {hour, min}}, tail} -> 
+         item idx hour min amounts elements : renderTimline (coordX + width) (idx + 1) tail currGap
 
 populateTransactions x@coordX coordY width xs = 
   go coordY $ flip sortBy xs \x y -> compare (_.tm x :: String) (_.tm y)
