@@ -6,6 +6,7 @@ module BCorrespondent.Api.Foreign.Frontend
   , GapItemTime
   , GapItemUnit
   , GapItemUnitStatus(..)
+  , GapItemUnitWrapper(..)
   , Init
   , NextGap
   , Sha
@@ -28,6 +29,7 @@ module BCorrespondent.Api.Foreign.Frontend
   , _start
   , _swiftSepaCode
   , _transaction
+  , decodeGapItemUnitStatus
   , fetchTimelineForParticularHour
   , fetchTrnsaction
   , getJwtStatus
@@ -36,7 +38,6 @@ module BCorrespondent.Api.Foreign.Frontend
   , loadNextGap
   , mkFrontApi
   , printInit
-  , readGapItemUnitStatus
   , shaPred
   )
   where
@@ -62,6 +63,10 @@ import Effect.Exception as E
 import Data.Array (uncons)
 import Data.Lens (lens, Lens)
 import Data.Generic.Rep (class Generic)
+import Foreign.Enum
+import Data.String (toLower)
+import Data.Either (hush)
+import Control.Monad.Except (runExcept)
 
 import Undefined
 
@@ -120,28 +125,31 @@ foreign import _init :: Fn3 WithError Json FrontApi (AC.EffectFnAff (Object (Res
 init :: Maybe JWTToken -> FrontApi -> AC.EffectFnAff (Object (Response Init))
 init token = runFn3 _init withError (fromMaybe jsonEmptyObject (map encodeJson token))
 
-data GapItemUnitStatus = Pending | ProcessedOk | ProcessedDecline
+data GapItemUnitStatus = Pending | Ok | Declined
 
 derive instance genericGapItemUnitStatus :: Generic GapItemUnitStatus _
 derive instance eqGapItemUnitStatus :: Eq GapItemUnitStatus
 
 instance Show GapItemUnitStatus where
   show Pending = "pending"
-  show ProcessedOk = "ok"
-  show ProcessedDecline = "declined"
+  show Ok = "ok"
+  show Declined = "declined"
 
-readGapItemUnitStatus :: String -> Maybe GapItemUnitStatus
-readGapItemUnitStatus "pending" = Just Pending
-readGapItemUnitStatus "processedOk" = Just ProcessedOk
-readGapItemUnitStatus "processedDecline" = Just ProcessedDecline
-readGapItemUnitStatus _ = Nothing
+decodeGapItemUnitStatus :: Foreign -> Maybe GapItemUnitStatus
+decodeGapItemUnitStatus = hush <<< runExcept <<< genericDecodeEnum {constructorTagTransform: toLower}
 
 type GapItemUnit = 
-     { status :: String, 
+     { status :: Foreign, 
        textualIdent :: String, 
        ident :: Int, 
        tm :: String
      }
+
+newtype GapItemUnitWrapper = GapItemUnitWrapper GapItemUnit
+
+instance Show GapItemUnitWrapper where
+  show _ = undefined
+
 
 type GapItemTime = { hour :: Int, min :: Int }
 
@@ -165,21 +173,22 @@ initDashboard = runFn2 _initDashboard withError
 
 foreign import _loadNextGap :: Fn4 WithError String String FrontApi (AC.EffectFnAff (Object (Response NextGap)))
 
-type NextGap = { gap :: GapItem } 
+type NextGap = { gap :: GapItem }
 
 loadNextGap :: String -> String -> FrontApi -> AC.EffectFnAff (Object (Response NextGap))
 loadNextGap = runFn4 _loadNextGap withError
 
-foreign import _fetchTimelineForParticularHour :: Fn4 WithError String String FrontApi (AC.EffectFnAff (Object (Response (Array GapItem))))
-
+foreign import _fetchTimelineForParticularHour :: Fn4 WithError Foreign String FrontApi (AC.EffectFnAff (Object (Response (Array GapItem))))
 
 data Direction = Backward | Forward
 
-showDirection Backward = "backward"
-showDirection Forward = "forward"
+derive instance genericDirection :: Generic Direction _
+
+encodeDirection :: Direction -> Foreign
+encodeDirection = genericEncodeEnum {constructorTagTransform: toLower}
 
 fetchTimelineForParticularHour :: Direction -> String -> FrontApi -> AC.EffectFnAff (Object (Response (Array GapItem)))
-fetchTimelineForParticularHour direction = runFn4 _fetchTimelineForParticularHour withError (showDirection direction)
+fetchTimelineForParticularHour direction = runFn4 _fetchTimelineForParticularHour withError (encodeDirection direction)
 
 type Transaction = { transaction :: TransactionValue }
 

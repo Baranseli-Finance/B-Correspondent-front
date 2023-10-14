@@ -97,7 +97,7 @@ component =
           resp <- Request.makeAuth (Just token) host Back.mkFrontApi $ Back.initDashboard
           let failure e = H.modify_ _ { error = Just $ "cannot load component: " <> message e }
           onFailure resp failure \{ success: {dailyBalanceSheet: {institution: title, gaps}} } -> do
-            logDebug $ loc <> " ---> timeline gaps " <> show (gaps :: Array Back.GapItem)
+            -- logDebug $ loc <> " ---> timeline gaps " <> show (gaps :: Array Back.GapItem)
             logDebug $ loc <> " ---> timeline institution " <> title
             timeto <- H.liftEffect $ nowTime
             let timetoAdj = setMinute (intToTimePiece (fromEnum (minute timeto) + mod (60 - fromEnum (minute timeto)) 5)) timeto
@@ -109,7 +109,7 @@ component =
             let timeline = 
                   flip populateTimeline gaps $ 
                     initTimeline timefromAdj timetoAdj
-            logDebug $ loc <> " ---> init timeline " <> show timeline
+            -- logDebug $ loc <> " ---> init timeline " <> show timeline
         
             forkId <-  H.fork $ do
                logDebug $ loc <> " ---> timeline updater has been activated"
@@ -161,7 +161,7 @@ component =
               let failure = Async.send <<< flip Async.mkException loc  
               onFailure resp failure \{success: gaps} -> do
                 map (_.forkId) H.get >>= flip for_ H.kill
-                logDebug $ loc <> " --->  backward, gaps " <> show (gaps :: Array Back.GapItem)
+                -- logDebug $ loc <> " --->  backward, gaps " <> show (gaps :: Array Back.GapItem)
                 time <- H.liftEffect $ nowTime
                 let newStartPoint | hour - 1 < 0 = setTime min 23 time 
                                   | otherwise = setTime min (hour - 1) time
@@ -172,7 +172,7 @@ component =
                 let newTimeline = 
                       flip populateTimeline gaps $ 
                         initTimeline newStartPoint newEndPoint
-                logDebug $ loc <> " --->  backward. current timline " <> show newTimeline 
+                -- logDebug $ loc <> " --->  backward. current timline " <> show newTimeline 
 
                 H.modify_ _ 
                   { timeline = newTimeline,
@@ -189,7 +189,7 @@ component =
           for_ (user :: Maybe User) \{ token } -> do
             {timeline, stepsBackward} <- H.get
             for_ (last timeline) \ps@{end: p@{hour, min}} -> do
-              logDebug $ loc <> " --->  forward. points " <> show ps
+              -- logDebug $ loc <> " --->  forward. points " <> show ps
               time <- H.liftEffect $ nowTime
               let minutes = fromEnum $ minute time
 
@@ -231,7 +231,7 @@ component =
                         let newTimeline = 
                               flip populateTimeline gaps $ 
                                 initTimeline from to
-                        logDebug $ loc <> " --->  forward. current timline " <> show newTimeline     
+                        -- logDebug $ loc <> " --->  forward. current timline " <> show newTimeline     
                         H.modify_ _ 
                           { timeline = newTimeline,
                             isForward = checkForward,
@@ -279,7 +279,7 @@ component =
         | otherwise = H.tell Dashboard.Transaction.proxy 1 $ Dashboard.Transaction.Open ident
      
       handleAction (UpdateTransaction tr@{hour, min, textualIdent: ident, status: newStatus}) = do 
-        logDebug $ loc <> " ---> update transaction " <> show tr
+        -- logDebug $ loc <> " ---> update transaction " <> show tr
         {timeline} <- H.get
         let newTimeline = 
               flip map timeline \x ->
@@ -463,12 +463,12 @@ populateTransactions x@coordX coordY width xs =
         Svg.y (y + toNumber 25)] 
        [HH.text textualIdent]
       ]
-      where status = Back.readGapItemUnitStatus s
+      where status = Back.decodeGapItemUnitStatus s
     region y status =
       let chooseColour Nothing = Svg.Named "#ffffff"
           chooseColour (Just Back.Pending) = Svg.Named "#ffffff"
-          chooseColour (Just Back.ProcessedOk) = Svg.Named "#7ddF3a"
-          chooseColour (Just Back.ProcessedDecline) = Svg.Named "#ff5959"
+          chooseColour (Just Back.Ok) = Svg.Named "#7ddF3a"
+          chooseColour (Just Back.Declined) = Svg.Named "#ff5959"
       in
         Svg.rect
         [ cssSvg "timeline-transaction-region",
