@@ -97,19 +97,20 @@ component =
           resp <- Request.makeAuth (Just token) host Back.mkFrontApi $ Back.initDashboard
           let failure e = H.modify_ _ { error = Just $ "cannot load component: " <> message e }
           onFailure resp failure \{ success: {dailyBalanceSheet: {institution: title, gaps}} } -> do
-            -- logDebug $ loc <> " ---> timeline gaps " <> show (gaps :: Array Back.GapItem)
+            logDebug $ loc <> " ---> timeline gaps " <> show (map (\x -> x # Back._elements %~ map Back.printGapItemUnit) (gaps :: Array Back.GapItem))
             logDebug $ loc <> " ---> timeline institution " <> title
-            timeto <- H.liftEffect $ nowTime
-            let timetoAdj = setMinute (intToTimePiece (fromEnum (minute timeto) + mod (60 - fromEnum (minute timeto)) 5)) timeto
-            timefrom <- H.liftEffect $ addMinutes (-60) timetoAdj
-            let timefromAdj = setMinute (intToTimePiece (fromEnum (minute timefrom) + mod (60 - fromEnum (minute timefrom)) 5)) timefrom
+            time <- H.liftEffect $ nowTime
+            let adjMin = fromEnum (minute time) + mod (60 - fromEnum (minute time)) 5
+            let roundMin = if adjMin == 60 then 0 else adjMin
+            let from = setH (if roundMin == 0 then fromEnum (hour time) else fromEnum (hour time) - 1) $ setMin roundMin time
+            let to = setH (if roundMin == 0 then fromEnum (hour time) + 1 else fromEnum (hour time)) $ setMin roundMin time
 
-            logDebug $ loc <> " ---> timeline start -> end: (" <> show timefromAdj <> ", " <> show timetoAdj <> ")"
+            logDebug $ loc <> " ---> timeline start -> end: (" <> show from <> ", " <> show to <> ")"
 
             let timeline = 
                   flip populateTimeline gaps $ 
-                    initTimeline timefromAdj timetoAdj
-            -- logDebug $ loc <> " ---> init timeline " <> show timeline
+                    initTimeline from to
+            logDebug $ loc <> " ---> init timeline " <> show (map (\x -> x # Back._elements %~ map Back.printGapItemUnit) timeline)
         
             forkId <-  H.fork $ do
                logDebug $ loc <> " ---> timeline updater has been activated"
@@ -124,7 +125,7 @@ component =
               { timeline = timeline,
                 institution = title, 
                 isBackward = 
-                  if fromEnum (hour timeto) == 0 
+                  if fromEnum (hour time) == 0 
                   then false 
                   else true,
                 forkId = Just forkId,
@@ -161,7 +162,7 @@ component =
               let failure = Async.send <<< flip Async.mkException loc  
               onFailure resp failure \{success: gaps} -> do
                 map (_.forkId) H.get >>= flip for_ H.kill
-                -- logDebug $ loc <> " --->  backward, gaps " <> show (gaps :: Array Back.GapItem)
+                logDebug $ loc <> " --->  backward, gaps " <> show (map (\x -> x # Back._elements %~ map Back.printGapItemUnit) (gaps :: Array Back.GapItem))
                 time <- H.liftEffect $ nowTime
                 let newStartPoint | hour - 1 < 0 = setTime min 23 time 
                                   | otherwise = setTime min (hour - 1) time
@@ -172,7 +173,7 @@ component =
                 let newTimeline = 
                       flip populateTimeline gaps $ 
                         initTimeline newStartPoint newEndPoint
-                -- logDebug $ loc <> " --->  backward. current timline " <> show newTimeline 
+                logDebug $ loc <> " --->  backward. current timline " <> show (map (\x -> x # Back._elements %~ map Back.printGapItemUnit) newTimeline)
 
                 H.modify_ _ 
                   { timeline = newTimeline,
@@ -231,7 +232,7 @@ component =
                         let newTimeline = 
                               flip populateTimeline gaps $ 
                                 initTimeline from to
-                        -- logDebug $ loc <> " --->  forward. current timline " <> show newTimeline     
+                        logDebug $ loc <> " --->  forward. current timline " <> show (map (\x -> x # Back._elements %~ map Back.printGapItemUnit) newTimeline) 
                         H.modify_ _ 
                           { timeline = newTimeline,
                             isForward = checkForward,
@@ -278,8 +279,7 @@ component =
         | status == Just Back.Pending = logDebug $ loc <> " ---> FetchTransaction , pending, skip" 
         | otherwise = H.tell Dashboard.Transaction.proxy 1 $ Dashboard.Transaction.Open ident
      
-      handleAction (UpdateTransaction tr@{hour, min, textualIdent: ident, status: newStatus}) = do 
-        -- logDebug $ loc <> " ---> update transaction " <> show tr
+      handleAction (UpdateTransaction {hour, min, textualIdent: ident, status: newStatus}) = do
         {timeline} <- H.get
         let newTimeline = 
               flip map timeline \x ->
@@ -311,6 +311,10 @@ component =
 setTime m h = 
   setMinute (fromMaybe undefined (toEnum m <|> toEnum 0)) <<< 
   setHour (fromMaybe undefined (toEnum h <|> toEnum 0))
+
+setMin m = setMinute (fromMaybe undefined (toEnum m <|> toEnum 0))
+
+setH h = setHour (fromMaybe undefined (toEnum h <|> toEnum 0))
 
 initTimeline :: Time -> Time -> Array Back.GapItem
 initTimeline from to = go from to []
@@ -374,7 +378,8 @@ mkBackwardButton isBackward =
       else "timeline-travel-button-blocked",
       Svg.x (toNumber ((1440 / 2) - 50)), 
       Svg.y (toNumber 950), 
-      Svg.fill (Svg.Named "black")] 
+      Svg.fill (Svg.Named "black"),
+      Svg.fontSize Svg.Large]
     [HH.text "backward"]
   ]
 
@@ -388,7 +393,8 @@ mkForwardButton isForward =
       else "timeline-travel-button-blocked",
       Svg.x (toNumber ((1440 / 2) + 50)), 
       Svg.y (toNumber 950), 
-      Svg.fill (Svg.Named "black")] 
+      Svg.fill (Svg.Named "black"),
+      Svg.fontSize Svg.Large]
     [HH.text "forward"]
   ]
 

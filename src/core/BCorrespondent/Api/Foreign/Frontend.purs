@@ -6,7 +6,6 @@ module BCorrespondent.Api.Foreign.Frontend
   , GapItemTime
   , GapItemUnit
   , GapItemUnitStatus(..)
-  , GapItemUnitWrapper(..)
   , Init
   , NextGap
   , Sha
@@ -37,6 +36,7 @@ module BCorrespondent.Api.Foreign.Frontend
   , initDashboard
   , loadNextGap
   , mkFrontApi
+  , printGapItemUnit
   , printInit
   , shaPred
   )
@@ -145,11 +145,11 @@ type GapItemUnit =
        tm :: String
      }
 
-newtype GapItemUnitWrapper = GapItemUnitWrapper GapItemUnit
-
-instance Show GapItemUnitWrapper where
-  show _ = undefined
-
+printGapItemUnit {status, textualIdent, ident, tm} = 
+  "{status: foreign, ident: " <> 
+  show ident <> 
+  ", textualIdent: " <> textualIdent <> 
+  ", tm: " <> tm  <> "}"
 
 type GapItemTime = { hour :: Int, min :: Int }
 
