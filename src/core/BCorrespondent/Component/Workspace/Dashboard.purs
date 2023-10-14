@@ -13,6 +13,7 @@ import BCorrespondent.Api.Foreign.Back as Back
 import BCorrespondent.Api.Foreign.Request.Handler (onFailure)
 import BCorrespondent.Component.Async as Async
 import BCorrespondent.Component.Workspace.Dashboard.Transaction as Dashboard.Transaction
+import BCorrespondent.Component.Workspace.Dashboard.Gap as Dashboard.Gap
 import BCorrespondent.Component.Subscription.WS as WS
 import BCorrespondent.Component.Subscription.WS.Types
 
@@ -44,7 +45,7 @@ import Data.Lens
 import Data.Ord (compare, abs)
 import Web.Socket as WS
 import Effect.AVar as Async
-import Web.UIEvent.MouseEvent (MouseEvent, pageX, pageY)
+import Web.UIEvent.MouseEvent (MouseEvent, clientX, clientY)
 
 import Undefined
 
@@ -320,8 +321,14 @@ component =
         {wallets: old} <- H.get
         H.modify_ _ { wallets = flip map old \x -> if _.ident x == ident then x { amount = new } else x }
 
-      handleAction (TotalAmountInGap idx ev) = H.modify_ _ { currentGapIdx = idx }
-      handleAction CancelTotalAmountInGap = H.modify_ _ { currentGapIdx = -1 }
+      handleAction (TotalAmountInGap idx ev) = do
+        H.tell Dashboard.Gap.proxy 2 $ 
+          Dashboard.Gap.Open { x: Just (clientX ev), y: Just (clientY ev) } 
+        H.modify_ _ { currentGapIdx = idx }
+      handleAction CancelTotalAmountInGap = do 
+        H.modify_ _ { currentGapIdx = -1 }
+        H.tell Dashboard.Gap.proxy 2 $ 
+          Dashboard.Gap.Open { x: Nothing, y: Nothing } 
 
       handleAction Finalize = do
         map (_.forkId) H.get >>= flip for_ H.kill
@@ -523,6 +530,20 @@ populateTransactions x@coordX coordY width xs =
           Svg.width width, 
           Svg.height height]
 
+renderWallets xs = 
+  [  HH.div [css "wallet"] (catMaybes (map (go ((==) Back.Debit)) xs))
+  ,  HH.div [css "wallet"] (catMaybes (map (go ((==) Back.Credit)) xs))
+  ]
+  where 
+    go cond {walletType, currency, amount} 
+      | cond walletType = 
+          Just $ 
+            HH.div_
+            [HH.span [css "wallet-text"] [HH.text (show walletType <> "(" <> show currency <> "): ")], 
+             HH.span [css "wallet-amount"] [HH.text (show amount)]
+            ]
+      | otherwise = Nothing
+
 render {error: Just e} = HH.text e
 render st@{ error: Nothing } =
   HH.div_ 
@@ -545,18 +566,5 @@ render st@{ error: Nothing } =
         ]
       ]
   ,   Dashboard.Transaction.slot 1
+  ,   Dashboard.Gap.slot 2
   ]
-
-renderWallets xs = 
-  [  HH.div [css "wallet"] (catMaybes (map (go ((==) Back.Debit)) xs))
-  ,  HH.div [css "wallet"] (catMaybes (map (go ((==) Back.Credit)) xs))
-  ]
-  where 
-    go cond {walletType, currency, amount} 
-      | cond walletType = 
-          Just $ 
-            HH.div_
-            [HH.span [css "wallet-text"] [HH.text (show walletType <> "(" <> show currency <> "): ")], 
-             HH.span [css "wallet-amount"] [HH.text (show amount)]
-            ]
-      | otherwise = Nothing
