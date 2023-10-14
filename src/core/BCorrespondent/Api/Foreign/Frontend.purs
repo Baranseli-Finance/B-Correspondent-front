@@ -202,13 +202,15 @@ decodeCurrency :: Foreign -> Maybe Currency
 decodeCurrency = decodeEnumG
 
 type Wallet = 
-    { walletType :: Foreign,
+    { ident :: Int,
+      walletType :: Foreign,
       currency :: Foreign, 
       amount :: Number 
     }
 
 type EnumResolvedWallet = 
-    { walletType :: WalletType,
+    { ident :: Int,
+      walletType :: WalletType,
       currency :: Currency, 
       amount :: Number 
     }

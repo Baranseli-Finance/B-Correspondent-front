@@ -20,7 +20,6 @@ import Effect.AVar as Async
 import Data.Array ((:), singleton)
 import Data.Argonaut.Encode (encodeJson)
 
-import Undefined
 
 subscribe loc url trigger goCompHandle = do
   { config: Config { apiBCorrespondentHostWS }, user, wsVar } <- getStore

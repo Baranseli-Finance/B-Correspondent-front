@@ -58,6 +58,7 @@ data Action =
      | Forward
      | FetchTransaction Int (Maybe Back.GapItemUnitStatus)
      | UpdateTransaction Transaction
+     | UpdateWallet Wallet
 
 type State = 
      { error :: Maybe String, 
@@ -120,8 +121,11 @@ component =
 
             timezone <- H.liftEffect getTimezone
 
-            WS.subscribe loc WS.transactionUrl (Just (WS.encodeResource WS.Transaction))
-             \{success: new} -> handleAction $ UpdateTransaction new
+            WS.subscribe loc WS.transactionUrl (Just (WS.encodeResource WS.Transaction)) $ 
+              handleAction <<< UpdateTransaction <<< _.success
+
+            WS.subscribe loc WS.walletUrl (Just (WS.encodeResource WS.Wallet)) $
+              handleAction <<< UpdateWallet <<< _.success
 
             H.modify_ _ 
               { timeline = timeline,
@@ -302,6 +306,11 @@ component =
                          else el
                 else x
         H.modify_ _ { timeline = newTimeline }
+
+      handleAction (UpdateWallet wallet@{ident, amount: new}) = do
+        logDebug $ loc <> " wallet update --- >" <> show wallet
+        {wallets: old} <- H.get
+        H.modify_ _ { wallets = flip map old \x -> if _.ident x == ident then x { amount = new } else x }
 
       handleAction Finalize = do
         map (_.forkId) H.get >>= flip for_ H.kill
@@ -525,15 +534,15 @@ render st@{ error: Nothing } =
   ]
 
 renderWallets xs = 
-  [  HH.div_ (catMaybes (map (go ((==) Back.Debit)) xs))
-  ,  HH.div_ (catMaybes (map (go ((==) Back.Credit)) xs))
+  [  HH.div [css "wallet"] (catMaybes (map (go ((==) Back.Debit)) xs))
+  ,  HH.div [css "wallet"] (catMaybes (map (go ((==) Back.Credit)) xs))
   ]
   where 
     go cond {walletType, currency, amount} 
       | cond walletType = 
           Just $ 
             HH.div_
-            [HH.span_[HH.text (show walletType <> "(" <> show currency <> "): ")], 
-             HH.span_[HH.text (show amount)]
+            [HH.span [css "wallet-text"] [HH.text (show walletType <> "(" <> show currency <> "): ")], 
+             HH.span [css "wallet-amount"] [HH.text (show amount)]
             ]
       | otherwise = Nothing

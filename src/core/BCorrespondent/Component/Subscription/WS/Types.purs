@@ -1,8 +1,10 @@
 module BCorrespondent.Component.Subscription.WS.Types
   ( Resource(..)
   , Transaction
+  , Wallet
   , encodeResource
   , transactionUrl
+  , walletUrl
   )
   where
 
@@ -21,6 +23,11 @@ type Transaction =
        textualIdent :: String
      }
 
+type Wallet = 
+     { ident :: Int,
+       amount :: Number
+     }
+
 data Resource = Transaction | Wallet
 
 derive instance genericResource :: Generic Resource _
@@ -29,3 +36,4 @@ encodeResource :: Resource -> String
 encodeResource = unsafeFromForeign <<< genericEncodeEnum {constructorTagTransform: toLower}
 
 transactionUrl = "frontend/user/dashboard/daily-balance-sheet/transaction/update"
+walletUrl = "frontend/user/dashboard/wallet/update"
