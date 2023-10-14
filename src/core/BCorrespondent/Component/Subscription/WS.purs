@@ -1,4 +1,4 @@
-module BCorrespondent.Component.Subscription.WS ( Resource(..), subscribe, showResource, dashboardUrl) where
+module BCorrespondent.Component.Subscription.WS (subscribe, module WS) where
 
 import Prelude
 
@@ -7,6 +7,7 @@ import BCorrespondent.Api.Foreign.Request (makeWS)
 import BCorrespondent.Api.Foreign.Request.Handler (onFailure)
 import BCorrespondent.Component.Async as Async
 import BCorrespondent.Capability.LogMessages (logDebug)
+import BCorrespondent.Component.Subscription.WS.Types as WS
 
 import Halogen as H
 import Web.Socket as WS
@@ -20,14 +21,6 @@ import Data.Array ((:), singleton)
 import Data.Argonaut.Encode (encodeJson)
 
 import Undefined
-
-data Resource = Transaction | Wallet
-
-showResource :: Resource -> String
-showResource Transaction = "transaction"
-showResource Wallet = "wallet"
-
-dashboardUrl = "frontend/user/dashboard/daily-balance-sheet/notify/timeline"
 
 subscribe loc url trigger goCompHandle = do
   { config: Config { apiBCorrespondentHostWS }, user, wsVar } <- getStore

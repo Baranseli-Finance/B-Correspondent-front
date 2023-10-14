@@ -1,6 +1,17 @@
-module BCorrespondent.Component.Subscription.WS.Types (Transaction) where
+module BCorrespondent.Component.Subscription.WS.Types
+  ( Resource(..)
+  , Transaction
+  , encodeResource
+  , transactionUrl
+  )
+  where
 
-import Foreign (Foreign)
+import Prelude
+
+import Foreign (Foreign, unsafeFromForeign)
+import Data.Generic.Rep (class Generic)
+import Foreign.Enum (genericEncodeEnum)
+import Data.String (toLower)
 
 type Transaction = 
      { status :: Foreign,
@@ -10,3 +21,11 @@ type Transaction =
        textualIdent :: String
      }
 
+data Resource = Transaction | Wallet
+
+derive instance genericResource :: Generic Resource _
+
+encodeResource :: Resource -> String
+encodeResource = unsafeFromForeign <<< genericEncodeEnum {constructorTagTransform: toLower}
+
+transactionUrl = "frontend/user/dashboard/daily-balance-sheet/transaction/update"

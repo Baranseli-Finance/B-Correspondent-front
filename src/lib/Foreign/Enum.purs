@@ -1,4 +1,14 @@
-module Foreign.Enum where
+module Foreign.Enum
+  ( GenericEnumOptions
+  , class GenericDecodeEnum
+  , class GenericEncodeEnum
+  , defaultGenericEnumOptions
+  , genericDecodeEnum
+  , genericEncodeEnum
+  , decodeEnum
+  , encodeEnum
+  )
+  where
 
 import Prelude
 

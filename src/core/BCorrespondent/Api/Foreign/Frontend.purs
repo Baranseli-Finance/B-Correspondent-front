@@ -1,6 +1,8 @@
 module BCorrespondent.Api.Foreign.Frontend
-  ( DailyBalanceSheet
+  ( Currency(..)
+  , DailyBalanceSheet
   , Direction(..)
+  , EnumResolvedWallet
   , FrontApi
   , GapItem
   , GapItemTime
@@ -11,6 +13,8 @@ module BCorrespondent.Api.Foreign.Frontend
   , Sha
   , Transaction
   , TransactionValue
+  , Wallet
+  , WalletType(..)
   , _amount
   , _correspondentBank
   , _correspondentBankSwiftSepaCode
@@ -28,7 +32,9 @@ module BCorrespondent.Api.Foreign.Frontend
   , _start
   , _swiftSepaCode
   , _transaction
+  , decodeCurrency
   , decodeGapItemUnitStatus
+  , decodeWalletType
   , fetchTimelineForParticularHour
   , fetchTrnsaction
   , getJwtStatus
@@ -73,6 +79,9 @@ import Undefined
 foreign import data FrontApi :: Type
 
 foreign import mkFrontApi :: Fn1 ApiClient (Effect FrontApi)
+
+decodeEnumG :: forall a rep . Generic a rep => GenericDecodeEnum rep => Foreign -> Maybe a
+decodeEnumG = hush <<< runExcept <<< genericDecodeEnum {constructorTagTransform: toLower}
 
 type Sha = { key :: String, value :: String }
 
@@ -136,7 +145,7 @@ instance Show GapItemUnitStatus where
   show Declined = "declined"
 
 decodeGapItemUnitStatus :: Foreign -> Maybe GapItemUnitStatus
-decodeGapItemUnitStatus = hush <<< runExcept <<< genericDecodeEnum {constructorTagTransform: toLower}
+decodeGapItemUnitStatus = decodeEnumG
 
 type GapItemUnit = 
      { status :: Foreign, 
@@ -164,7 +173,50 @@ _elements = lens _.elements $ \el x -> el { elements = x }
 
 type DailyBalanceSheet = { institution :: String, gaps :: Array GapItem }
 
-type Dashboard = { dailyBalanceSheet :: DailyBalanceSheet }
+data WalletType = Debit | Credit | WalletTypeNotResolved
+
+derive instance genericWalletType :: Generic WalletType _
+derive instance eqWalletType :: Eq WalletType
+derive instance ordWalletType :: Ord WalletType
+
+instance Show WalletType where
+  show Debit = "debit"
+  show Credit = "credit"
+  show WalletTypeNotResolved = "wallet type not resolved"
+
+decodeWalletType :: Foreign -> Maybe WalletType
+decodeWalletType = decodeEnumG
+
+data Currency = USD | EUR | CurrencyNotResolved
+
+derive instance genericCurrency :: Generic Currency _
+derive instance eqCurrency :: Eq Currency
+derive instance ordCurrency :: Ord Currency
+
+instance Show Currency where
+  show USD = "usd"
+  show EUR = "eur"
+  show CurrencyNotResolved = "currency type not resolved"
+
+decodeCurrency :: Foreign -> Maybe Currency
+decodeCurrency = decodeEnumG
+
+type Wallet = 
+    { walletType :: Foreign,
+      currency :: Foreign, 
+      amount :: Number 
+    }
+
+type EnumResolvedWallet = 
+    { walletType :: WalletType,
+      currency :: Currency, 
+      amount :: Number 
+    }
+
+type Dashboard = 
+     { dailyBalanceSheet :: DailyBalanceSheet, 
+       wallets :: Array Wallet 
+     }
 
 foreign import _initDashboard :: Fn2 WithError FrontApi (AC.EffectFnAff (Object (Response Dashboard)))
 

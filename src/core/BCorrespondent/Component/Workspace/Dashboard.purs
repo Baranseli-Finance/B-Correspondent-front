@@ -2,7 +2,7 @@ module BCorrespondent.Component.Workspace.Dashboard (slot) where
 
 import Prelude
 
-import BCorrespondent.Component.HTML.Utils (cssSvg)
+import BCorrespondent.Component.HTML.Utils (cssSvg, css)
 import BCorrespondent.Data.Config (Config(..))
 import BCorrespondent.Capability.LogMessages (logDebug, logError)
 import BCorrespondent.Api.Foreign.Request as Request
@@ -32,7 +32,7 @@ import Data.Time (hour, minute, Time (..), setHour, setMinute)
 import Data.Time as Time
 import Data.Enum (toEnum, fromEnum, class BoundedEnum)
 import Data.Time.Component
-import Data.Array ((:), reverse, length, uncons, head, last, snoc, find, concat, sortBy)
+import Data.Array ((:), reverse, length, uncons, head, last, snoc, find, concat, sortBy, catMaybes)
 import Effect.Aff as Aff
 import Store (User)
 import Control.Monad.Rec.Class (forever)
@@ -67,7 +67,8 @@ type State =
        isBackward :: Boolean,
        isForward :: Boolean,
        stepsBackward :: Int,
-       timezone :: Int
+       timezone :: Int,
+       wallets :: Array Back.EnumResolvedWallet
      }
 
 component =
@@ -80,7 +81,8 @@ component =
         isBackward: false,
         isForward: false,
         stepsBackward: 0,
-        timezone: 0
+        timezone: 0,
+        wallets: []
       }
     , render: render
     , eval: H.mkEval H.defaultEval
@@ -96,7 +98,7 @@ component =
         for_ user \{ token } -> do
           resp <- Request.makeAuth (Just token) host Back.mkFrontApi $ Back.initDashboard
           let failure e = H.modify_ _ { error = Just $ "cannot load component: " <> message e }
-          onFailure resp failure \{ success: {dailyBalanceSheet: {institution: title, gaps}} } -> do
+          onFailure resp failure \{ success: {dailyBalanceSheet: {institution: title, gaps}, wallets} } -> do
             logDebug $ loc <> " ---> timeline gaps " <> show (map (\x -> x # Back._elements %~ map Back.printGapItemUnit) (gaps :: Array Back.GapItem))
             logDebug $ loc <> " ---> timeline institution " <> title
             time <- H.liftEffect $ nowTime
@@ -118,7 +120,7 @@ component =
 
             timezone <- H.liftEffect getTimezone
 
-            WS.subscribe loc WS.dashboardUrl (Just (WS.showResource WS.Transaction)) 
+            WS.subscribe loc WS.transactionUrl (Just (WS.encodeResource WS.Transaction))
              \{success: new} -> handleAction $ UpdateTransaction new
 
             H.modify_ _ 
@@ -129,7 +131,11 @@ component =
                   then false 
                   else true,
                 forkId = Just forkId,
-                timezone = timezone
+                timezone = timezone,
+                wallets = 
+                  flip sortBy (map resolveEnums wallets) \x y -> 
+                    compare (_.walletType x) (_.walletType y) <> 
+                    compare (_.currency x) (_.currency y)
               }
 
       handleAction Update = do
@@ -308,6 +314,16 @@ component =
             logDebug $ loc <> " ---> ws has been killed"
 
 
+resolveEnums :: Back.Wallet -> Back.EnumResolvedWallet
+resolveEnums x = 
+  x { walletType = 
+       fromMaybe Back.WalletTypeNotResolved $
+         Back.decodeWalletType (_.walletType x),
+     currency =
+        fromMaybe Back.CurrencyNotResolved $
+         Back.decodeCurrency (_.currency x) 
+    }
+
 setTime m h = 
   setMinute (fromMaybe undefined (toEnum m <|> toEnum 0)) <<< 
   setHour (fromMaybe undefined (toEnum h <|> toEnum 0))
@@ -485,22 +501,39 @@ populateTransactions x@coordX coordY width xs =
           Svg.height height]
 
 render {error: Just e} = HH.text e
-render {error: Nothing, timeline, isBackward, isForward, timezone, institution} =
+render st@{ error: Nothing } =
   HH.div_ 
   [
-      Svg.svg 
-      [Svg.width (toNumber 1440), 
-      Svg.height (toNumber 1000)]
-      [ Svg.text 
-        [Svg.x (toNumber ((1440 / 2))), 
-        Svg.y (toNumber 20), 
-        Svg.fill (Svg.Named "black"),
-        Svg.fontSize Svg.XXLarge]
-        [HH.text institution]
-      , Svg.g [] $ 
-          mkBackwardButton isBackward : 
-          mkForwardButton isForward :
-          renderTimline (toNumber 10) 0 (map (applyTimezone timezone) timeline)
+      HH.div [css "wallet-container"] $ renderWallets (_.wallets st)
+  ,   HH.div [css "timeline-container"]
+      [ Svg.svg 
+        [Svg.width (toNumber 1440), 
+         Svg.height (toNumber 1000)]
+        [ Svg.text 
+          [Svg.x (toNumber ((1440 / 2))), 
+           Svg.y (toNumber 20), 
+           Svg.fill (Svg.Named "black"),
+           Svg.fontSize Svg.XXLarge]
+          [HH.text (_.institution st)]
+        , Svg.g [] $ 
+            mkBackwardButton (_.isBackward st) : 
+            mkForwardButton (_.isForward st) :
+            renderTimline (toNumber 10) 0 (map (applyTimezone (_.timezone st)) (_.timeline st))
+        ]
       ]
   ,   Dashboard.Transaction.slot 1
   ]
+
+renderWallets xs = 
+  [  HH.div_ (catMaybes (map (go ((==) Back.Debit)) xs))
+  ,  HH.div_ (catMaybes (map (go ((==) Back.Credit)) xs))
+  ]
+  where 
+    go cond {walletType, currency, amount} 
+      | cond walletType = 
+          Just $ 
+            HH.div_
+            [HH.span_[HH.text (show walletType <> "(" <> show currency <> "): ")], 
+             HH.span_[HH.text (show amount)]
+            ]
+      | otherwise = Nothing
