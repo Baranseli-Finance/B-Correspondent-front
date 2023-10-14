@@ -1,4 +1,7 @@
-module BCorrespondent.Component.Workspace.Dashboard (slot) where
+module BCorrespondent.Component.Workspace.Dashboard
+  ( slot
+  )
+  where
 
 import Prelude
 
@@ -17,7 +20,7 @@ import Halogen.Store.Monad (getStore)
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Properties.Extended as HPExt
-import Halogen.HTML.Events (onClick)
+import Halogen.HTML.Events (onClick, onMouseMove, onMouseOut)
 import Halogen.Svg.Elements as Svg
 import Halogen.Svg.Attributes.FontSize as Svg
 import Halogen.Svg.Attributes as Svg
@@ -41,6 +44,7 @@ import Data.Lens
 import Data.Ord (compare, abs)
 import Web.Socket as WS
 import Effect.AVar as Async
+import Web.UIEvent.MouseEvent (MouseEvent, pageX, pageY)
 
 import Undefined
 
@@ -59,6 +63,8 @@ data Action =
      | FetchTransaction Int (Maybe Back.GapItemUnitStatus)
      | UpdateTransaction Transaction
      | UpdateWallet Wallet
+     | TotalAmountInGap Int MouseEvent
+     | CancelTotalAmountInGap
 
 type State = 
      { error :: Maybe String, 
@@ -69,7 +75,8 @@ type State =
        isForward :: Boolean,
        stepsBackward :: Int,
        timezone :: Int,
-       wallets :: Array Back.EnumResolvedWallet
+       wallets :: Array Back.EnumResolvedWallet,
+       currentGapIdx :: Int 
      }
 
 component =
@@ -83,7 +90,8 @@ component =
         isForward: false,
         stepsBackward: 0,
         timezone: 0,
-        wallets: []
+        wallets: [],
+        currentGapIdx: -1
       }
     , render: render
     , eval: H.mkEval H.defaultEval
@@ -312,6 +320,9 @@ component =
         {wallets: old} <- H.get
         H.modify_ _ { wallets = flip map old \x -> if _.ident x == ident then x { amount = new } else x }
 
+      handleAction (TotalAmountInGap idx ev) = H.modify_ _ { currentGapIdx = idx }
+      handleAction CancelTotalAmountInGap = H.modify_ _ { currentGapIdx = -1 }
+
       handleAction Finalize = do
         map (_.forkId) H.get >>= flip for_ H.kill
         { wsVar } <- getStore
@@ -423,7 +434,7 @@ mkForwardButton isForward =
     [HH.text "forward"]
   ]
 
-renderTimline coordX idx xs = 
+renderTimline coordX idx xs currGap = 
   let width = toNumber 115
       height = toNumber 850
       coordY = toNumber 50
@@ -434,7 +445,10 @@ renderTimline coordX idx xs =
             Svg.x coordX, 
             Svg.y coordY, 
             Svg.width width, 
-            Svg.height height
+            Svg.height height,
+            if currGap == idx 
+            then cssSvg "gap-selected" 
+            else cssSvg mempty
           ]
       tmCircle = Svg.circle [Svg.fill (Svg.Named "black"), Svg.cy (height + toNumber 50), Svg.cx coordX, Svg.r (toNumber 5) ]
       lastTmCircle = Svg.circle [Svg.fill (Svg.Named "black"), Svg.cy (height + toNumber 50), Svg.cx (coordX + width), Svg.r (toNumber 5) ]
@@ -444,8 +458,8 @@ renderTimline coordX idx xs =
                 Svg.y (height + toNumber 70), 
                 Svg.fill (Svg.Named "black")] 
                 [HH.text (show (h :: Int) <> ":" <> show (m :: Int))]
-      item h m xs = 
-        Svg.g [] $ 
+      item i h m xs = 
+        Svg.g [onMouseMove (TotalAmountInGap i), onMouseOut (const CancelTotalAmountInGap) ] $ 
           [gap, mkTm h m (coordX - toNumber 10)] <> 
           populateTransactions coordX height width xs <> 
           [tmCircle]
@@ -453,7 +467,7 @@ renderTimline coordX idx xs =
        Nothing -> []
        Just {head: x, tail: []} -> 
          [Svg.g 
-          [] $
+          [onMouseMove (TotalAmountInGap idx), onMouseOut (const CancelTotalAmountInGap) ] $
           [gap,
            mkTm 
            ((_.hour <<< _.start) x) 
@@ -466,7 +480,7 @@ renderTimline coordX idx xs =
            populateTransactions coordX height width (x^.Back._elements) <>
            [tmCircle, lastTmCircle]
        Just {head: {elements, start: {hour, min}}, tail} -> 
-         item hour min elements : renderTimline (coordX + width) (idx + 1) tail
+         item idx hour min elements : renderTimline (coordX + width) (idx + 1) tail currGap
 
 populateTransactions x@coordX coordY width xs = 
   go coordY $ flip sortBy xs \x y -> compare (_.tm x :: String) (_.tm y)
@@ -527,7 +541,7 @@ render st@{ error: Nothing } =
         , Svg.g [] $ 
             mkBackwardButton (_.isBackward st) : 
             mkForwardButton (_.isForward st) :
-            renderTimline (toNumber 10) 0 (map (applyTimezone (_.timezone st)) (_.timeline st))
+            renderTimline (toNumber 10) 0 (map (applyTimezone (_.timezone st)) (_.timeline st)) (_.currentGapIdx st)
         ]
       ]
   ,   Dashboard.Transaction.slot 1
