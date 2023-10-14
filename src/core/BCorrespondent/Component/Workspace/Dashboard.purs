@@ -38,7 +38,7 @@ import Store (User)
 import Control.Monad.Rec.Class (forever)
 import Control.Alt ((<|>))
 import Data.Lens
-import Data.Ord (compare)
+import Data.Ord (compare, abs)
 import Web.Socket as WS
 import Effect.AVar as Async
 
@@ -192,22 +192,20 @@ component =
               logDebug $ loc <> " --->  forward. points " <> show ps
               time <- H.liftEffect $ nowTime
               let minutes = fromEnum $ minute time
-              let minutesAdj = if minutes > 55 then 0 else minutes + mod (60 - minutes) 5
 
               logDebug $ loc <> " --->  forward. end point " <> show p
-              logDebug $ loc <> " --->  forward. current point {" <> show (Time.hour time) <> ", " <> show minutesAdj <> "}"
+              logDebug $ loc <> " --->  forward. current point {" <> show (Time.hour time) <> ", " <> show (minute time) <> "}"
               logDebug $ loc <> " --->  forward. current shift backwards " <> show stepsBackward 
 
               let diffMin = 
-                    fromEnum (Time.hour time) * 60 + 
-                    (minutes + mod (60 - minutes) 5) - 
-                    ((hour + stepsBackward) * 60 + min)
+                    ((hour + stepsBackward) * 60 + min) -
+                    (fromEnum (Time.hour time) * 60 + minutes)
 
               logDebug $ loc <> " --->  forward, diff " <> show diffMin
 
-              let gap | diffMin == 0 || diffMin == 60 = 0
-                      | diffMin < 60 = diffMin
-                      | otherwise = floor $ toNumber (diffMin / 60)
+              let gap | 0 < diffMin && diffMin < 5 = 0
+                      | 0 > diffMin && diffMin > -60 = abs diffMin + mod (60 - abs diffMin) 5
+                      | otherwise = floor $ toNumber (abs diffMin / 60)
 
               logDebug $ loc <> " --->  forward. gap " <> show gap
 
@@ -257,6 +255,7 @@ component =
                         let newMin = addGapTomin min gap
                         let newHour = addGapToHour newMin hour
                         let point = show newHour <> "," <> show newMin
+                        let minutesAdj = minutes + mod (60 - minutes) 5
                         doNoGap (setTime newMin newHour time) (setMinute (intToTimePiece minutesAdj) time) point
               let -- in this case just add an hour and then two hours to the end point
                   -- example: supposing the initial end point were 9.45, current time were 11.50
@@ -266,10 +265,10 @@ component =
                     let msg = "gapMoreThen2Hour hasn't been implemented yet. reload page"
                     in Async.send $ Async.mkOrdinary msg Async.Debug (Just loc) 
 
-              let doWithGap | gap < 60 = gapLessThenHour
+              let doWithGap | 0 > diffMin && diffMin > -60 = gapLessThenHour
                             | otherwise = gapMoreThen2Hour
 
-              if gap == 0 
+              if 0 < diffMin && diffMin < 5
               then
                 let point = show hour <> "," <> show min
                 in doNoGap (setTime min hour time) (setTime min (hour + 1) time) point
