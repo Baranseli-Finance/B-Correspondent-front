@@ -10,8 +10,9 @@ import Halogen.HTML as HH
 import Halogen.HTML.Properties.Extended as HPExt
 import Halogen.HTML.Events as HE
 import Type.Proxy (Proxy(..))
-import Data.Array ((..))
+import Data.Array ((..), index)
 import Web.Event.Event (preventDefault, Event)
+import Data.Foldable (for_)
 
 import Undefined
 
@@ -27,7 +28,16 @@ data Action =
      | SetDay Int 
      | MakeHistoryRequest Event
 
-type State = { year :: Int, month :: Int, day :: Int, isInit :: Boolean, isLoading :: Boolean }
+type State = 
+     { year :: Int, 
+       month :: Int, 
+       day :: Int, 
+       isInit :: Boolean, 
+       isLoading :: Boolean,
+       yearXs :: Array Int,
+       monthXs :: Array Int,
+       dayXs :: Array Int
+     }
 
 component from to =
   H.mkComponent
@@ -37,20 +47,32 @@ component from to =
         month: _.month from, 
         day: _.day from,
         isInit: true,
-        isLoading: false
+        isLoading: false,
+        yearXs: _.year from .. _.year to,
+        monthXs: _.month from .. _.month to,
+        dayXs: _.day from .. _.day to
+
       }
     , render: render from to
     , eval: H.mkEval H.defaultEval
       { handleAction = handleAction }
     }
     where
-      handleAction (SetYear idx) = logDebug $ loc <> "  ---> SetYear " <> show idx 
-      handleAction (SetMonth idx) = logDebug $ loc <> "  ---> SetMonth " <> show idx
-      handleAction (SetDay idx) = logDebug $ loc <> "  ---> SetDay " <> show idx
+      handleAction (SetYear idx) = do 
+        {yearXs} <- H.get
+        for_ (index yearXs idx) \x -> H.modify_ _ { year = x }
+      handleAction (SetMonth idx) = do 
+        {monthXs} <- H.get
+        for_ (index monthXs idx) \x -> H.modify_ _ { month = x }
+      handleAction (SetDay idx) = do 
+        {dayXs} <- H.get
+        for_ (index dayXs idx) \x -> H.modify_ _ { day = x }
       handleAction (MakeHistoryRequest ev) = do 
         H.liftEffect $ preventDefault ev
         H.modify_ _ { isInit = false, isLoading = true }
-        logDebug $ loc <> "  ---> history request made"
+        {year, month, day} <- H.get
+        logDebug $ loc <> "  ---> history request made for a date of " <> 
+                   show year <> "-" <> show month <> "-" <> show day
       
 render from to {isInit, isLoading} = HH.div_ [selectors from to, timeline isInit isLoading]
 
