@@ -20,6 +20,9 @@ import Halogen.HTML.Properties.Extended as HPExt
 import Type.Proxy (Proxy(..))
 import AppM (AppM)
 import Data.Maybe (Maybe (..), isJust, fromMaybe)
+import Halogen.Store.Monad (getStore)
+import Data.Date as D
+import Data.Enum (fromEnum)
 
 import Undefined
 
@@ -37,7 +40,13 @@ data Acion =
 
 data Output = SignOutForward 
 
-data Component = Dashboard | History | Wallet | TechSupport
+data Component = 
+       Dashboard 
+     | History 
+       {year :: Int, month :: Int, day :: Int} 
+       {year :: Int, month :: Int, day :: Int} 
+     | Wallet 
+     | TechSupport
 
 type State = { component :: Component }
 
@@ -63,12 +72,22 @@ component =
          Workspace.User.Notification) =
         let msg = "notifications are to be implemented in the next release" 
         in Async.send $ Async.mkOrdinary msg Async.Debug Nothing
-      handleAction (HandleChildWorkspaceMenu out) =
+      handleAction (HandleChildWorkspaceMenu out) = do
+        {now, since} <- getStore
         H.modify_ _ { 
           component = 
           case out of
             Workspace.Menu.Dashboard -> Dashboard
-            Workspace.Menu.History -> History
+            Workspace.Menu.History -> 
+              History 
+              { year: _.year since , 
+                month: _.month since, 
+                day: _.day since
+              }
+              { year: fromEnum $ D.year now, 
+                month: fromEnum $ D.month now, 
+                day: fromEnum $ D.day now
+              }
             Workspace.Menu.Wallet -> Wallet
             Workspace.Menu.TechSupport -> TechSupport
         }
@@ -86,6 +105,6 @@ render { component } =
   ]
 
 chooseComponent Dashboard = Workspace.Dashboard.slot
-chooseComponent History = Workspace.History.slot
+chooseComponent (History from to) = Workspace.History.slot from to
 chooseComponent Wallet = Workspace.Wallet.slot
 chooseComponent TechSupport = Workspace.TechSupport.slot

@@ -48,7 +48,8 @@ import Crypto.Jwt as Jwt
 import Effect.Ref as Ref
 import Data.Array (find)
 import Web.Browser (getBrowserIdentifier)
-
+import Data.DateTime (date)
+import System.Time (nowDate)
 
 import Undefined
 
@@ -75,7 +76,7 @@ main cfg = do
     initResp <- initAppStore (_.apiBCorrespondentHost (getVal cfg)) $ map JWTToken jwt
     case initResp of
       Left err -> void $ runUI AppInitFailure.component { error: err } body
-      Right init@{isjwtvalid, shaxs, level, totelegram, telegramchat, telegrambot, loadcsslocally} -> do
+      Right init@{isjwtvalid, shaxs, level, totelegram, telegramchat, telegrambot, loadcsslocally, invoicesince} -> do
 
         H.liftEffect $ logShow $ printInit init
 
@@ -104,6 +105,8 @@ main cfg = do
         wsVar <- H.liftEffect Async.empty
 
         browserFp <- H.liftAff $ getBrowserIdentifier
+
+        now <- H.liftEffect nowDate
         
         when (logLevel == Dev)
           $ H.liftEffect
@@ -133,6 +136,8 @@ main cfg = do
             , wsVar: wsVar
             , browserFp: browserFp
             , jwtName: _.jwtName (getVal cfg)
+            , now: now
+            , since: invoicesince
             }
 
         -- With our app environment ready to go, we can prepare the router to run as our root component.

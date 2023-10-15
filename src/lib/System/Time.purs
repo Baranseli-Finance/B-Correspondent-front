@@ -3,6 +3,7 @@ module System.Time
   , dateToTimestamp
   , getTimestamp
   , getTimezone
+  , nowDate
   , nowTime
   , timestampToDate
   )
@@ -10,7 +11,7 @@ module System.Time
 
 import Prelude
 
-import Data.DateTime (Time, time, modifyTime)
+import Data.DateTime (Time, Date, time, date, modifyTime)
 import Data.DateTime.Instant (Instant, toDateTime, fromDateTime)
 import Effect (Effect)
 
@@ -27,6 +28,9 @@ foreign import now :: Effect Instant
 -- | Gets the time according to the current machine’s clock.
 nowTime :: Effect Time
 nowTime = time <<< toDateTime <$> now
+
+nowDate :: Effect Date
+nowDate = date <<< toDateTime <$> now
 
 foreign import _addMinutes :: Int -> Instant -> Effect Instant
 

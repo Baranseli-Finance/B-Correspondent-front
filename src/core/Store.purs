@@ -45,6 +45,7 @@ import Concurrent.Channel as Async
 import Crypto.Jwt (JwtUser)
 import Effect.Ref (Ref)
 import Web.Socket as WS
+import Data.Date (Date)
 
 type User = { jwtUser :: JwtUser, token :: Back.JWTToken }
 
@@ -68,6 +69,8 @@ type Store =
     -- browser fingerprint
   , browserFp :: String
   , jwtName :: String
+  , now :: Date
+  , since :: Back.InvoiceSince
   }
 
 printStore store =
@@ -85,6 +88,8 @@ printStore store =
     <> ", wsVar: <AVar>"
     <> ", browserFp: " <> (_.browserFp store)
     <> ", jwtName: " <> (_.jwtName store)
+    <> ", now: " <> show (_.now store)
+    <> ", since: " <> show (_.since store) <> " }"
 
 -- | Ordinarily we'd write an initialStore function, but in our case we construct
 -- | all three values in our initial store during app initialization. For that

@@ -10,6 +10,7 @@ module BCorrespondent.Api.Foreign.Frontend
   , GapItemUnit
   , GapItemUnitStatus(..)
   , Init
+  , InvoiceSince
   , NextGap
   , Sha
   , Transaction
@@ -93,6 +94,11 @@ printSha { key, value } = "{ \"key\": " <> key <> ", \"value\": " <> value <> " 
 shaPred :: String -> Sha -> Boolean
 shaPred s {key} = s == key
 
+type InvoiceSince = { year :: Int, month :: Int, day :: Int }
+
+printInvoiceSince {year, month, day} = 
+  "{year:" <> show year  <> ",month:" <> show month <> ", day:" <> show day <> "}"
+
 type Init = 
      { isjwtvalid :: String, 
        shaxs :: Array Sha, 
@@ -100,7 +106,8 @@ type Init =
        totelegram :: Boolean,
        telegramchat :: String,
        telegrambot :: String,
-       loadcsslocally :: Boolean
+       loadcsslocally :: Boolean,
+       invoicesince :: InvoiceSince
      }
 
 printShaxs xs = 
@@ -116,7 +123,8 @@ printInit
    totelegram, 
    telegramchat, 
    telegrambot, 
-   loadcsslocally
+   loadcsslocally,
+   invoicesince
   } = 
   "{ \"isjwtvalid\": " <> isjwtvalid <> 
   ", \"shaxs\": [ " <> printShaxs shaxs <> "] " <>
@@ -124,7 +132,8 @@ printInit
   ", \"totelegram\": " <> show totelegram <>
   ", \"telegramchat\": " <> telegramchat <>
   ", \"telegrambot\": " <> telegrambot <>
-  ", \"loadCssLocally\": " <> show loadcsslocally <> " }"
+  ", \"loadCssLocally\": " <> show loadcsslocally <> 
+  ", \"invoicesince\": " <> printInvoiceSince invoicesince <> " }"
 
 getJwtStatus :: String -> Maybe JWTStatus
 getJwtStatus "valid" = Just Valid
