@@ -8,7 +8,7 @@ import BCorrespondent.Component.Workspace.User.Menu as Menu
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Properties.Extended as HPExt
-import Halogen.HTML.Events (onMouseOver)
+import Halogen.HTML.Events (onMouseOver, onClick)
 import Type.Proxy (Proxy(..))
 import Halogen.Store.Monad (getStore)
 import Data.Foldable (for_)
@@ -23,9 +23,9 @@ loc = "BCorrespondent.Component.Workspace.User"
 
 slot n = HH.slot proxy n component unit
 
-data Action = Initialize | OpenMenu
+data Action = Initialize | OpenMenu | OpenNotification
 
-data Output = OpenDropDownMenu
+data Output = DropDownMenu | Notification
 
 type State = { user :: String, isMenu :: Boolean }
 
@@ -42,17 +42,22 @@ component =
         { user } <- getStore
         for_ (user :: Maybe User) \{jwtUser: {login}} -> 
           H.modify_ _ { user = login }
-      handleAction OpenMenu = H.raise OpenDropDownMenu
+      handleAction OpenMenu = H.raise DropDownMenu
+      handleAction OpenNotification = H.raise Notification
 
-render { user } = 
-  HH.div [css "user-container"] 
+render { user } =
+  HH.div_
   [
-      HH.div [ css "avatar"] 
-      [ HH.div [css "user-login"] [HH.text user]
-      , stylishDiv 
-        [onMouseOver $ const OpenMenu, 
-         css "user-icon font", 
-         HPExt.style "cursor:pointer"
-        ]
+      HH.div [css "user-container"] 
+      [
+          HH.div [ css "avatar"] 
+          [ HH.div [css "user-login"] [HH.text user]
+          , stylishDiv 
+            [onMouseOver $ const OpenMenu, 
+            css "user-icon font", 
+            HPExt.style "cursor:pointer"
+            ]
+          ]
       ]
+  ,   HH.div [css "bell", onClick $ const OpenNotification] [HH.i [css "fa fa-bell fa-lg"] []]
   ]

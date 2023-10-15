@@ -12,6 +12,7 @@ import BCorrespondent.Component.Workspace.History as Workspace.History
 import BCorrespondent.Component.Workspace.Dashboard as Workspace.Dashboard
 import BCorrespondent.Component.Workspace.Wallet as Workspace.Wallet
 import BCorrespondent.Component.Workspace.TechSupport as Workspace.TechSupport
+import BCorrespondent.Component.Async as Async
 
 import Halogen as H
 import Halogen.HTML as HH
@@ -54,9 +55,14 @@ component =
         H.raise SignOutForward
       handleAction 
         (HandleChildWorkspace 
-         Workspace.User.OpenDropDownMenu) = 
+         Workspace.User.DropDownMenu) = 
         H.tell Workspace.User.Menu.proxy 1 $ 
           Workspace.User.Menu.Open
+      handleAction
+        (HandleChildWorkspace 
+         Workspace.User.Notification) =
+        let msg = "notifications are to be implemented in the next release" 
+        in Async.send $ Async.mkOrdinary msg Async.Debug Nothing
       handleAction (HandleChildWorkspaceMenu out) =
         H.modify_ _ { 
           component = 
