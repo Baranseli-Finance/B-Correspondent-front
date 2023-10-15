@@ -227,7 +227,7 @@ component =
 
               logDebug $ loc <> " --->  forward, diff " <> show diffMin
 
-              let gap | 0 < diffMin && diffMin < 5 = 0
+              let gap | 0 <= diffMin && diffMin < 5 = 0
                       | 0 > diffMin && diffMin > -60 = abs diffMin + mod (60 - abs diffMin) 5
                       | otherwise = floor $ toNumber (abs diffMin / 60)
 
@@ -293,7 +293,7 @@ component =
               let doWithGap | 0 > diffMin && diffMin > -60 = gapLessThenHour
                             | otherwise = gapMoreThen2Hour
 
-              if 0 < diffMin && diffMin < 5
+              if 0 <= diffMin && diffMin < 5
               then
                 let point = show hour <> "," <> show min
                 in doNoGap (setTime min hour time) (setTime min (hour + 1) time) point
