@@ -8,7 +8,8 @@ import BCorrespondent.Data.Config (Config(..))
 import BCorrespondent.Api.Foreign.Request as Request
 import BCorrespondent.Api.Foreign.Back as Back
 import BCorrespondent.Api.Foreign.Request.Handler (onFailure)
-import BCorrespondent.Component.Workspace.Dashboard.Timeline as T
+import BCorrespondent.Component.Workspace.Dashboard.Timeline as Timeline
+import BCorrespondent.Component.Async as Async
 
 import Halogen as H
 import Halogen.HTML as HH
@@ -46,37 +47,37 @@ type State =
        day :: Int, 
        isInit :: Boolean, 
        isLoading :: Boolean,
+       loaded :: Boolean,
        yearXs :: Array Int,
        monthXs :: Array Int,
        dayXs :: Array Int,
        error :: Maybe String,
-       timeline :: T.State
+       timeline :: Array Back.GapItem,
+       institution :: String
      }
 
 _timeline = lens _.timeline $ \el x -> el { timeline = x }
 _isLoading = lens _.isLoading $ \el x -> el { isLoading = x }
+_institution = lens _.institution $ \el x -> el { institution = x }
+_loaded = lens _.loaded $ \el x -> el { loaded = x }
 
 component from to =
   H.mkComponent
     { initialState: 
-      const { 
-        year: _.year from, 
+      const 
+      { year: _.year from, 
         month: _.month from, 
         day: _.day from,
         isInit: true,
         isLoading: false,
+        loaded: false,
         yearXs: _.year from .. _.year to,
         monthXs: _.month from .. _.month to,
         dayXs: _.day from .. _.day to,
         error: Nothing,
-        timeline: {
-          gaps: [],
-          institution: mempty :: String, 
-          isBackward: false,
-          isForward: false,
-          timezone: 0,
-          currentGapIdx: -1 }
-        }
+        timeline: [],
+        institution: mempty :: String
+      }
     , render: render from to
     , eval: H.mkEval H.defaultEval
       { handleAction = handleAction }
@@ -84,41 +85,45 @@ component from to =
     where
       handleAction (SetYear idx) = do 
         {yearXs} <- H.get
-        for_ (index yearXs idx) \x -> H.modify_ _ { year = x }
+        for_ (index yearXs idx) \x -> H.modify_ _ { year = x, loaded = false }
       handleAction (SetMonth idx) = do 
         {monthXs} <- H.get
-        for_ (index monthXs idx) \x -> H.modify_ _ { month = x }
+        for_ (index monthXs idx) \x -> H.modify_ _ { month = x, loaded = false }
       handleAction (SetDay idx) = do 
         {dayXs} <- H.get
-        for_ (index dayXs idx) \x -> H.modify_ _ { day = x }
+        for_ (index dayXs idx) \x -> H.modify_ _ { day = x, loaded = false }
       handleAction (MakeHistoryRequest ev) = do 
         H.liftEffect $ preventDefault ev
-        H.modify_ _ { isInit = false, isLoading = true, error = Nothing }
-        {year, month, day} <- H.get
+        {year, month, day, loaded} <- H.get
         logDebug $ loc <> "  ---> history request made for a date of " <> 
                    show year <> "-" <> show month <> "-" <> show day
-        { config: Config { apiBCorrespondentHost: host }, user } <- getStore
-        for_ (user :: Maybe User) \{ token } -> do 
-          resp <- Request.makeAuth (Just token) host Back.mkFrontApi $ 
-              Back.initHistoryTimeline {year: year, month: month, day: day}
-          let failure e = H.modify_ _ { isLoading = false, error = Just $ message e }
-          onFailure resp failure \{success: {institution, timeline}} -> do
-            let showableTimeline = 
-                  flip map (timeline :: Array Back.GapItem) \x -> 
-                    x # Back._elements %~ map Back.printGapItemUnit 
-                      # Back._amounts %~ map Back.printGapItemAmount
-            logDebug $ loc <> " ---> timeline gaps " <> show showableTimeline
-            time <- H.liftEffect $ nowTime
-            H.modify_ \s ->
-               s # _isLoading .~ false
-                 # _timeline <<< T._gaps .~
-                     flip T.populateTimeline timeline
-                       (T.initTimeline (T.setTime 0 0 time) (T.setTime 0 1 time))
-                 # _timeline <<< T._institution .~ institution
+        if loaded then
+          let msg = "timeline for " <> show year <> "-" <> show month <> "-" <> show day <> " already loaded"
+          in Async.send $ Async.mkOrdinary msg Async.Info Nothing
+        else do
+          { config: Config { apiBCorrespondentHost: host }, user } <- getStore
+          H.modify_ _ { isInit = false, isLoading = true, error = Nothing }
+          for_ (user :: Maybe User) \{ token } -> do 
+            resp <- Request.makeAuth (Just token) host Back.mkFrontApi $ 
+                Back.initHistoryTimeline {year: year, month: month, day: day}
+            let failure e = H.modify_ _ { isLoading = false, error = Just $ message e }
+            onFailure resp failure \{success: {institution, timeline}} -> do
+              let showableTimeline = 
+                    flip map (timeline :: Array Back.GapItem) \x -> 
+                      x # Back._elements %~ map Back.printGapItemUnit 
+                        # Back._amounts %~ map Back.printGapItemAmount
+              logDebug $ loc <> " ---> timeline gaps " <> show showableTimeline
+              time <- H.liftEffect $ nowTime
+              let newTimeline = 
+                    flip Timeline.populatGaps timeline $
+                      Timeline.initTimeline 
+                      (Timeline.setTime 0 0 time) 
+                      (Timeline.setTime 0 1 time)
+              H.modify_ \s -> s # _isLoading .~ false # _loaded .~ true # _institution .~ institution # _timeline .~ newTimeline
 
-render from to {isInit, isLoading, error} = HH.div_ [selectors from to, timeline isInit isLoading error]
+render from to state = HH.div_ [renderSelectors from to, renderTimline state]
 
-selectors from to =
+renderSelectors from to =
   HH.div 
   [css "history-selectors"]
   [   
@@ -144,16 +149,15 @@ selectors from to =
             HPExt.value "load timeline"
           ] 
         ]
-      ]   
+      ]
   ]
 
-timeline isInit isLoading Nothing = 
-  HH.div [css "history-timeline"] $ 
+renderTimline {isInit, isLoading, error: Nothing, timeline, institution} =
   if isInit 
-  then textContainer "no timeline"
+  then HH.div [css "history-timeline"] $ textContainer "no timeline"
   else if isLoading
-  then textContainer "loading..."
-  else [HH.text "...."]
-timeline _ _ (Just error) = HH.text error
+  then HH.div [css "history-timeline"] $ textContainer "loading..."
+  else Timeline.slot 1 {timeline: timeline, institution: institution}
+renderTimline {error: Just val} = HH.div_ [HH.text val]
   
 textContainer text = [HH.div [HPExt.style "position:absolute;left:45%;top:40%"] [HH.h3 [HPExt.style "text-transform: uppercase"] [HH.text text]]]

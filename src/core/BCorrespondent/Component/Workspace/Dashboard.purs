@@ -122,7 +122,7 @@ component =
             logDebug $ loc <> " ---> timeline start -> end: (" <> show from <> ", " <> show to <> ")"
 
             let timeline = 
-                  flip populateTimeline gaps $ 
+                  flip populatGaps gaps $ 
                     initTimeline from to
             logDebug $ loc <> " ---> init timeline " <> 
               show (map (\x -> x # Back._elements %~ map Back.printGapItemUnit # Back._amounts %~ map Back.printGapItemAmount) timeline)
@@ -194,7 +194,7 @@ component =
                 logDebug $ loc <> " --->  backward. new points " <> show newStartPoint <> ", " <> show newEndPoint
                  
                 let newTimeline = 
-                      flip populateTimeline gaps $ 
+                      flip populatGaps gaps $ 
                         initTimeline newStartPoint newEndPoint
                 logDebug $ loc <> " --->  backward. current timline " <> 
                   show (map (\x -> x # Back._elements %~ map Back.printGapItemUnit # Back._amounts %~ map Back.printGapItemAmount) newTimeline)
@@ -254,7 +254,7 @@ component =
                          else pure Nothing
 
                         let newTimeline = 
-                              flip populateTimeline gaps $ 
+                              flip populatGaps gaps $ 
                                 initTimeline from to
                         logDebug $ loc <> " --->  forward. current timline " <> 
                           show (map (\x -> x # Back._elements %~ map Back.printGapItemUnit # Back._amounts %~ map Back.printGapItemAmount) newTimeline) 
