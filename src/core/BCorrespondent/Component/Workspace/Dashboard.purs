@@ -16,6 +16,7 @@ import BCorrespondent.Component.Workspace.Dashboard.Transaction as Dashboard.Tra
 import BCorrespondent.Component.Workspace.Dashboard.Gap as Dashboard.Gap
 import BCorrespondent.Component.Subscription.WS as WS
 import BCorrespondent.Component.Subscription.WS.Types
+import BCorrespondent.Component.Workspace.Dashboard.Timeline
 
 import Halogen.Store.Monad (getStore)
 import Halogen as H
@@ -359,66 +360,9 @@ resolveEnums x =
          Back.decodeCurrency (_.currency x) 
     }
 
-setTime m h = 
-  setMinute (fromMaybe undefined (toEnum m <|> toEnum 0)) <<< 
-  setHour (fromMaybe undefined (toEnum h <|> toEnum 0))
-
 setMin m = setMinute (fromMaybe undefined (toEnum m <|> toEnum 0))
 
 setH h = setHour (fromMaybe undefined (toEnum h <|> toEnum 0))
-
-initTimeline :: Time -> Time -> Array Back.GapItem
-initTimeline from to = go from to []
-  where
-     def = 
-           Time 
-           (intToTimePiece 0)
-           (intToTimePiece 0)
-           (intToTimePiece 0)
-           (intToTimePiece 0)
-     go from to xs | 
-       (hour from == hour to) && 
-       (minute from == minute to) = reverse xs
-     go from to xs =
-       let x = 
-              { elements: [],
-                start: { 
-                  hour: fromEnum $ hour from, 
-                  min: fromEnum $ minute from }, 
-                end: { 
-                  hour: 
-                    if fromEnum (minute from) + 5 == 60 
-                    then fromEnum $ hour to
-                    else fromEnum $ hour from,
-                  min: 
-                    if fromEnum (minute from) + 5 == 60 
-                    then 0 
-                    else fromEnum (minute from) + 5 },
-                amounts: []   
-              }
-           newFrom = 
-             setHour
-             (if fromEnum (minute from) + 5 == 60 
-             then hour to
-             else hour from) $
-             flip setMinute def $
-              if fromEnum (minute from) + 5 == 60 
-              then intToTimePiece 0 
-              else intToTimePiece (fromEnum (minute from) + 5)
-       in go newFrom to (x:xs)
-
-intToTimePiece :: forall a . BoundedEnum a => Int -> a
-intToTimePiece = fromMaybe bottom <<< toEnum
-
-populateTimeline timeline xs = 
-  timeline <#> \curr@{ start, end} -> 
-    let elm = flip find xs \x -> _.start x == start && _.end x == end
-    in fromMaybe curr $ flip map elm \{elements, amounts } -> curr # Back._elements .~ elements # Back._amounts .~ amounts
-
- -- x # Back._start <<< Back._hour %~ ((+) timezone) 
---    # Back._end <<< Back._hour %~ ((+) timezone)
-applyTimezone :: Int -> Back.GapItem -> Back.GapItem
-applyTimezone _ x = x
 
 mkBackwardButton isBackward = 
   Svg.g [onClick (const Backward)] 
