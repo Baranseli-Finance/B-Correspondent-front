@@ -1,6 +1,12 @@
 module BCorrespondent.Component.Workspace.Dashboard.Timeline
   ( Action(..)
   , State
+  , _currentGapIdx
+  , _gaps
+  , _institution
+  , _isBackward
+  , _isForwarc
+  , _timezone
   , applyTimezone
   , initTimeline
   , intToTimePiece
@@ -24,13 +30,22 @@ import Data.Lens
 import Undefined
 
 type State = 
-     { timeline :: Array Back.GapItem,
+     { gaps :: Array Back.GapItem,
        institution :: String,
        isBackward :: Boolean,
        isForward :: Boolean,
        timezone :: Int,
        currentGapIdx :: Int 
      }
+
+_gaps = lens _.gaps $ \el x -> el { gaps = x }
+_institution = lens _.institution $ \el x -> el { institution = x }
+_isBackward = lens _.isBackward $ \el x -> el { isBackward = x }
+_isForwarc = lens _.isForward $ \el x -> el { isForward = x }
+_timezone = lens _.timezone $ \el x -> el { timezone = x }
+_currentGapIdx = lens _.currentGapIdx $ \el x -> el { currentGapIdx = x }
+
+
 
 data Action =
        Backward

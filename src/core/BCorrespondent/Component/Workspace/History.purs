@@ -8,6 +8,7 @@ import BCorrespondent.Data.Config (Config(..))
 import BCorrespondent.Api.Foreign.Request as Request
 import BCorrespondent.Api.Foreign.Back as Back
 import BCorrespondent.Api.Foreign.Request.Handler (onFailure)
+import BCorrespondent.Component.Workspace.Dashboard.Timeline as T
 
 import Halogen as H
 import Halogen.HTML as HH
@@ -22,6 +23,8 @@ import Data.Maybe (Maybe (..))
 import Store (User)
 import Data.Lens
 import Effect.Exception (message)
+import System.Time (nowTime)
+import Data.Time (hour, minute)
 
 import Undefined
 
@@ -47,10 +50,11 @@ type State =
        monthXs :: Array Int,
        dayXs :: Array Int,
        error :: Maybe String,
-       timeline :: Array Back.GapItem,
-       institution :: String,
-       currentGapIdx :: Int
+       timeline :: T.State
      }
+
+_timeline = lens _.timeline $ \el x -> el { timeline = x }
+_isLoading = lens _.isLoading $ \el x -> el { isLoading = x }
 
 component from to =
   H.mkComponent
@@ -65,11 +69,14 @@ component from to =
         monthXs: _.month from .. _.month to,
         dayXs: _.day from .. _.day to,
         error: Nothing,
-        timeline: [],
-        institution: mempty :: String,
-        currentGapIdx: -1
-
-      }
+        timeline: {
+          gaps: [],
+          institution: mempty :: String, 
+          isBackward: false,
+          isForward: false,
+          timezone: 0,
+          currentGapIdx: -1 }
+        }
     , render: render from to
     , eval: H.mkEval H.defaultEval
       { handleAction = handleAction }
@@ -101,9 +108,14 @@ component from to =
                     x # Back._elements %~ map Back.printGapItemUnit 
                       # Back._amounts %~ map Back.printGapItemAmount
             logDebug $ loc <> " ---> timeline gaps " <> show showableTimeline
-            H.modify_ _ { isLoading = false, timeline = timeline, institution = institution }
+            time <- H.liftEffect $ nowTime
+            H.modify_ \s ->
+               s # _isLoading .~ false
+                 # _timeline <<< T._gaps .~
+                     flip T.populateTimeline timeline
+                       (T.initTimeline (T.setTime 0 0 time) (T.setTime 0 1 time))
+                 # _timeline <<< T._institution .~ institution
 
- 
 render from to {isInit, isLoading, error} = HH.div_ [selectors from to, timeline isInit isLoading error]
 
 selectors from to =
