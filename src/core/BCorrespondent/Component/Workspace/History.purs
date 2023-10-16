@@ -4,15 +4,24 @@ import Prelude
 
 import BCorrespondent.Component.HTML.Utils (css)
 import BCorrespondent.Capability.LogMessages (logDebug)
+import BCorrespondent.Data.Config (Config(..))
+import BCorrespondent.Api.Foreign.Request as Request
+import BCorrespondent.Api.Foreign.Back as Back
+import BCorrespondent.Api.Foreign.Request.Handler (onFailure)
 
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Properties.Extended as HPExt
 import Halogen.HTML.Events as HE
+import Halogen.Store.Monad (getStore)
 import Type.Proxy (Proxy(..))
 import Data.Array ((..), index)
 import Web.Event.Event (preventDefault, Event)
 import Data.Foldable (for_)
+import Data.Maybe (Maybe (..))
+import Store (User)
+import Data.Lens
+import Effect.Exception (message)
 
 import Undefined
 
@@ -36,7 +45,11 @@ type State =
        isLoading :: Boolean,
        yearXs :: Array Int,
        monthXs :: Array Int,
-       dayXs :: Array Int
+       dayXs :: Array Int,
+       error :: Maybe String,
+       timeline :: Array Back.GapItem,
+       institution :: String,
+       currentGapIdx :: Int
      }
 
 component from to =
@@ -50,7 +63,11 @@ component from to =
         isLoading: false,
         yearXs: _.year from .. _.year to,
         monthXs: _.month from .. _.month to,
-        dayXs: _.day from .. _.day to
+        dayXs: _.day from .. _.day to,
+        error: Nothing,
+        timeline: [],
+        institution: mempty :: String,
+        currentGapIdx: -1
 
       }
     , render: render from to
@@ -69,12 +86,25 @@ component from to =
         for_ (index dayXs idx) \x -> H.modify_ _ { day = x }
       handleAction (MakeHistoryRequest ev) = do 
         H.liftEffect $ preventDefault ev
-        H.modify_ _ { isInit = false, isLoading = true }
+        H.modify_ _ { isInit = false, isLoading = true, error = Nothing }
         {year, month, day} <- H.get
         logDebug $ loc <> "  ---> history request made for a date of " <> 
                    show year <> "-" <> show month <> "-" <> show day
-      
-render from to {isInit, isLoading} = HH.div_ [selectors from to, timeline isInit isLoading]
+        { config: Config { apiBCorrespondentHost: host }, user } <- getStore
+        for_ (user :: Maybe User) \{ token } -> do 
+          resp <- Request.makeAuth (Just token) host Back.mkFrontApi $ 
+              Back.initHistoryTimeline {year: year, month: month, day: day}
+          let failure e = H.modify_ _ { isLoading = false, error = Just $ message e }
+          onFailure resp failure \{success: {institution, timeline}} -> do
+            let showableTimeline = 
+                  flip map (timeline :: Array Back.GapItem) \x -> 
+                    x # Back._elements %~ map Back.printGapItemUnit 
+                      # Back._amounts %~ map Back.printGapItemAmount
+            logDebug $ loc <> " ---> timeline gaps " <> show showableTimeline
+            H.modify_ _ { isLoading = false, timeline = timeline, institution = institution }
+
+ 
+render from to {isInit, isLoading, error} = HH.div_ [selectors from to, timeline isInit isLoading error]
 
 selectors from to =
   HH.div 
@@ -105,12 +135,13 @@ selectors from to =
       ]   
   ]
 
-timeline isInit isLoading = 
+timeline isInit isLoading Nothing = 
   HH.div [css "history-timeline"] $ 
   if isInit 
-  then textContainer "no timeline loaded"
+  then textContainer "no timeline"
   else if isLoading
   then textContainer "loading..."
   else [HH.text "...."]
+timeline _ _ (Just error) = HH.text error
   
 textContainer text = [HH.div [HPExt.style "position:absolute;left:45%;top:40%"] [HH.h3 [HPExt.style "text-transform: uppercase"] [HH.text text]]]

@@ -50,3 +50,21 @@ export const _fetchTransaction =
             })
         };
     }
+
+export const _initHistoryTimeline = 
+function(withError, date, api) {
+    return function(onError, onOk) {
+        api.frontendUserHistoryTimelineGet(date).then(onOk).catch(resp => {
+            return withError(resp, onError)
+        })
+    };
+}
+
+export const _fetchShiftHistoryTimeline = 
+function(withError, y, m, d, direction, hour, api) {
+    return function(onError, onOk) {
+        api.frontendUserHistoryTimelineYearMonthDayDirectionGet(y, m, d, direction, hour).then(onOk).catch(resp => {
+            return withError(resp, onError)
+        })
+    };
+}

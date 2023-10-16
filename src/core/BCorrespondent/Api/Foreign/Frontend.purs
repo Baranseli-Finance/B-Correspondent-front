@@ -3,12 +3,14 @@ module BCorrespondent.Api.Foreign.Frontend
   , DailyBalanceSheet
   , Direction(..)
   , EnumResolvedWallet
+  , FetchShiftHistoryTimelineParams
   , FrontApi
   , GapItem
   , GapItemAmount
   , GapItemTime
   , GapItemUnit
   , GapItemUnitStatus(..)
+  , HistoryTimeline
   , Init
   , InvoiceSince
   , NextGap
@@ -38,11 +40,13 @@ module BCorrespondent.Api.Foreign.Frontend
   , decodeCurrency
   , decodeGapItemUnitStatus
   , decodeWalletType
+  , fetchShiftHistoryTimeline
   , fetchTimelineForParticularHour
   , fetchTrnsaction
   , getJwtStatus
   , init
   , initDashboard
+  , initHistoryTimeline
   , loadNextGap
   , mkFrontApi
   , printGapItemAmount
@@ -301,4 +305,29 @@ foreign import _fetchTransaction :: Fn3 WithError Int FrontApi (AC.EffectFnAff (
 fetchTrnsaction :: Int -> FrontApi -> AC.EffectFnAff (Object (Response Transaction))
 fetchTrnsaction = runFn3 _fetchTransaction withError
 
+type HistoryTimeline = 
+     { institution :: String, 
+       timeline :: Array GapItem 
+     }
 
+type Date = { year :: Int, month :: Int, day :: Int }
+
+printDate {year, month, day} = show year <> "," <> show month <> "," <> show day 
+
+foreign import _initHistoryTimeline :: Fn3 WithError String FrontApi (AC.EffectFnAff (Object (Response HistoryTimeline)))
+
+initHistoryTimeline :: Date -> FrontApi -> AC.EffectFnAff (Object (Response HistoryTimeline))
+initHistoryTimeline date = runFn3 _initHistoryTimeline withError (printDate date)
+
+type FetchShiftHistoryTimelineParams =
+     { year :: Int,
+       month :: Int,
+       day :: Int,
+       direction :: Foreign,
+       hour :: Int 
+     }
+
+foreign import _fetchShiftHistoryTimeline :: Fn3 WithError FetchShiftHistoryTimelineParams FrontApi (AC.EffectFnAff (Object (Response (Array GapItem))))
+
+fetchShiftHistoryTimeline :: FetchShiftHistoryTimelineParams -> FrontApi -> AC.EffectFnAff (Object (Response (Array GapItem)))
+fetchShiftHistoryTimeline = runFn3 _fetchShiftHistoryTimeline withError
