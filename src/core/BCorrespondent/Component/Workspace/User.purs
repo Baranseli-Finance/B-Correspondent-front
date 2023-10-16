@@ -59,5 +59,5 @@ render { user } =
             ]
           ]
       ]
-  ,   HH.div [css "bell", onClick $ const OpenNotification] [HH.i [css "fa fa-bell fa-lg"] []]
+  ,   HH.div [css "bell", onClick $ const OpenNotification] [HH.i [css "bell-animate fa fa-bell fa-lg"] []]
   ]
