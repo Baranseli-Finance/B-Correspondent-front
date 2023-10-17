@@ -1,10 +1,13 @@
 module BCorrespondent.Component.Workspace.Dashboard.Timeline
   ( Action(..)
+  , Output(..)
+  , Query(..)
   , State
   , applyTimezone
   , initTimeline
   , intToTimePiece
   , populatGaps
+  , proxy
   , render
   , setTime
   , slot
@@ -15,14 +18,17 @@ import Prelude
 
 import BCorrespondent.Api.Foreign.Back as Back
 import BCorrespondent.Component.HTML.Utils (cssSvg, css)
+import BCorrespondent.Component.Workspace.Dashboard.Transaction as Dashboard.Transaction
+import BCorrespondent.Component.Workspace.Dashboard.Gap as Dashboard.Gap
+import BCorrespondent.Capability.LogMessages (logDebug, logError)
 
 import Halogen as H
-import Web.UIEvent.MouseEvent (MouseEvent)
+import Web.UIEvent.MouseEvent (MouseEvent, clientX, clientY)
 import Data.Maybe (Maybe, fromMaybe, Maybe (..))
 import Data.Enum (toEnum, fromEnum, class BoundedEnum)
 import Data.Time (setHour, setMinute, Time (..), hour, minute)
 import Control.Alt ((<|>))
-import Data.Array (reverse, (:), find, uncons, sortBy)
+import Data.Array (reverse, (:), find, uncons, sortBy, head, last)
 import Data.Lens
 import Halogen.Svg.Elements as Svg
 import Halogen.Svg.Attributes.FontSize as Svg
@@ -32,6 +38,9 @@ import Halogen.HTML.Events (onClick, onMouseMove, onMouseOut, onMouseEnter)
 import Halogen.HTML as HH
 import Data.Int (toNumber, even, floor)
 import Type.Proxy (Proxy(..))
+import Data.Foldable (for_)
+import AppM (AppM)
+import System.Time (nowTime)
 
 import Undefined
 
@@ -39,7 +48,11 @@ proxy = Proxy :: _ "workspace_dashboard_timeline"
 
 loc = "BCorrespondent.Component.Workspace.Dashboard.Timeline"
 
-slot n {timeline, institution} = HH.slot_ proxy n component {timeline, institution}
+data Query a = GapItems (Array Back.GapItem) Back.Direction Int a
+
+data Output = OutputDirection Back.Direction Int
+
+slot n {timeline, institution} = HH.slot proxy n component {timeline, institution}
 
 type State = 
      { timeline :: Array Back.GapItem,
@@ -53,7 +66,7 @@ type State =
 _timeline = lens _.timeline $ \el x -> el { timeline = x }
 _institution = lens _.institution $ \el x -> el { institution = x }
 _isBackward = lens _.isBackward $ \el x -> el { isBackward = x }
-_isForwarc = lens _.isForward $ \el x -> el { isForward = x }
+_isForward = lens _.isForward $ \el x -> el { isForward = x }
 _timezone = lens _.timezone $ \el x -> el { timezone = x }
 _currentGapIdx = lens _.currentGapIdx $ \el x -> el { currentGapIdx = x }
 
@@ -77,9 +90,61 @@ component =
              currentGapIdx: -1
            }
     , render: render
-    , eval: H.mkEval H.defaultEval
+    , eval: H.mkEval H.defaultEval 
+      { handleAction = handleAction
+      , handleQuery = handleQuery 
+      }
     }
-
+    where
+      handleAction Backward = do
+        {timeline} <- H.get
+        for_ (head timeline) \el -> do 
+          let hour = el^.Back._start <<< Back._hour 
+          when (hour - 1 >= 0) $ 
+            H.raise $ OutputDirection Back.Backward hour
+      handleAction Forward = do
+        {timeline} <- H.get
+        for_ (last timeline) \el -> do 
+          let hour = el^.Back._end <<< Back._hour
+          when (hour /= 0) $
+            H.raise $ OutputDirection Back.Forward hour
+      handleAction (FetchTransaction  ident status)
+        | status == Nothing = 
+            logError $ loc <> " ---> FetchTransaction, status unknown" 
+        | status == Just Back.Pending = 
+            logDebug $ loc <> " ---> FetchTransaction , pending, skip" 
+        | otherwise = 
+            H.tell Dashboard.Transaction.proxy 1 $ 
+              Dashboard.Transaction.Open ident
+      handleAction (TotalAmountInGap idx xs ev) = do
+        H.tell Dashboard.Gap.proxy 2 $ 
+          Dashboard.Gap.Open 
+            { x: Just (clientX ev), 
+              y: Just (clientY ev), 
+              amounts: xs 
+            } 
+        H.modify_ _ { currentGapIdx = idx }
+      handleAction CancelTotalAmountInGap = do 
+        logDebug $ loc <> " CancelTotalAmountInGap"
+        H.tell Dashboard.Gap.proxy 2 $
+          Dashboard.Gap.Open { x: Nothing, y: Nothing, amounts: [] }
+        H.modify_ _ { currentGapIdx = -1 }
+      handleQuery 
+        :: forall a s . Query a
+        -> H.HalogenM State Action s Output AppM (Maybe a)
+      handleQuery (GapItems gaps direction point a) = do 
+        time <- H.liftEffect $ nowTime
+        let from = if direction == Back.Forward then setTime 0 point time else setTime 0 (point - 1) time
+        let to = if direction == Back.Forward then setTime 0 (point + 1) time else setTime 0 point time
+        let newTimeline = flip populatGaps gaps $ initTimeline from to
+        let isBackward = 
+              direction == Back.Forward || 
+              (direction == Back.Backward && point /= 1) 
+        let isForward = 
+              direction == Back.Backward || 
+              (direction == Back.Forward && point /= 23)
+        map (const (Just a)) $ H.modify_ \s -> 
+          s # _timeline .~ newTimeline # _isBackward .~ isBackward # _isForward .~ isForward 
 
 intToTimePiece :: forall a . BoundedEnum a => Int -> a
 intToTimePiece = fromMaybe bottom <<< toEnum
@@ -188,6 +253,8 @@ render {institution, isBackward, isForward, timezone, timeline, currentGapIdx} =
               mkForwardButton isForward :
               renderTimeline (toNumber 10) 0 (map (applyTimezone timezone) timeline) currentGapIdx
        ]
+   ,   Dashboard.Transaction.slot 1
+   ,   Dashboard.Gap.slot 2   
    ]
 
 renderTimeline coordX idx xs currGap = 

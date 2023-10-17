@@ -40,6 +40,7 @@ module BCorrespondent.Api.Foreign.Frontend
   , decodeCurrency
   , decodeGapItemUnitStatus
   , decodeWalletType
+  , encodeDirection
   , fetchShiftHistoryTimeline
   , fetchTimelineForParticularHour
   , fetchTrnsaction
@@ -262,7 +263,12 @@ foreign import _fetchTimelineForParticularHour :: Fn4 WithError Foreign String F
 
 data Direction = Backward | Forward
 
+instance Show Direction where
+  show Backward = "backward"
+  show Forward = "forward"
+
 derive instance genericDirection :: Generic Direction _
+derive instance eqDirection :: Eq Direction
 
 encodeDirection :: Direction -> Foreign
 encodeDirection = genericEncodeEnum {constructorTagTransform: toLower}

@@ -40,6 +40,7 @@ data Action =
      | SetMonth Int 
      | SetDay Int 
      | MakeHistoryRequest Event
+     | HandleChild Timeline.Output
 
 type State = 
      { year :: Int, 
@@ -85,13 +86,16 @@ component from to =
     where
       handleAction (SetYear idx) = do 
         {yearXs} <- H.get
-        for_ (index yearXs idx) \x -> H.modify_ _ { year = x, loaded = false }
+        for_ (index yearXs idx) \x -> 
+          H.modify_ _ { year = x, loaded = false }
       handleAction (SetMonth idx) = do 
         {monthXs} <- H.get
-        for_ (index monthXs idx) \x -> H.modify_ _ { month = x, loaded = false }
+        for_ (index monthXs idx) \x -> 
+          H.modify_ _ { month = x, loaded = false }
       handleAction (SetDay idx) = do 
         {dayXs} <- H.get
-        for_ (index dayXs idx) \x -> H.modify_ _ { day = x, loaded = false }
+        for_ (index dayXs idx) \x -> 
+          H.modify_ _ { day = x, loaded = false }
       handleAction (MakeHistoryRequest ev) = do 
         H.liftEffect $ preventDefault ev
         {year, month, day, loaded} <- H.get
@@ -120,6 +124,17 @@ component from to =
                       (Timeline.setTime 0 0 time) 
                       (Timeline.setTime 0 1 time)
               H.modify_ \s -> s # _isLoading .~ false # _loaded .~ true # _institution .~ institution # _timeline .~ newTimeline
+      handleAction (HandleChild (Timeline.OutputDirection direction hour)) = do
+        logDebug $ loc <> "  ---> shift " <> show direction <> ", hour " <> show hour 
+        { config: Config { apiBCorrespondentHost: host }, user } <- getStore
+        for_ (user :: Maybe User) \{ token } -> do
+          {year, month, day} <- H.get
+          let params = {year: year, month: month, day: day, direction: Back.encodeDirection direction, hour: hour}
+          resp <- Request.makeAuth (Just token) host Back.mkFrontApi $ 
+            Back.fetchShiftHistoryTimeline params
+          onFailure resp (Async.send <<< flip Async.mkException loc) \{success: gaps} ->
+            H.tell Timeline.proxy 1 $ Timeline.GapItems gaps direction hour
+
 
 render from to state = HH.div_ [renderSelectors from to, renderTimline state]
 
@@ -157,7 +172,7 @@ renderTimline {isInit, isLoading, error: Nothing, timeline, institution} =
   then HH.div [css "history-timeline"] $ textContainer "no timeline"
   else if isLoading
   then HH.div [css "history-timeline"] $ textContainer "loading..."
-  else Timeline.slot 1 {timeline: timeline, institution: institution}
+  else Timeline.slot 1 {timeline: timeline, institution: institution} HandleChild
 renderTimline {error: Just val} = HH.div_ [HH.text val]
   
 textContainer text = [HH.div [HPExt.style "position:absolute;left:45%;top:40%"] [HH.h3 [HPExt.style "text-transform: uppercase"] [HH.text text]]]
