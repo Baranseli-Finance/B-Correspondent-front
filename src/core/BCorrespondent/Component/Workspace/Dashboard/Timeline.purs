@@ -2,6 +2,7 @@ module BCorrespondent.Component.Workspace.Dashboard.Timeline
   ( Action(..)
   , Output(..)
   , Query(..)
+  , ShiftInit(..)
   , State
   , applyTimezone
   , initTimeline
@@ -51,7 +52,7 @@ loc = "BCorrespondent.Component.Workspace.Dashboard.Timeline"
 data Query a = NewTimeline (Array Back.GapItem) Boolean Boolean a
 
 data Output = OutputDirection Back.Direction (Array Back.GapItem)
-slot n {timeline, institution} = HH.slot proxy n component {timeline, institution}
+slot n {timeline, institution, initShift} = HH.slot proxy n component {timeline, institution, initShift}
 
 type State = 
      { timeline :: Array Back.GapItem,
@@ -77,16 +78,16 @@ data Action =
      | TotalAmountInGap Int (Array Back.GapItemAmount) MouseEvent
      | CancelTotalAmountInGap
 
-initBackward timeline = fromMaybe false $ flip map (head timeline) \el -> not $ (el^.Back._start <<< Back._hour) == 0
+data ShiftInit = ShiftInit Boolean Boolean
 
 component =
   H.mkComponent
     { initialState: 
-        \{timeline, institution} -> 
+        \{timeline, institution, initShift: ShiftInit back forth} -> 
            { timeline: timeline,
-             institution: institution, 
-             isBackward: initBackward timeline,
-             isForward: true,
+             institution: institution,
+             isBackward: back,
+             isForward: forth,
              timezone: 0,
              currentGapIdx: -1
            }

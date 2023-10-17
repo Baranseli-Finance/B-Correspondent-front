@@ -195,7 +195,7 @@ renderTimline {isInit, isLoading, error: Nothing, timeline, institution} =
   then HH.div [css "history-timeline"] $ textContainer "no timeline"
   else if isLoading
   then HH.div [css "history-timeline"] $ textContainer "loading..."
-  else Timeline.slot 1 {timeline: timeline, institution: institution} HandleChild
+  else Timeline.slot 1 {timeline: timeline, institution: institution, initShift: Timeline.ShiftInit false true } HandleChild
 renderTimline {error: Just val} = HH.div_ [HH.text val]
   
 textContainer text = [HH.div [HPExt.style "position:absolute;left:45%;top:40%"] [HH.h3 [HPExt.style "text-transform: uppercase"] [HH.text text]]]
