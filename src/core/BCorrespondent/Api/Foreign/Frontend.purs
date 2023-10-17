@@ -40,6 +40,7 @@ module BCorrespondent.Api.Foreign.Frontend
   , decodeCurrency
   , decodeGapItemUnitStatus
   , decodeWalletType
+  , encodeCurrency
   , encodeDirection
   , fetchShiftHistoryTimeline
   , fetchTimelineForParticularHour
@@ -228,6 +229,9 @@ instance Show Currency where
 
 decodeCurrency :: Foreign -> Maybe Currency
 decodeCurrency = decodeEnumG
+
+encodeCurrency :: Currency -> Foreign
+encodeCurrency = genericEncodeEnum defaultGenericEnumOptions { constructorTagTransform = toLower }
 
 type Wallet = 
     { ident :: Int,

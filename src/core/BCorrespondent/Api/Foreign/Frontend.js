@@ -51,25 +51,25 @@ export const _fetchTransaction =
         };
     }
 
-export const _initHistoryTimeline = 
-function(withError, date, api) {
-    return function(onError, onOk) {
-        api.frontendUserHistoryTimelineGet(date).then(onOk).catch(resp => {
-            return withError(resp, onError)
-        })
-    };
-}
+export const _initHistoryTimeline =
+    function(withError, date, api) {
+        return function(onError, onOk) {
+            api.frontendUserHistoryTimelineGet(date).then(onOk).catch(resp => {
+                return withError(resp, onError)
+            })
+        };
+    }
 
-export const _fetchShiftHistoryTimeline = 
-function(withError, params, api) {
-    return function(onError, onOk) {
-        let y = params['year']
-        let m = params['month']
-        let d = params['day']
-        let direction = params['direction']
-        let hour = params['hour']
-        api.frontendUserHistoryTimelineYearMonthDayDirectionGet(y, m, d, direction, hour).then(onOk).catch(resp => {
-            return withError(resp, onError)
-        })
-    };
-}
+export const _fetchShiftHistoryTimeline =
+    function(withError, params, api) {
+        return function(onError, onOk) {
+            let y = params['year']
+            let m = params['month']
+            let d = params['day']
+            let direction = params['direction']
+            let hour = params['hour']
+            api.frontendUserHistoryTimelineYearMonthDayDirectionGet(y, m, d, direction, hour).then(onOk).catch(resp => {
+                return withError(resp, onError)
+            })
+        };
+    }
