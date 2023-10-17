@@ -59,7 +59,7 @@ slot n = HH.slot_ proxy n component unit
 data Action = 
        Initialize 
      | Finalize 
-     | Update
+     | AddGap
      | UpdateTransaction Transaction
      | UpdateWallet Wallet
      | HandleChild Timeline.Output
@@ -70,7 +70,8 @@ type State =
        stepsBackward :: Int,
        wallets :: Array Back.EnumResolvedWallet,
        timeline :: Array Back.GapItem,
-       institution :: String
+       institution :: String,
+       transaction :: Maybe Back.GapItemUnit
      }
 
 delay = H.liftAff $ Aff.delay $ Aff.Milliseconds 300_000.0
@@ -83,7 +84,8 @@ component =
         stepsBackward: 0,
         wallets: [],
         timeline: [],
-        institution: mempty
+        institution: mempty,
+        transaction: Nothing
       }
     , render: render
     , eval: H.mkEval H.defaultEval
@@ -120,7 +122,7 @@ component =
         
             forkId <-  H.fork $ do
                logDebug $ loc <> " ---> timeline updater has been activated"
-               forever $ delay *> handleAction Update
+               forever $ delay *> handleAction AddGap
 
             WS.subscribe loc WS.transactionUrl (Just (WS.encodeResource WS.Transaction)) $ 
               handleAction <<< UpdateTransaction <<< _.success
@@ -138,40 +140,10 @@ component =
                 institution = title
               }
 
-      handleAction Update = undefined
-        -- { config: Config { apiBCorrespondentHost: host }, user } <- getStore
-        -- for_ (user :: Maybe User) \{ token } -> do
-        --   {timeline} <- H.get
-        --   for_ (last timeline) \{end: {hour, min}} -> do
-        --     let start = show hour <> "," <> show min
-        --     let endHour = if min + 5 > 59 then hour + 1 else hour
-        --     let endMin = if min + 5 > 59 then 5 else min + 5
-        --     let end = show endHour <> "," <> show endMin
-        --     resp <- Request.makeAuth (Just token) host Back.mkFrontApi $ 
-        --       Back.loadNextGap start end
-        --     let failure = Async.send <<< flip Async.mkException loc
-        --     onFailure resp failure \{ success: {gap} } -> do
-        --       logDebug $ loc <> " ---> update timeline from " <> start <> ", to " <> end 
-        --       H.modify_  \s@{timeline: x} -> s { timeline = fromMaybe [] $ flip map (uncons x) \{tail} -> snoc tail gap }
-
-      handleAction (UpdateTransaction {hour, min, textualIdent: ident, status: newStatus}) = undefined
-        -- {timeline} <- H.get
-        -- let newTimeline = 
-        --       flip map timeline \x ->
-        --         if x^.Back._start <<< Back._hour * 60 + 
-        --            x^.Back._start <<< Back._min <= 
-        --            hour * 60 + min
-        --            && x^.Back._end <<< Back._hour * 
-        --               60 + x^.Back._end <<< Back._min >= 
-        --            hour * 60 + min
-        --         then x # Back._elements %~ \xs -> 
-        --                flip map xs \el@{textualIdent} -> 
-        --                  if ident ==  textualIdent 
-        --                  then el { status = newStatus } 
-        --                  else el
-        --         else x
-        -- H.modify_ _ { timeline = newTimeline }
-
+      handleAction AddGap = H.tell Timeline.proxy 1 $ Timeline.AddGap
+      handleAction (UpdateTransaction transaction) = do
+        H.modify_ _ { transaction = Just transaction }
+        H.tell Timeline.proxy 1 $ Timeline.UpdateTransaction
       handleAction (UpdateWallet wallet@{ident, amount: new}) = do
         logDebug $ loc <> " wallet update --- >" <> show wallet
         {wallets: old} <- H.get
@@ -190,7 +162,41 @@ component =
       handleAction (HandleChild (Timeline.OutputDirection Back.Forward timeline)) = do
          {stepsBackward} <- H.get
          when (stepsBackward /= 0) $ 
-           handleforward timeline $ handleAction Update
+           handleforward timeline $ handleAction AddGap
+      handleAction (HandleChild (Timeline.OutputUpdate timeline)) = do 
+        { config: Config { apiBCorrespondentHost: host }, user } <- getStore
+        for_ (user :: Maybe User) \{ token } -> do
+          for_ (last timeline) \{end: {hour, min}} -> do
+            let start = show hour <> "," <> show min
+            let endHour = if min + 5 > 59 then hour + 1 else hour
+            let endMin = if min + 5 > 59 then 5 else min + 5
+            let end = show endHour <> "," <> show endMin
+            resp <- Request.makeAuth (Just token) host Back.mkFrontApi $
+              Back.loadNextGap start end
+            let failure = Async.send <<< flip Async.mkException loc
+            onFailure resp failure \{ success: {gap} } -> do
+              logDebug $ loc <> " ---> update timeline from " <> start <> ", to " <> end 
+              let newTimeline = fromMaybe [] $ flip map (uncons timeline) \{tail} -> snoc tail gap
+              H.tell Timeline.proxy 1 $ Timeline.NewTimeline newTimeline false false
+      handleAction (HandleChild (Timeline.OutputTransactionUpdate timeline)) = do
+        {transaction} <- H.get
+        for_ transaction \{hour, min, textualIdent: ident, status: newStatus} -> do
+          let newTimeline = 
+                flip map timeline \x ->
+                  if x^.Back._start <<< Back._hour * 60 + 
+                     x^.Back._start <<< Back._min <= 
+                     hour * 60 + min
+                     && x^.Back._end <<< Back._hour * 
+                        60 + x^.Back._end <<< Back._min >= 
+                     hour * 60 + min
+                  then x # Back._elements %~ \xs -> 
+                         flip map xs \el@{textualIdent} -> 
+                           if ident ==  textualIdent 
+                           then el { status = newStatus } 
+                           else el
+                  else x
+          H.tell Timeline.proxy 1 $ Timeline.WithNewTransaction newTimeline
+   
 
 handleBackward timeline = do 
   { config: Config { apiBCorrespondentHost: host }, user } <- getStore
@@ -206,6 +212,7 @@ handleBackward timeline = do
         do
           {stepsBackward} <- H.get
           map (_.forkId) H.get >>= flip for_ H.kill
+          logDebug $ loc <> " --->  timeline updater is deactivated"
           logDebug $ loc <> " --->  backward, gaps " <> show (Back.printTimline gaps)
           time <- H.liftEffect $ nowTime
           let newStartPoint 

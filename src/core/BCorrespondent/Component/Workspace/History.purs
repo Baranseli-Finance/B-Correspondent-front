@@ -158,6 +158,8 @@ component from to =
         case direction of 
           Back.Backward -> for_ (head timeline) \el -> go $ el^.Back._start <<< Back._hour
           Back.Forward -> for_ (last timeline) \el -> go $ el^.Back._end <<< Back._hour
+      handleAction (HandleChild (Timeline.OutputUpdate _)) = pure unit
+      handleAction (HandleChild (Timeline.OutputTransactionUpdate _)) = pure unit
 
 render from to state = HH.div_ [renderSelectors from to, renderTimline state]
 

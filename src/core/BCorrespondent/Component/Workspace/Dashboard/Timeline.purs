@@ -49,9 +49,17 @@ proxy = Proxy :: _ "workspace_dashboard_timeline"
 
 loc = "BCorrespondent.Component.Workspace.Dashboard.Timeline"
 
-data Query a = NewTimeline (Array Back.GapItem) Boolean Boolean a
+data Query a = 
+       NewTimeline (Array Back.GapItem) Boolean Boolean a 
+     | AddGap a 
+     | UpdateTransaction a 
+     | WithNewTransaction (Array Back.GapItem) a
 
-data Output = OutputDirection Back.Direction (Array Back.GapItem)
+data Output = 
+       OutputDirection Back.Direction (Array Back.GapItem) 
+     | OutputUpdate (Array Back.GapItem) 
+     | OutputTransactionUpdate (Array Back.GapItem)
+
 slot n {timeline, institution, initShift} = HH.slot proxy n component {timeline, institution, initShift}
 
 type State = 
@@ -99,17 +107,11 @@ component =
     }
     where
       handleAction Backward = do
-        {timeline} <- H.get
-        for_ (head timeline) \el -> do 
-          let hour = el^.Back._start <<< Back._hour 
-          when (hour - 1 >= 0) $ 
-            H.raise $ OutputDirection Back.Backward timeline
+        {timeline, isBackward} <- H.get
+        when (isBackward) $ H.raise $ OutputDirection Back.Backward timeline
       handleAction Forward = do
-        {timeline} <- H.get
-        for_ (last timeline) \el -> do 
-          let hour = el^.Back._end <<< Back._hour
-          when (hour /= 0) $
-            H.raise $ OutputDirection Back.Forward timeline
+        {timeline, isForward} <- H.get
+        when (isForward) $ H.raise $ OutputDirection Back.Forward timeline
       handleAction (FetchTransaction  ident status)
         | status == Nothing = 
             logError $ loc <> " ---> FetchTransaction, status unknown" 
@@ -134,10 +136,17 @@ component =
       handleQuery 
         :: forall a s . Query a
         -> H.HalogenM State Action s Output AppM (Maybe a)
+      handleQuery (AddGap a) = do 
+        {timeline} <- H.get
+        map (const (Just a)) $ H.raise (OutputUpdate timeline)
       handleQuery (NewTimeline newTimeline isBackward isForward a) = do 
         logDebug $ loc <> " ---> NewTimeline " <> show (Back.printTimline newTimeline)
         map (const (Just a)) $ H.modify_ \s ->
-          s # _timeline .~ newTimeline # _isBackward .~ isBackward # _isForward .~ isForward 
+          s # _timeline .~ newTimeline # _isBackward .~ isBackward # _isForward .~ isForward
+      handleQuery (UpdateTransaction a) = do
+        {timeline} <- H.get
+        map (const (Just a)) $ H.raise (OutputTransactionUpdate timeline)
+      handleQuery (WithNewTransaction newTimeline a) = map (const (Just a)) (H.modify_ \s -> s # _timeline .~ newTimeline)
 
 intToTimePiece :: forall a . BoundedEnum a => Int -> a
 intToTimePiece = fromMaybe bottom <<< toEnum
