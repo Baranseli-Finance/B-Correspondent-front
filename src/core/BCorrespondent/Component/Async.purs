@@ -52,7 +52,7 @@ data Action = Close Int | Add Async | Initialize
 
 type AsyncWithTM = { async :: Async, tm :: String }
 
-type State = { xs :: Map.Map Int AsyncWithTM }
+type State = { xs :: Map.Map Int AsyncWithTM, severity :: LogLevel }
 
 data Level = Warning | Success | Info | Error | Debug
 
@@ -69,7 +69,7 @@ mkOrdinary msg level loc = { val: Ordinary msg level, loc: loc }
 
 component =
   H.mkComponent
-    { initialState: const { xs: Map.empty }
+    { initialState: const { xs: Map.empty, severity: Dev }
     , render: render
     , eval: H.mkEval H.defaultEval
         { handleAction = handleAction
@@ -78,7 +78,7 @@ component =
     }
   where
   handleAction Initialize = do
-    { async } <- getStore
+    { async, logLevel } <- getStore
     void $ H.fork $ forever $ do
       H.liftAff $ Aff.delay $ Aff.Milliseconds 1000.0
       val <- H.liftAff $ Async.recv $ _.input async
@@ -95,7 +95,9 @@ component =
         \(Tuple idx {tm: d}) -> do
            tm <- H.liftEffect $ dateToTimestamp d 
            when (curr - tm > 30) $
-             handleAction (Close idx) 
+             handleAction (Close idx)
+
+    H.modify_ _ { severity = logLevel }         
 
   handleAction (Add e@{ val: v }) = do
     let
@@ -123,7 +125,7 @@ component =
   handleAction (Close idx) = 
     H.modify_ \s -> s { xs = recalculateIdx $ Map.delete idx (_.xs s) }
 
-render { xs } =
+render { xs, severity } =
   HH.div_ $
     (Map.toUnfoldable xs) <#> \(Tuple k { async: { val, loc }, tm }) ->
       let
@@ -136,7 +138,7 @@ render { xs } =
           , HP.role "alert"
           ]
           [ HH.p [HP.style "text-align: center", css (mkStyle val) ] 
-            [ HH.text (mkMsg val <> maybe mempty (\s -> " at " <> s) loc <> ", tm: " <> tm) ] ]
+            [ HH.text (mkMsg val <> if severity == Dev then maybe mempty (\s -> " at " <> s) loc <> ", tm: " <> tm else mempty) ] ]
   where
   mkStyle val =
     case val of
