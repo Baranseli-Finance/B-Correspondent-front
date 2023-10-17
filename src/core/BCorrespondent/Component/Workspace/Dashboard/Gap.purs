@@ -50,9 +50,9 @@ render { x: Just xCoord, y: Just yCoord, amounts } =
         \ background-color:white;\
         \ border: solid 1px black; \
         \ position:absolute;left:" <> 
-        show (xCoord - 30) <>
+        show (xCoord - 235) <>
         "px;top:" <> 
-        show (yCoord - 150) <> "px"
+        show (yCoord - 260) <> "px"
   in whenElem (length amounts > 0) $ 
        HH.div [HPExt.style mkStyle] $ 
          [HH.div_ [HH.text "Total amount"]] <> 
