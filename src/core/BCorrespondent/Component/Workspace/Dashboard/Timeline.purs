@@ -77,13 +77,15 @@ data Action =
      | TotalAmountInGap Int (Array Back.GapItemAmount) MouseEvent
      | CancelTotalAmountInGap
 
+initBackward timeline = fromMaybe false $ flip map (head timeline) \el -> not $ (el^.Back._start <<< Back._hour) == 0
+
 component =
   H.mkComponent
     { initialState: 
         \{timeline, institution} -> 
            { timeline: timeline,
              institution: institution, 
-             isBackward: false,
+             isBackward: initBackward timeline,
              isForward: true,
              timezone: 0,
              currentGapIdx: -1
