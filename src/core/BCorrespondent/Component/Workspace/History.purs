@@ -17,7 +17,7 @@ import Halogen.HTML.Properties.Extended as HPExt
 import Halogen.HTML.Events as HE
 import Halogen.Store.Monad (getStore)
 import Type.Proxy (Proxy(..))
-import Data.Array ((..), index)
+import Data.Array ((..), index, head, last)
 import Web.Event.Event (preventDefault, Event)
 import Data.Foldable (for_)
 import Data.Maybe (Maybe (..))
@@ -124,17 +124,40 @@ component from to =
                       (Timeline.setTime 0 0 time) 
                       (Timeline.setTime 0 1 time)
               H.modify_ \s -> s # _isLoading .~ false # _loaded .~ true # _institution .~ institution # _timeline .~ newTimeline
-      handleAction (HandleChild (Timeline.OutputDirection direction hour)) = do
-        logDebug $ loc <> "  ---> shift " <> show direction <> ", hour " <> show hour 
-        { config: Config { apiBCorrespondentHost: host }, user } <- getStore
-        for_ (user :: Maybe User) \{ token } -> do
-          {year, month, day} <- H.get
-          let params = {year: year, month: month, day: day, direction: Back.encodeDirection direction, hour: hour}
-          resp <- Request.makeAuth (Just token) host Back.mkFrontApi $ 
-            Back.fetchShiftHistoryTimeline params
-          onFailure resp (Async.send <<< flip Async.mkException loc) \{success: gaps} ->
-            H.tell Timeline.proxy 1 $ Timeline.GapItems gaps direction hour
-
+      handleAction (HandleChild (Timeline.OutputDirection direction timeline)) = do
+        logDebug $ loc <> "  ---> HandleChild  " <> show direction <> " " <> show (Back.printTimline timeline)
+        let go hour = 
+              do
+                { config: Config { apiBCorrespondentHost: host }, user } <- getStore
+                for_ (user :: Maybe User) \{ token } -> do
+                  {year, month, day} <- H.get
+                  let params = {year: year, month: month, day: day, direction: Back.encodeDirection direction, hour: hour}
+                  resp <- Request.makeAuth (Just token) host Back.mkFrontApi $ 
+                    Back.fetchShiftHistoryTimeline params
+                  onFailure resp (Async.send <<< flip Async.mkException loc) 
+                    \{success: gaps} -> do
+                      time <- H.liftEffect $ nowTime
+                      let from = 
+                            if direction == Back.Forward 
+                            then Timeline.setTime 0 hour time 
+                            else Timeline.setTime 0 (hour - 1) time
+                      let to = 
+                            if direction == Back.Forward 
+                            then Timeline.setTime 0 (hour + 1) time 
+                            else Timeline.setTime 0 hour time
+                      let newTimeline = 
+                            flip Timeline.populatGaps gaps $ 
+                              Timeline.initTimeline from to
+                      let isBackward = 
+                            direction == Back.Forward || 
+                            (direction == Back.Backward && hour /= 1) 
+                      let isForward = 
+                            direction == Back.Backward || 
+                            (direction == Back.Forward && hour /= 23)
+                      H.tell Timeline.proxy 1 $ Timeline.NewTimeline newTimeline isBackward isForward
+        case direction of 
+          Back.Backward -> for_ (head timeline) \el -> go $ el^.Back._start <<< Back._hour
+          Back.Forward -> for_ (last timeline) \el -> go $ el^.Back._end <<< Back._hour
 
 render from to state = HH.div_ [renderSelectors from to, renderTimline state]
 

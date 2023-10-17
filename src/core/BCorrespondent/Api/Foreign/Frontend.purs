@@ -53,6 +53,7 @@ module BCorrespondent.Api.Foreign.Frontend
   , printGapItemAmount
   , printGapItemUnit
   , printInit
+  , printTimline
   , shaPred
   )
   where
@@ -76,7 +77,7 @@ import Data.Map as Map
 import Data.Either (Either)
 import Effect.Exception as E
 import Data.Array (uncons)
-import Data.Lens (lens, Lens)
+import Data.Lens (lens, Lens, (%~))
 import Data.Generic.Rep (class Generic)
 import Foreign.Enum
 import Data.String (toLower)
@@ -337,3 +338,8 @@ foreign import _fetchShiftHistoryTimeline :: Fn3 WithError FetchShiftHistoryTime
 
 fetchShiftHistoryTimeline :: FetchShiftHistoryTimelineParams -> FrontApi -> AC.EffectFnAff (Object (Response (Array GapItem)))
 fetchShiftHistoryTimeline = runFn3 _fetchShiftHistoryTimeline withError
+
+printTimline timeline = 
+  flip map (timeline :: Array GapItem) \ x -> 
+    x # _elements %~ map printGapItemUnit 
+      # _amounts %~ map printGapItemAmount

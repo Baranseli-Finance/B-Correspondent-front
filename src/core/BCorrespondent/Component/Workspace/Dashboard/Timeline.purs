@@ -48,10 +48,9 @@ proxy = Proxy :: _ "workspace_dashboard_timeline"
 
 loc = "BCorrespondent.Component.Workspace.Dashboard.Timeline"
 
-data Query a = GapItems (Array Back.GapItem) Back.Direction Int a
+data Query a = NewTimeline (Array Back.GapItem) Boolean Boolean a
 
-data Output = OutputDirection Back.Direction Int
-
+data Output = OutputDirection Back.Direction (Array Back.GapItem)
 slot n {timeline, institution} = HH.slot proxy n component {timeline, institution}
 
 type State = 
@@ -101,13 +100,13 @@ component =
         for_ (head timeline) \el -> do 
           let hour = el^.Back._start <<< Back._hour 
           when (hour - 1 >= 0) $ 
-            H.raise $ OutputDirection Back.Backward hour
+            H.raise $ OutputDirection Back.Backward timeline
       handleAction Forward = do
         {timeline} <- H.get
         for_ (last timeline) \el -> do 
           let hour = el^.Back._end <<< Back._hour
           when (hour /= 0) $
-            H.raise $ OutputDirection Back.Forward hour
+            H.raise $ OutputDirection Back.Forward timeline
       handleAction (FetchTransaction  ident status)
         | status == Nothing = 
             logError $ loc <> " ---> FetchTransaction, status unknown" 
@@ -132,18 +131,9 @@ component =
       handleQuery 
         :: forall a s . Query a
         -> H.HalogenM State Action s Output AppM (Maybe a)
-      handleQuery (GapItems gaps direction point a) = do 
-        time <- H.liftEffect $ nowTime
-        let from = if direction == Back.Forward then setTime 0 point time else setTime 0 (point - 1) time
-        let to = if direction == Back.Forward then setTime 0 (point + 1) time else setTime 0 point time
-        let newTimeline = flip populatGaps gaps $ initTimeline from to
-        let isBackward = 
-              direction == Back.Forward || 
-              (direction == Back.Backward && point /= 1) 
-        let isForward = 
-              direction == Back.Backward || 
-              (direction == Back.Forward && point /= 23)
-        map (const (Just a)) $ H.modify_ \s -> 
+      handleQuery (NewTimeline newTimeline isBackward isForward a) = do 
+        logDebug $ loc <> " ---> NewTimeline " <> show (Back.printTimline newTimeline)
+        map (const (Just a)) $ H.modify_ \s ->
           s # _timeline .~ newTimeline # _isBackward .~ isBackward # _isForward .~ isForward 
 
 intToTimePiece :: forall a . BoundedEnum a => Int -> a
