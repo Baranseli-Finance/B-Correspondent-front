@@ -303,9 +303,7 @@ resolveEnums x =
   x { walletType = 
        fromMaybe Back.WalletTypeNotResolved $
          Back.decodeWalletType (_.walletType x),
-     currency =
-        fromMaybe Back.CurrencyNotResolved $
-         Back.decodeCurrency (_.currency x) 
+     currency = Back.decodeCurrency (_.currency x) 
     }
 
 renderWallets xs = 

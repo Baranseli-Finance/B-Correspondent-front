@@ -21,4 +21,4 @@ component =
     }
 
 
-render = HH.text "order component"
+render = HH.text "order component is being developed"

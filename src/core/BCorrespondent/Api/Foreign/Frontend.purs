@@ -84,6 +84,8 @@ import Foreign.Enum
 import Data.String (toLower)
 import Data.Either (hush)
 import Control.Monad.Except (runExcept)
+import Data.Enum (class Enum, class BoundedEnum, fromEnum, toEnum)
+import Data.Enum.Generic (genericCardinality, genericToEnum, genericFromEnum, genericSucc, genericPred)
 
 import Undefined
 
@@ -216,19 +218,32 @@ instance Show WalletType where
 decodeWalletType :: Foreign -> Maybe WalletType
 decodeWalletType = decodeEnumG
 
-data Currency = USD | EUR | CurrencyNotResolved
+data Currency = CurrencyNotResolved | USD | EUR
 
 derive instance genericCurrency :: Generic Currency _
 derive instance eqCurrency :: Eq Currency
 derive instance ordCurrency :: Ord Currency
 
+instance Enum Currency where
+  succ = genericSucc
+  pred = genericPred
+
+instance Bounded Currency where
+  top = USD
+  bottom = CurrencyNotResolved
+
+instance BoundedEnum Currency where
+  cardinality = genericCardinality
+  toEnum = genericToEnum
+  fromEnum = genericFromEnum
+
 instance Show Currency where
-  show USD = "usd"
-  show EUR = "eur"
+  show USD = "USD"
+  show EUR = "EUR"
   show CurrencyNotResolved = "currency type not resolved"
 
-decodeCurrency :: Foreign -> Maybe Currency
-decodeCurrency = decodeEnumG
+decodeCurrency :: Foreign -> Currency
+decodeCurrency = fromMaybe CurrencyNotResolved <<< decodeEnumG
 
 encodeCurrency :: Currency -> Foreign
 encodeCurrency = genericEncodeEnum defaultGenericEnumOptions { constructorTagTransform = toLower }

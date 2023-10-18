@@ -1,8 +1,11 @@
 module BCorrespondent.Api.Foreign.Institution
   ( Balance
   , Balances
+  , ForeignBalance
   , InstitutionApi
   , Withdraw
+  , _amountB
+  , _currencyB
   , fetchBalances
   , mkInstitutionApi
   , withdraw
@@ -19,14 +22,20 @@ import Effect (Effect)
 import Effect.Aff.Compat as AC
 import Foreign.Object (Object)
 import Foreign (Foreign)
+import Data.Lens
 
 foreign import data InstitutionApi :: Type
 
 foreign import mkInstitutionApi :: Fn1 ApiClient (Effect InstitutionApi)
 
+type ForeignBalance = { currency :: Foreign, amount :: Number }
+
+_currencyB = lens _.currency $ \el x -> el { currency = x }
+_amountB = lens _.amount $ \el x -> el { amount = x }
+
 type Balance = { currency :: Currency, amount :: Number }
 
-type Balances = { xs :: Array Balance }
+type Balances = { xs :: Array ForeignBalance }
 
 foreign import _fetchBalances :: Fn2 WithError InstitutionApi (AC.EffectFnAff (Object (Response Balances)))
 

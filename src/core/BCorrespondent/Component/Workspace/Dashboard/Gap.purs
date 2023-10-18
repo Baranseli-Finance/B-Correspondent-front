@@ -64,7 +64,7 @@ renderAmounts xs =
     HH.div_ 
     [  HH.span 
        [HPExt.style "position:relative;font-size:20px"] 
-       [HH.text (show (fromMaybe CurrencyNotResolved (decodeCurrency currency)))]
+       [HH.text (show (decodeCurrency currency))]
     ,  HH.span [HPExt.style "font-size:20px; padding-left:10px"]
        [HH.text (show value)]
     ]
