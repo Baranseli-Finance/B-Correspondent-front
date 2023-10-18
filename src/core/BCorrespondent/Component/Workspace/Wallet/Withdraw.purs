@@ -8,6 +8,7 @@ import BCorrespondent.Api.Foreign.Back as Back
 import BCorrespondent.Api.Foreign.Request.Handler (onFailure)
 import BCorrespondent.Component.Async as Async
 import BCorrespondent.Component.HTML.Utils (css, maybeElem)
+import BCorrespondent.Capability.LogMessages (logDebug, logError)
 
 import Halogen as H
 import Halogen.HTML as HH
@@ -20,7 +21,7 @@ import Halogen.Store.Monad (getStore)
 import Data.Foldable (for_)
 import Data.Traversable (for)
 import Store (User)
-import Effect.Exception (message)
+import Effect.Exception (message, error)
 import Data.Int (toNumber)
 import Data.Array (sort, length, zip, (..))
 import Data.Number (fromString)
@@ -29,6 +30,7 @@ import String.Regex (isValidNote)
 import Data.Map as M
 import Data.List (toUnfoldable)
 import Data.Lens
+import Foreign (unsafeFromForeign)
 
 import Undefined
 
@@ -50,7 +52,7 @@ type State =
        balances :: M.Map Int Back.Balance,
        amount :: Number,
        currencyidx :: Int,
-       error :: Maybe String
+       compError :: Maybe String
      }
 
 component =
@@ -62,7 +64,7 @@ component =
          balances: M.empty,
          amount: 0.0,
          currencyidx: 0,
-         error: Nothing
+         compError: Nothing
        }
     , render: render
     , eval: H.mkEval H.defaultEval
@@ -86,7 +88,7 @@ handleAction Initialize = do
       in H.modify_ _ { balances = M.fromFoldable (zip (0 .. length ys) (sort ys :: Array Back.Balance)) }
 handleAction (Withdraw ev) = do 
   H.liftEffect $ preventDefault ev
-  H.modify_ _ { error = Nothing }
+  H.modify_ _ { compError = Nothing }
   { config: Config { apiBCorrespondentHost: host }, user } <- getStore
   for_ (user :: Maybe User) \{ token } -> do
     {amount, currencyidx, balances} <- H.get
@@ -94,14 +96,29 @@ handleAction (Withdraw ev) = do
       let body = { amount: amount, walletIdent: ident }
       resp <- Request.makeAuth (Just token) host Back.mkInstitutionApi $ Back.withdraw body
       let failure e = Async.send $ Async.mkException e loc
-      onFailure resp failure \{success: _} ->
-        let msg = "the request for withdrawal of " <> show amount <> " " <> show currency <> " has been submitted"
-        in Async.send $ Async.mkOrdinary msg Async.Success Nothing
+      onFailure resp failure \{success: {frozenFunds, status}} -> do 
+        let withStatus _ Back.WithdrawalRegistered =
+              let msg = 
+                    "the request for withdrawal of " <> 
+                    show amount <> " " <> 
+                    show currency <> " has been submitted"
+              in Async.send $ Async.mkOrdinary msg Async.Success Nothing
+            withStatus _ Back.NotEnoughFunds = 
+              Async.send $ Async.mkOrdinary "funds are not suffecient" Async.Warning Nothing
+            withStatus amount Back.FrozenFunds = 
+              let n = unsafeFromForeign amount :: Number
+              in Async.send $ Async.mkOrdinary ("there are the frozen funds of " <> show n) Async.Warning Nothing
+            withStatus _ Back.WithdrawResultStatusNotResolved = do 
+              logError $ loc <> " cannot convert WithdrawResultStatus"
+              Async.send $ Async.mkException (error ("cannot convert WithdrawResultStatus")) loc
+        withStatus frozenFunds $ Back.decodeWithdrawResultStatus status
 handleAction (FillAmount s) 
   | not (isValidNote s) = 
-      H.modify_ _ { error = pure "number in the format of {xxx.xx} is expected" }
-handleAction (FillAmount s) = for_ (fromString s) \x -> H.modify_ _ { amount = x, error = Nothing }
-handleAction (SetCurrency idx) = H.modify_ _ { currencyidx = idx, amount = 0.0 }
+      H.modify_ _ { compError = pure "number in the format of {xxx.xx} is expected" }
+handleAction (FillAmount s) = for_ (fromString s) \x -> H.modify_ _ { amount = x, compError = Nothing }
+handleAction (SetCurrency idx) = do
+  logDebug $ loc <> " set currency"
+  H.modify_ _ { currencyidx = idx, compError = Nothing, amount = 0.0 }
 handleAction AddAll = do 
   {currencyidx, balances} <- H.get
   for_ (M.lookup currencyidx balances) \{amount: value} -> 
@@ -110,7 +127,7 @@ handleAction AddAll = do
 render {serverError: Just msg } = HH.text msg
 render {serverError: Nothing, balances } 
   | M.isEmpty balances = HH.h3_ [HH.text "there is no money on the accounts to be withdrawn"]
-render {serverError: Nothing, amount, balances, error } =
+render {serverError: Nothing, amount, balances, compError } =
   HH.div_
   [
       HH.form [ HE.onSubmit Withdraw ]
@@ -138,5 +155,6 @@ render {serverError: Nothing, amount, balances, error } =
       ,   HH.span [HPExt.style "padding-right:10px;padding-left:5px"] []    
       ,   HH.span_ [ HH.input [ HPExt.type_ HPExt.InputSubmit, HPExt.value "withdraw", HPExt.style "cursor: pointer;font-size:20px" ] ]
       ]
-  ,   maybeElem error \text -> HH.span [HPExt.style "color:red;font-size:15px;"] [HH.text text]    
+  ,   HH.div [HPExt.style "padding-top:10px"] [] 
+  ,   maybeElem compError \text -> HH.span [HPExt.style "color:red;font-size:20px;"] [HH.text text]    
   ]
