@@ -117,7 +117,7 @@ component =
           logDebug $ loc <> " code hash ---> " <> hash
           if Array.length ws > 0
           then for_ ws \tmLeft ->
-                 let msg = "the next attempt is in " <> tmLeft
+                 let msg = "the next attempt in " <> tmLeft <> " sec"
                  in H.modify_ _
                     { errMsg = Just msg
                     , login = Nothing
@@ -171,7 +171,7 @@ component =
       onFailure resp onError \{ success: hash :: String, warnings: ws } ->
         if Array.length ws > 0
         then for_ ws \tmLeft ->
-               let msg = "the next attempt will be available in " <> tmLeft
+               let msg = "the next attempt in " <> tmLeft <> " sec"
                in H.modify_ _ { errMsg = Just msg }
         else H.modify_ _ { hash = Just hash, errMsg = Nothing }
 
