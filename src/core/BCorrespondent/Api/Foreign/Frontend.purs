@@ -82,8 +82,6 @@ import Data.Lens (lens, Lens, (%~))
 import Data.Generic.Rep (class Generic)
 import Foreign.Enum
 import Data.String (toLower)
-import Data.Either (hush)
-import Control.Monad.Except (runExcept)
 import Data.Enum (class Enum, class BoundedEnum, fromEnum, toEnum)
 import Data.Enum.Generic (genericCardinality, genericToEnum, genericFromEnum, genericSucc, genericPred)
 
@@ -92,9 +90,6 @@ import Undefined
 foreign import data FrontApi :: Type
 
 foreign import mkFrontApi :: Fn1 ApiClient (Effect FrontApi)
-
-decodeEnumG :: forall a rep . Generic a rep => GenericDecodeEnum rep => Foreign -> Maybe a
-decodeEnumG = hush <<< runExcept <<< genericDecodeEnum {constructorTagTransform: toLower}
 
 type Sha = { key :: String, value :: String }
 

@@ -1,13 +1,17 @@
 module BCorrespondent.Api.Foreign.Institution
   ( Balance
   , ForeignBalance
+  , ForeignWithdrawResult
   , ForeignWithdrawalHistoryItem
   , InitWithdrawal
   , InstitutionApi
   , Withdraw
+  , WithdrawResult
+  , WithdrawResultStatus(..)
   , _amountB
   , _currencyB
   , _walletIdent
+  , decodeWithdrawResultStatus
   , initWithdrawal
   , mkInstitutionApi
   , withdraw
@@ -25,6 +29,9 @@ import Effect.Aff.Compat as AC
 import Foreign.Object (Object)
 import Foreign (Foreign)
 import Data.Lens
+import Data.Generic.Rep (class Generic)
+import Data.Maybe (fromMaybe)
+import Foreign.Enum
 
 foreign import data InstitutionApi :: Type
 
@@ -58,7 +65,22 @@ initWithdrawal = runFn2 _initWithdrawal withError
 
 type Withdraw = { amount :: Number, walletIdent :: Int }
 
-foreign import _withdraw :: Fn3 WithError Withdraw InstitutionApi (AC.EffectFnAff (Object (Response Unit)))
+data WithdrawResultStatus = 
+        WithdrawResultStatusNotResolved 
+      | NotEnoughFunds 
+      | WithdrawalRegistered
+      | FrozenFunds
 
-withdraw :: Withdraw -> InstitutionApi -> AC.EffectFnAff (Object (Response Unit))
+derive instance genericDirection :: Generic WithdrawResultStatus _
+
+decodeWithdrawResultStatus :: Foreign -> WithdrawResultStatus
+decodeWithdrawResultStatus = fromMaybe WithdrawResultStatusNotResolved <<< decodeEnumG
+
+type ForeignWithdrawResult = { frozenFunds :: Foreign, status :: Foreign }
+
+type WithdrawResult = { frozenFunds :: Foreign, status :: WithdrawResultStatus }
+
+foreign import _withdraw :: Fn3 WithError Withdraw InstitutionApi (AC.EffectFnAff (Object (Response ForeignWithdrawResult)))
+
+withdraw :: Withdraw -> InstitutionApi -> AC.EffectFnAff (Object (Response ForeignWithdrawResult))
 withdraw = runFn3 _withdraw withError

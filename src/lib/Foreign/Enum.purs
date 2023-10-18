@@ -2,11 +2,12 @@ module Foreign.Enum
   ( GenericEnumOptions
   , class GenericDecodeEnum
   , class GenericEncodeEnum
+  , decodeEnum
+  , decodeEnumG
   , defaultGenericEnumOptions
+  , encodeEnum
   , genericDecodeEnum
   , genericEncodeEnum
-  , decodeEnum
-  , encodeEnum
   )
   where
 
@@ -21,6 +22,10 @@ import Foreign (F, Foreign, ForeignError(..), fail, readString, unsafeToForeign)
 import Partial.Unsafe (unsafeCrashWith)
 import Prim.TypeError (class Fail, Text)
 import Type.Proxy (Proxy (..))
+import Data.Maybe (Maybe)
+import Data.Either (hush)
+import Control.Monad.Except (runExcept)
+import Data.String (toLower)
 
 type GenericEnumOptions =
   { constructorTagTransform :: String -> String
@@ -124,3 +129,6 @@ instance ctorProductGenericEncodeEnum
   :: Fail (Text "genericEncode/DecodeEnum cannot be used on types that are not sums of constructors with no arguments.")
   => GenericEncodeEnum (Constructor name (Product a b)) where
   encodeEnum _ _ = unsafeCrashWith "unreachable encodeEnum was reached."
+
+decodeEnumG :: forall a rep . Generic a rep => GenericDecodeEnum rep => Foreign -> Maybe a
+decodeEnumG = hush <<< runExcept <<< genericDecodeEnum {constructorTagTransform: toLower}

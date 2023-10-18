@@ -18,7 +18,7 @@ export const _initWithdrawal =
 export const _withdraw =
     function(withError, body, api) {
         return function(onError, onOk) {
-            api.institutionFiatWithdrawPost(body).then(onOk).catch(resp => {
+            api.institutionFiatWithdrawPut(body).then(onOk).catch(resp => {
                 return withError(resp, onError)
             })
         };
