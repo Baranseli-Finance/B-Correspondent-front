@@ -5,15 +5,13 @@ module BCorrespondent.Component.Workspace.Dashboard
 
 import Prelude
 
-import BCorrespondent.Component.HTML.Utils (cssSvg, css)
+import BCorrespondent.Component.HTML.Utils (css)
 import BCorrespondent.Data.Config (Config(..))
 import BCorrespondent.Capability.LogMessages (logDebug, logError)
 import BCorrespondent.Api.Foreign.Request as Request
 import BCorrespondent.Api.Foreign.Back as Back
 import BCorrespondent.Api.Foreign.Request.Handler (onFailure)
 import BCorrespondent.Component.Async as Async
-import BCorrespondent.Component.Workspace.Dashboard.Transaction as Dashboard.Transaction
-import BCorrespondent.Component.Workspace.Dashboard.Gap as Dashboard.Gap
 import BCorrespondent.Component.Subscription.WS as WS
 import BCorrespondent.Component.Subscription.WS.Types
 import BCorrespondent.Component.Workspace.Dashboard.Timeline as Timeline
@@ -22,11 +20,6 @@ import Halogen.Store.Monad (getStore)
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Properties.Extended as HPExt
-import Halogen.HTML.Events (onClick, onMouseMove, onMouseOut, onMouseEnter)
-import Halogen.Svg.Elements as Svg
-import Halogen.Svg.Attributes.FontSize as Svg
-import Halogen.Svg.Attributes as Svg
-import Halogen.Svg.Attributes.Color as Svg
 import Type.Proxy (Proxy(..))
 import Data.Foldable (for_)
 import Data.Maybe (Maybe (..), fromMaybe)
@@ -35,18 +28,18 @@ import Data.Int (toNumber, even, floor)
 import System.Time (addMinutes, nowTime, getTimezone)
 import Data.Time (hour, minute, Time (..), setHour, setMinute)
 import Data.Time as Time
-import Data.Enum (toEnum, fromEnum, class BoundedEnum)
+import Data.Enum (toEnum, fromEnum)
 import Data.Time.Component
-import Data.Array ((:), reverse, length, uncons, head, last, snoc, find, concat, sortBy, catMaybes)
+import Data.Array (uncons, last, sortBy, catMaybes, snoc, head)
 import Effect.Aff as Aff
 import Store (User)
 import Control.Monad.Rec.Class (forever)
 import Control.Alt ((<|>))
 import Data.Lens
-import Data.Ord (compare, abs)
+import Data.Ord (abs)
 import Web.Socket as WS
 import Effect.AVar as Async
-import Web.UIEvent.MouseEvent (MouseEvent, clientX, clientY)
+
 
 import Undefined
 
