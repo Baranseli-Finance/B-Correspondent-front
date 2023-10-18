@@ -74,10 +74,15 @@ component =
 handleAction Initialize = do 
   { config: Config { apiBCorrespondentHost: host }, user } <- getStore
   for_ (user :: Maybe User) \{ token } -> do 
-    resp <- Request.makeAuth (Just token) host Back.mkInstitutionApi $ Back.fetchBalances
+    resp <- Request.makeAuth (Just token) host Back.mkInstitutionApi $ Back.initWithdrawal
     let failure e = H.modify_ _ { serverError = pure $ message e }
-    onFailure resp failure \{success: { xs }} ->
-      let ys = flip map xs \x -> {currency: Back.decodeCurrency $ x^.Back._currencyB, amount: x^.Back._amountB }
+    onFailure resp failure \{success: { walletBalances }} ->
+      let ys = 
+               flip map walletBalances \x -> 
+                 { currency: Back.decodeCurrency $ x^.Back._currencyB, 
+                   amount: x^.Back._amountB,
+                   walletIdent: x^.Back._walletIdent
+                 }
       in H.modify_ _ { balances = M.fromFoldable (zip (0 .. length ys) (sort ys :: Array Back.Balance)) }
 handleAction (Withdraw ev) = do 
   H.liftEffect $ preventDefault ev
@@ -85,12 +90,12 @@ handleAction (Withdraw ev) = do
   { config: Config { apiBCorrespondentHost: host }, user } <- getStore
   for_ (user :: Maybe User) \{ token } -> do
     {amount, currencyidx, balances} <- H.get
-    for_ (M.lookup currencyidx balances) \{currency: curr} -> do
-      let body = { amount: amount, currency: curr }
+    for_ (M.lookup currencyidx balances) \{walletIdent: ident, currency} -> do
+      let body = { amount: amount, walletIdent: ident }
       resp <- Request.makeAuth (Just token) host Back.mkInstitutionApi $ Back.withdraw body
       let failure e = Async.send $ Async.mkException e loc
       onFailure resp failure \{success: _} ->
-        let msg = "the request for withdrawal of " <> show amount <> " " <> show curr <> " has been submitted"
+        let msg = "the request for withdrawal of " <> show amount <> " " <> show currency <> " has been submitted"
         in Async.send $ Async.mkOrdinary msg Async.Success Nothing
 handleAction (FillAmount s) 
   | not (isValidNote s) = 

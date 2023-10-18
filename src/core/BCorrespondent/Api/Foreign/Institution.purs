@@ -1,12 +1,14 @@
 module BCorrespondent.Api.Foreign.Institution
   ( Balance
-  , Balances
   , ForeignBalance
+  , ForeignWithdrawalHistoryItem
+  , InitWithdrawal
   , InstitutionApi
   , Withdraw
   , _amountB
   , _currencyB
-  , fetchBalances
+  , _walletIdent
+  , initWithdrawal
   , mkInstitutionApi
   , withdraw
   )
@@ -28,25 +30,35 @@ foreign import data InstitutionApi :: Type
 
 foreign import mkInstitutionApi :: Fn1 ApiClient (Effect InstitutionApi)
 
-type ForeignBalance = { currency :: Foreign, amount :: Number }
+type ForeignBalance = { currency :: Foreign, amount :: Number, walletIdent :: Int }
 
 _currencyB = lens _.currency $ \el x -> el { currency = x }
 _amountB = lens _.amount $ \el x -> el { amount = x }
+_walletIdent = lens _.walletIdent $ \el x -> el { walletIdent = x }
 
-type Balance = { currency :: Currency, amount :: Number }
+type Balance = { currency :: Currency, amount :: Number, walletIdent :: Int }
 
-type Balances = { xs :: Array ForeignBalance }
+type ForeignWithdrawalHistoryItem = 
+     { ident :: Int, 
+       currency :: Foreign, 
+       amount :: Number, 
+       withdrawalStatus :: Foreign, 
+       created :: String 
+     }
 
-foreign import _fetchBalances :: Fn2 WithError InstitutionApi (AC.EffectFnAff (Object (Response Balances)))
+type InitWithdrawal = 
+     { walletBalances :: Array ForeignBalance, 
+       history :: Array ForeignWithdrawalHistoryItem 
+     }
 
-fetchBalances :: InstitutionApi -> AC.EffectFnAff (Object (Response Balances))
-fetchBalances = runFn2 _fetchBalances withError
+foreign import _initWithdrawal :: Fn2 WithError InstitutionApi (AC.EffectFnAff (Object (Response InitWithdrawal)))
 
-type Withdraw = { amount :: Number, currency :: Currency }
+initWithdrawal :: InstitutionApi -> AC.EffectFnAff (Object (Response InitWithdrawal))
+initWithdrawal = runFn2 _initWithdrawal withError
 
-type ForeignWithdraw = { amount :: Number, currency :: Foreign }
+type Withdraw = { amount :: Number, walletIdent :: Int }
 
-foreign import _withdraw :: Fn3 WithError ForeignWithdraw InstitutionApi (AC.EffectFnAff (Object (Response Unit)))
+foreign import _withdraw :: Fn3 WithError Withdraw InstitutionApi (AC.EffectFnAff (Object (Response Unit)))
 
 withdraw :: Withdraw -> InstitutionApi -> AC.EffectFnAff (Object (Response Unit))
-withdraw {amount: sum, currency: old} = runFn3 _withdraw withError ({ amount: sum, currency: encodeCurrency old })
+withdraw = runFn3 _withdraw withError

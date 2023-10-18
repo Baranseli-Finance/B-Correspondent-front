@@ -6,10 +6,10 @@ export const mkInstitutionApi = function(api) {
     }
 }
 
-export const _fetchBalances =
+export const _initWithdrawal =
     function(withError, api) {
         return function(onError, onOk) {
-            api.institutionFiatBalancesGet().then(onOk).catch(resp => {
+            api.institutionFiatWithdrawInitGet().then(onOk).catch(resp => {
                 return withError(resp, onError)
             })
         };
