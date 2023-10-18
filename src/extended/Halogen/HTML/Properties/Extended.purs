@@ -3,10 +3,13 @@ module Halogen.HTML.Properties.Extended
   , ariaLabel
   , dataDismiss
   , dataLabel
+  , size
+  , maxLength
   , module Properties
   , role
   , tabindex
-  ) where
+  )
+  where
 
 import Prelude
 
@@ -22,3 +25,8 @@ ariaHidden = Properties.prop (PropName "aria-hidden")
 dataLabel = Properties.prop (PropName "data-label")
 tabindex = Properties.prop (PropName "tabindex")
 
+size :: forall r i. Int -> Properties.IProp (size :: Int | r) i
+size = Properties.prop (PropName "size")
+
+maxLength :: forall r i. Int -> Properties.IProp (maxLength :: Int | r) i
+maxLength = Properties.prop (PropName "maxLength")

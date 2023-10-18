@@ -168,15 +168,15 @@ renderSelectors from to =
   [css "history-selectors"]
   [   
       HH.div_
-      [ HH.select [HE.onSelectedIndexChange SetYear ] $
+      [ HH.select [HE.onSelectedIndexChange SetYear, HPExt.style "font-size:20px" ] $
         ((_.year from) .. (_.year to)) <#> \x -> HH.option_ [ HH.text (show x) ]
       ]
   ,   HH.div [HPExt.style "padding-left:10px"] 
-      [ HH.select [HE.onSelectedIndexChange SetMonth ] $
+      [ HH.select [HE.onSelectedIndexChange SetMonth, HPExt.style "font-size:20px"] $
         ((_.month from) .. (_.month to)) <#> \x -> HH.option_ [ HH.text (show x) ]
       ]
   ,   HH.div [HPExt.style "padding-left:10px"]
-      [ HH.select [HE.onSelectedIndexChange SetDay ] $
+      [ HH.select [HE.onSelectedIndexChange SetDay, HPExt.style "font-size:20px" ] $
         ((_.day from) .. (_.day to)) <#> \x -> HH.option_ [ HH.text (show x) ]
       ]
   ,   HH.div [HPExt.style "padding-left:10px"]
@@ -185,8 +185,8 @@ renderSelectors from to =
         [ HE.onSubmit MakeHistoryRequest ] 
         [ HH.input 
           [ HPExt.type_ HPExt.InputSubmit, 
-            HPExt.style "cursor:pointer", 
-            HPExt.value "load timeline"
+            HPExt.style "cursor:pointer;font-size:25px", 
+            HPExt.value "load"
           ] 
         ]
       ]
@@ -200,4 +200,4 @@ renderTimline {isInit, isLoading, error: Nothing, timeline, institution} =
   else Timeline.slot 1 {timeline: timeline, institution: institution, initShift: Timeline.ShiftInit false true } HandleChild
 renderTimline {error: Just val} = HH.div_ [HH.text val]
   
-textContainer text = [HH.div [HPExt.style "position:absolute;left:45%;top:40%"] [HH.h3 [HPExt.style "text-transform: uppercase"] [HH.text text]]]
+textContainer text = [HH.div [HPExt.style "position:absolute;left:48%;top:40%"] [HH.h3 [HPExt.style "text-transform: uppercase"] [HH.text text]]]
