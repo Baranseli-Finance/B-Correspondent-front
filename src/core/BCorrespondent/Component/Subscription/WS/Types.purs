@@ -5,6 +5,7 @@ module BCorrespondent.Component.Subscription.WS.Types
   , encodeResource
   , transactionUrl
   , walletUrl
+  , withdrawalUrl
   )
   where
 
@@ -28,7 +29,7 @@ type Wallet =
        amount :: Number
      }
 
-data Resource = Transaction | Wallet
+data Resource = Transaction | Wallet | Withdrawal
 
 derive instance genericResource :: Generic Resource _
 
@@ -37,3 +38,4 @@ encodeResource = unsafeFromForeign <<< genericEncodeEnum {constructorTagTransfor
 
 transactionUrl = "frontend/user/dashboard/daily-balance-sheet/transaction/update"
 walletUrl = "frontend/user/dashboard/wallet/update"
+withdrawalUrl = "institution/fiat/withdraw/history/item/update"
