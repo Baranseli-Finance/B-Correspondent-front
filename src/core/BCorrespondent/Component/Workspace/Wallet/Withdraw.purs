@@ -7,8 +7,9 @@ import BCorrespondent.Api.Foreign.Request as Request
 import BCorrespondent.Api.Foreign.Back as Back
 import BCorrespondent.Api.Foreign.Request.Handler (onFailure)
 import BCorrespondent.Component.Async as Async
-import BCorrespondent.Component.HTML.Utils (css, maybeElem)
+import BCorrespondent.Component.HTML.Utils (css, maybeElem, whenElem)
 import BCorrespondent.Capability.LogMessages (logDebug, logError)
+import BCorrespondent.Component.Pagination as Pagination
 
 import Halogen as H
 import Halogen.HTML as HH
@@ -46,6 +47,7 @@ data Action =
      | FillAmount String 
      | SetCurrency Int
      | AddAll
+     | HandleChildPagination Pagination.Output
 
 type State = 
      { serverError :: Maybe String, 
@@ -53,7 +55,8 @@ type State =
        history :: Array Back.WithdrawalHistoryItem,
        amount :: Maybe Number,
        currencyidx :: Int,
-       compError :: Maybe String
+       compError :: Maybe String,
+       perPage :: Int
      }
 
 component =
@@ -66,7 +69,8 @@ component =
          history: [],
          amount: Nothing,
          currencyidx: 0,
-         compError: Nothing
+         compError: Nothing,
+         perPage: 0
        }
     , render: render
     , eval: H.mkEval H.defaultEval
@@ -80,14 +84,31 @@ handleAction Initialize = do
   for_ (user :: Maybe User) \{ token } -> do 
     resp <- Request.makeAuth (Just token) host Back.mkInstitutionApi $ Back.initWithdrawal
     let failure e = H.modify_ _ { serverError = pure $ message e }
-    onFailure resp failure \{success: { walletBalances }} ->
+    onFailure resp failure \{success: { walletBalances, history }} ->
       let ys = 
                flip map walletBalances \x -> 
                  { currency: Back.decodeCurrency $ x^.Back._currencyB, 
                    amount: x^.Back._amountB,
                    walletIdent: x^.Back._walletIdent
                  }
-      in H.modify_ _ { balances = M.fromFoldable (zip (0 .. length ys) (sort ys :: Array Back.Balance)) }
+          zs = 
+               flip map history \x -> 
+                 { currency: 
+                     Back.decodeCurrency $ 
+                      x^.Back._currencyW, 
+                   amount: x^.Back._amountW,
+                   withdrawalStatus: 
+                     Back.decodeWithdrawalStatus $ 
+                       x^.Back._withdrawalStatus,
+                   initiator: x^.Back._initiator,
+                   created: x^.Back._created,
+                   ident: x^.Back._ident
+                 }
+      in H.modify_ _ 
+      { balances = M.fromFoldable (zip (0 .. length ys) (sort ys :: Array Back.Balance)), 
+        history = (zs :: Array Back.WithdrawalHistoryItem),
+        perPage = 5
+      }
 handleAction (Withdraw ev) = do 
   H.liftEffect $ preventDefault ev
   {compError, amount} <- H.get
@@ -129,11 +150,12 @@ handleAction AddAll = do
   {currencyidx, balances} <- H.get
   for_ (M.lookup currencyidx balances) \{amount: value} -> 
     H.modify_ _ { amount = Just value }
+handleAction (HandleChildPagination _) = undefined    
 
 render {serverError: Just msg } = HH.text msg
 render {serverError: Nothing, balances } 
   | M.isEmpty balances = HH.h3_ [HH.text "there is no money on the accounts to be withdrawn"]
-render {serverError: Nothing, amount, balances, compError } =
+render {serverError: Nothing, amount, balances, compError, history, perPage } =
   HH.div_
   [
       HH.form [ HE.onSubmit Withdraw ]
@@ -162,5 +184,19 @@ render {serverError: Nothing, amount, balances, compError } =
       ,   HH.span_ [ HH.input [ HPExt.type_ HPExt.InputSubmit, HPExt.value "withdraw", HPExt.style "cursor: pointer;font-size:20px" ] ]
       ]
   ,   HH.div [HPExt.style "padding-top:10px"] []
-  ,   maybeElem compError \text -> HH.span [HPExt.style "color:red;font-size:20px;"] [HH.text text]    
+  ,   maybeElem compError \text -> HH.span [HPExt.style "color:red;font-size:20px;"] [HH.text text]
+  ,   whenElem (length history > 0) $ HH.div [css "withdraw-history-container"] $ renderHistory history
+  ,   whenElem (length history > perPage) $ Pagination.slot 1 { total: 100, perpage: 5, page: 1 } HandleChildPagination
   ]
+
+renderHistory xs = 
+  xs <#> \{currency, initiator, amount, created, withdrawalStatus} ->
+    HH.div_ 
+    [
+        HH.span [css "withdraw-history-container-item"] [HH.text (show amount)],
+        HH.span [css "withdraw-history-container-item"] [HH.text (show currency)],
+        HH.span [css "withdraw-history-container-item"] [HH.text (show withdrawalStatus)],
+        HH.span [css "withdraw-history-container-item"] [HH.text initiator],
+        HH.span [css "withdraw-history-container-item"] [HH.text created],
+        HH.div [HPExt.style "padding-top:10px"] []
+    ]

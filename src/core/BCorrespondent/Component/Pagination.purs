@@ -1,6 +1,6 @@
 module BCorrespondent.Component.Pagination
   ( Input
-  , Outpit(..)
+  , Output(..)
   , calculateCurrentSegment
   , component
   , proxy
@@ -31,7 +31,7 @@ proxy = Proxy :: _ "pagination"
 
 loc = "Buzgibi.Component.Pagination"
 
-slot n mkRoute { total, perpage, page } = HH.slot proxy n (component mkRoute) { total, perpage, page }
+slot n { total, perpage, page } = HH.slot proxy n component { total, perpage, page }
 
 type Segment = { xs :: Array Int, next :: Maybe Int }
 
@@ -46,9 +46,9 @@ data Action = Initialize | Next Int MouseEvent | Receive Input
 
 type Input = { total :: Int, perpage :: Int, page :: Int }
 
-data Outpit = Page Int
+data Output = Page Int
 
-component (mkRoute :: String -> Route) =
+component =
   H.mkComponent
     { initialState: \{ total, perpage, page } ->
         { currenPage: page
@@ -56,7 +56,7 @@ component (mkRoute :: String -> Route) =
         , perpage: perpage
         , segment: Nothing
         }
-    , render: render mkRoute
+    , render: render
     , eval: H.mkEval H.defaultEval
         { handleAction = handleAction
         , initialize = pure Initialize
@@ -79,20 +79,20 @@ component (mkRoute :: String -> Route) =
     when (rem input.total perpage == 1) $
       H.modify_ _ { total = input.total, segment = calculateCurrentSegment currenPage input.total perpage }
   
-render _ { segment: Nothing } = HH.div_ []
-render mkRoute { currenPage, segment: Just { xs, next } } =
+render { segment: Nothing } = HH.div_ []
+render { currenPage, segment: Just { xs, next } } =
   HH.nav_
-    [ HH.ul [ css "pagination justify-content-center" ] $
-        makeCorner mkRoute (if currenPage == 1 then Nothing else Just (currenPage - 1)) "Previous"
+    [ HH.ul [css "pagination-ul"] $
+        makeCorner (if currenPage == 1 then Nothing else Just (currenPage - 1)) "Previous"
           `cons`
             ( xs <#> \page ->
                 HH.li
-                  [ css ("page-item " <> if currenPage == page then "disabled" else mempty) ]
-                  [ HH.a [ css ("page-link" <> if currenPage == page then " text-light bg-dark" else mempty), safeHref (mkRoute (show page)), HE.onClick (Next page) ]
+                  [ css ( "pagination-ul-li " <> if currenPage == page then "disabled" else mempty) ]
+                  [ HH.a [ HPExt.href "#", css (if currenPage == page then "pagination-ul-li-a-active" else "pagination-ul-li-a"), HE.onClick (Next page) ]
                       [ HH.text (show page) ]
                   ]
             )
-          `snoc` makeCorner mkRoute next "Next"
+          `snoc` makeCorner next "Next"
     ]
 
 calculateCurrentSegment :: Int -> Int -> Int -> Maybe Segment
@@ -108,5 +108,5 @@ calculateCurrentSegment curr total perPage =
   in
     flip map xsm \xs -> { xs: xs, next: next }
 
-makeCorner mkRoute (Just page) label = HH.li [ css "page-item" ] [ HH.a [ css "page-link", safeHref (mkRoute (show page)), HE.onClick $ Next page ] [ HH.text label ] ]
-makeCorner _ Nothing label = HH.li [ css "page-item disabled" ] [ HH.a [ css "page-link", HPExt.href "#" ] [ HH.text label ] ]
+makeCorner (Just page) label = HH.li [ css "pagination-ul-li"] [ HH.a [css "pagination-ul-li-a", HPExt.href "#", HE.onClick $ Next page ] [ HH.text label ] ]
+makeCorner Nothing label = HH.li [ css "pagination-ul-li" ] [ HH.a [css "pagination-ul-li-a-disabled", HPExt.style "cursor:not-allowed", HPExt.href "#" ] [ HH.text label ] ]
