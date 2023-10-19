@@ -56,7 +56,8 @@ type State =
        amount :: Maybe Number,
        currencyidx :: Int,
        compError :: Maybe String,
-       perPage :: Int
+       perPage :: Int,
+       total :: Int
      }
 
 component =
@@ -70,7 +71,8 @@ component =
          amount: Nothing,
          currencyidx: 0,
          compError: Nothing,
-         perPage: 0
+         perPage: 0,
+         total: 0
        }
     , render: render
     , eval: H.mkEval H.defaultEval
@@ -84,7 +86,7 @@ handleAction Initialize = do
   for_ (user :: Maybe User) \{ token } -> do 
     resp <- Request.makeAuth (Just token) host Back.mkInstitutionApi $ Back.initWithdrawal
     let failure e = H.modify_ _ { serverError = pure $ message e }
-    onFailure resp failure \{success: { walletBalances, history }} ->
+    onFailure resp failure \{success: { walletBalances, history: {items, total} }} ->
       let ys = 
                flip map walletBalances \x -> 
                  { currency: Back.decodeCurrency $ x^.Back._currencyB, 
@@ -92,7 +94,7 @@ handleAction Initialize = do
                    walletIdent: x^.Back._walletIdent
                  }
           zs = 
-               flip map history \x -> 
+               flip map items \x -> 
                  { currency: 
                      Back.decodeCurrency $ 
                       x^.Back._currencyW, 
@@ -107,7 +109,8 @@ handleAction Initialize = do
       in H.modify_ _ 
       { balances = M.fromFoldable (zip (0 .. length ys) (sort ys :: Array Back.Balance)), 
         history = (zs :: Array Back.WithdrawalHistoryItem),
-        perPage = 5
+        perPage = 10,
+        total = total
       }
 handleAction (Withdraw ev) = do 
   H.liftEffect $ preventDefault ev
@@ -150,12 +153,32 @@ handleAction AddAll = do
   {currencyidx, balances} <- H.get
   for_ (M.lookup currencyidx balances) \{amount: value} -> 
     H.modify_ _ { amount = Just value }
-handleAction (HandleChildPagination _) = undefined    
+handleAction (HandleChildPagination (Pagination.Page page)) = do 
+  { config: Config { apiBCorrespondentHost: host }, user } <- getStore
+  for_ (user :: Maybe User) \{ token } -> do
+    resp <- Request.makeAuth (Just token) host Back.mkInstitutionApi $ 
+      Back.fetchWithdrawHistoryPage page
+    let failure e = Async.send $ Async.mkException e loc
+    onFailure resp failure \{success: {items, total}} -> do
+      let xs = 
+              flip map items \x -> 
+                { currency: 
+                    Back.decodeCurrency $ 
+                    x^.Back._currencyW, 
+                  amount: x^.Back._amountW,
+                  withdrawalStatus: 
+                    Back.decodeWithdrawalStatus $ 
+                      x^.Back._withdrawalStatus,
+                  initiator: x^.Back._initiator,
+                  created: x^.Back._created,
+                  ident: x^.Back._ident
+                }
+      H.modify_ _ { history = xs, total = total }          
 
 render {serverError: Just msg } = HH.text msg
 render {serverError: Nothing, balances } 
   | M.isEmpty balances = HH.h3_ [HH.text "there is no money on the accounts to be withdrawn"]
-render {serverError: Nothing, amount, balances, compError, history, perPage } =
+render {serverError: Nothing, amount, balances, compError, history, total, perPage } =
   HH.div_
   [
       HH.form [ HE.onSubmit Withdraw ]
@@ -186,7 +209,7 @@ render {serverError: Nothing, amount, balances, compError, history, perPage } =
   ,   HH.div [HPExt.style "padding-top:10px"] []
   ,   maybeElem compError \text -> HH.span [HPExt.style "color:red;font-size:20px;"] [HH.text text]
   ,   whenElem (length history > 0) $ HH.div [css "withdraw-history-container"] $ renderHistory history
-  ,   whenElem (length history > perPage) $ Pagination.slot 1 { total: 100, perpage: 5, page: 1 } HandleChildPagination
+  ,   whenElem (total >= perPage) $ Pagination.slot 1 { total: total, perpage: perPage, page: 1 } HandleChildPagination
   ]
 
 renderHistory xs = 

@@ -8,6 +8,7 @@ module BCorrespondent.Api.Foreign.Institution
   , Withdraw
   , WithdrawResult
   , WithdrawResultStatus(..)
+  , WithdrawalHistory
   , WithdrawalHistoryItem
   , WithdrawalStatus
   , _amountB
@@ -20,6 +21,7 @@ module BCorrespondent.Api.Foreign.Institution
   , _withdrawalStatus
   , decodeWithdrawResultStatus
   , decodeWithdrawalStatus
+  , fetchWithdrawHistoryPage
   , initWithdrawal
   , mkInstitutionApi
   , withdraw
@@ -93,9 +95,14 @@ type WithdrawalHistoryItem =
        created :: String
      }
 
+type WithdrawalHistory = 
+     { total :: Int,
+       items :: Array ForeignWithdrawalHistoryItem
+     }
+
 type InitWithdrawal = 
      { walletBalances :: Array ForeignBalance, 
-       history :: Array ForeignWithdrawalHistoryItem 
+       history :: WithdrawalHistory
      }
 
 foreign import _initWithdrawal :: Fn2 WithError InstitutionApi (AC.EffectFnAff (Object (Response InitWithdrawal)))
@@ -124,3 +131,8 @@ foreign import _withdraw :: Fn3 WithError Withdraw InstitutionApi (AC.EffectFnAf
 
 withdraw :: Withdraw -> InstitutionApi -> AC.EffectFnAff (Object (Response ForeignWithdrawResult))
 withdraw = runFn3 _withdraw withError
+
+foreign import _fetchWithdrawHistoryPage :: Fn3 WithError Int InstitutionApi (AC.EffectFnAff (Object (Response WithdrawalHistory)))
+
+fetchWithdrawHistoryPage :: Int -> InstitutionApi -> AC.EffectFnAff (Object (Response WithdrawalHistory))
+fetchWithdrawHistoryPage = runFn3 _fetchWithdrawHistoryPage withError

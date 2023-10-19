@@ -23,3 +23,12 @@ export const _withdraw =
             })
         };
     }
+
+export const _fetchWithdrawHistoryPage =
+    function(withError, page, api) {
+        return function(onError, onOk) {
+            api.institutionFiatWithdrawHistoryPageGet(page).then(onOk).catch(resp => {
+                return withError(resp, onError)
+            })
+        };
+    }
