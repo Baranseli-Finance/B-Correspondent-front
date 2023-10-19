@@ -33,6 +33,7 @@ import Data.Map as M
 import Data.List (toUnfoldable)
 import Data.Lens
 import Foreign (unsafeFromForeign)
+import Date.Format (format)
 
 import Undefined
 
@@ -95,17 +96,18 @@ component =
                       amount: x^.Back._amountB,
                       walletIdent: x^.Back._walletIdent
                     }
-              zs = 
-                  flip map items \x -> 
+          zs <- for items \x -> do 
+                  tm <- H.liftEffect $ format $ x^.Back._created
+                  pure 
                     { currency: 
                         Back.decodeCurrency $ 
-                          x^.Back._currencyW, 
+                        x^.Back._currencyW, 
                       amount: x^.Back._amountW,
                       withdrawalStatus: 
                         Back.decodeWithdrawalStatus $ 
-                          x^.Back._withdrawalStatus,
+                        x^.Back._withdrawalStatus,
                       initiator: x^.Back._initiator,
-                      created: x^.Back._created,
+                      created: tm,
                       ident: x^.Back._ident
                     }
           H.modify_ _ 
@@ -164,17 +166,18 @@ component =
           Back.fetchWithdrawHistoryPage page
         let failure e = Async.send $ Async.mkException e loc
         onFailure resp failure \{success: {items, total}} -> do
-          let xs = 
-                  flip map items \x -> 
+          xs <- for items \x -> do
+                  tm <- H.liftEffect $ format $ x^.Back._created
+                  pure
                     { currency: 
                         Back.decodeCurrency $ 
                         x^.Back._currencyW, 
                       amount: x^.Back._amountW,
                       withdrawalStatus: 
                         Back.decodeWithdrawalStatus $ 
-                          x^.Back._withdrawalStatus,
+                        x^.Back._withdrawalStatus,
                       initiator: x^.Back._initiator,
-                      created: x^.Back._created,
+                      created: tm,
                       ident: x^.Back._ident
                     }
           H.modify_ _ { history = xs, total = total }          
@@ -239,7 +242,7 @@ renderHistory xs =
   xs <#> \{currency, initiator, amount, created, withdrawalStatus} ->
     HH.div_ 
     [
-        HH.span [css "withdraw-history-container-item"] [HH.text (show amount)],
+        HH.span [css "withdraw-history-container-item", HPExt.style "width:60px"] [HH.text (show amount)],
         HH.span [css "withdraw-history-container-item"] [HH.text (show currency)],
         HH.span [css "withdraw-history-container-item"] [HH.text (show withdrawalStatus)],
         HH.span [css "withdraw-history-container-item"] [HH.text initiator],
