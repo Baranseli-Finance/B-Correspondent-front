@@ -6,7 +6,7 @@ import BCorrespondent.Api.Foreign.Back
 import BCorrespondent.Data.Route (routeCodec)
 import BCorrespondent.Component.Root as Root
 import BCorrespondent.Data.Config as Cfg
-import BCorrespondent.Component.AppInitFailure as AppInitFailure
+import BCorrespondent.Component.AppFailure as AppFailure
 import BCorrespondent.Data.Config
 import BCorrespondent.Web.Platform (getPlatform)
 
@@ -75,7 +75,7 @@ main cfg = do
     -- request the backend to send initial values (such as static content) required to get the app running
     initResp <- initAppStore (_.apiBCorrespondentHost (getVal cfg)) $ map JWTToken jwt
     case initResp of
-      Left err -> void $ runUI AppInitFailure.component { error: err } body
+      Left err -> void $ runUI AppFailure.component { error: err } body
       Right init@{isjwtvalid, shaxs, level, totelegram, telegramchat, telegrambot, loadcsslocally, invoicesince} -> do
 
         H.liftEffect $ logShow $ printInit init

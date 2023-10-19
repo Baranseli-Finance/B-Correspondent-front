@@ -8,10 +8,13 @@ module BCorrespondent.Api.Foreign.Institution
   , Withdraw
   , WithdrawResult
   , WithdrawResultStatus(..)
+  , WithdrawalHistoryItem
+  , WithdrawalStatus
   , _amountB
   , _currencyB
   , _walletIdent
   , decodeWithdrawResultStatus
+  , decodeWithdrawalStatus
   , initWithdrawal
   , mkInstitutionApi
   , withdraw
@@ -46,11 +49,27 @@ _walletIdent = lens _.walletIdent $ \el x -> el { walletIdent = x }
 type Balance = { currency :: Currency, amount :: Number, walletIdent :: Int }
 
 type ForeignWithdrawalHistoryItem = 
-     { ident :: Int, 
+     { initiator :: String,
+       ident :: Int, 
        currency :: Foreign, 
        amount :: Number, 
        withdrawalStatus :: Foreign, 
        created :: String 
+     }
+
+data WithdrawalStatus = WithdrawalStatusNotResolved | Registered | Processing | Confirmed | Declined
+
+derive instance genericWithdrawalStatus :: Generic WithdrawalStatus _
+
+decodeWithdrawalStatus :: Foreign -> WithdrawalStatus
+decodeWithdrawalStatus = fromMaybe WithdrawalStatusNotResolved <<< decodeEnumG
+
+type WithdrawalHistoryItem =
+     { ident :: Int, 
+       currency :: Currency, 
+       amount :: Number, 
+       withdrawalStatus :: WithdrawalStatus, 
+       created :: String
      }
 
 type InitWithdrawal = 
@@ -71,7 +90,7 @@ data WithdrawResultStatus =
       | WithdrawalRegistered
       | FrozenFunds
 
-derive instance genericDirection :: Generic WithdrawResultStatus _
+derive instance genericWithdrawResultStatus :: Generic WithdrawResultStatus _
 
 decodeWithdrawResultStatus :: Foreign -> WithdrawResultStatus
 decodeWithdrawResultStatus = fromMaybe WithdrawResultStatusNotResolved <<< decodeEnumG

@@ -16,7 +16,7 @@ import Halogen.HTML.Properties.Extended as HPExt
 import Web.Event.Event (preventDefault, Event)
 import Halogen.HTML.Events as HE
 import Type.Proxy (Proxy(..))
-import Data.Maybe (Maybe (..), fromMaybe)
+import Data.Maybe (Maybe (..), fromMaybe, isNothing, isJust)
 import Halogen.Store.Monad (getStore)
 import Data.Foldable (for_)
 import Data.Traversable (for)
@@ -50,7 +50,8 @@ data Action =
 type State = 
      { serverError :: Maybe String, 
        balances :: M.Map Int Back.Balance,
-       amount :: Number,
+       history :: Array Back.WithdrawalHistoryItem,
+       amount :: Maybe Number,
        currencyidx :: Int,
        compError :: Maybe String
      }
@@ -62,7 +63,8 @@ component =
        { 
          serverError: Nothing, 
          balances: M.empty,
-         amount: 0.0,
+         history: [],
+         amount: Nothing,
          currencyidx: 0,
          compError: Nothing
        }
@@ -88,41 +90,45 @@ handleAction Initialize = do
       in H.modify_ _ { balances = M.fromFoldable (zip (0 .. length ys) (sort ys :: Array Back.Balance)) }
 handleAction (Withdraw ev) = do 
   H.liftEffect $ preventDefault ev
-  H.modify_ _ { compError = Nothing }
-  { config: Config { apiBCorrespondentHost: host }, user } <- getStore
-  for_ (user :: Maybe User) \{ token } -> do
-    {amount, currencyidx, balances} <- H.get
-    for_ (M.lookup currencyidx balances) \{walletIdent: ident, currency} -> do
-      let body = { amount: amount, walletIdent: ident }
-      resp <- Request.makeAuth (Just token) host Back.mkInstitutionApi $ Back.withdraw body
-      let failure e = Async.send $ Async.mkException e loc
-      onFailure resp failure \{success: {frozenFunds, status}} -> do 
-        let withStatus _ Back.WithdrawalRegistered =
-              let msg = 
-                    "the request for withdrawal of " <> 
-                    show amount <> " " <> 
-                    show currency <> " has been submitted"
-              in Async.send $ Async.mkOrdinary msg Async.Success Nothing
-            withStatus _ Back.NotEnoughFunds = 
-              Async.send $ Async.mkOrdinary "funds are not suffecient" Async.Warning Nothing
-            withStatus amount Back.FrozenFunds = 
-              let n = unsafeFromForeign amount :: Number
-              in Async.send $ Async.mkOrdinary ("there are the frozen funds of " <> show n) Async.Warning Nothing
-            withStatus _ Back.WithdrawResultStatusNotResolved = do 
-              logError $ loc <> " cannot convert WithdrawResultStatus"
-              Async.send $ Async.mkException (error ("cannot convert WithdrawResultStatus")) loc
-        withStatus frozenFunds $ Back.decodeWithdrawResultStatus status
+  {compError, amount} <- H.get
+  when (isNothing compError && isNothing amount) $ H.modify_ _ { compError = pure "number not specified"}
+  when (isNothing compError && 
+        isJust amount) $ do
+    H.modify_ _ { compError = Nothing }
+    { config: Config { apiBCorrespondentHost: host }, user } <- getStore
+    for_ (user :: Maybe User) \{ token } -> do
+      {currencyidx, balances} <- H.get
+      for_ (M.lookup currencyidx balances) \{walletIdent: ident, currency} -> do
+        let body = { amount: fromMaybe 0.0 amount, walletIdent: ident }
+        resp <- Request.makeAuth (Just token) host Back.mkInstitutionApi $ Back.withdraw body
+        let failure e = Async.send $ Async.mkException e loc
+        onFailure resp failure \{success: {frozenFunds, status}} -> do 
+          let withStatus _ Back.WithdrawalRegistered =
+                let msg = 
+                      "the request for withdrawal of " <> 
+                      show (fromMaybe 0.0 amount) <> " " <> 
+                      show currency <> " has been submitted"
+                in Async.send $ Async.mkOrdinary msg Async.Success Nothing
+              withStatus _ Back.NotEnoughFunds = 
+                Async.send $ Async.mkOrdinary "funds are not suffecient" Async.Warning Nothing
+              withStatus amount Back.FrozenFunds = 
+                let n = unsafeFromForeign amount :: Number
+                in Async.send $ Async.mkOrdinary ("there are the frozen funds of " <> show n) Async.Warning Nothing
+              withStatus _ Back.WithdrawResultStatusNotResolved = do 
+                logError $ loc <> " cannot convert WithdrawResultStatus"
+                Async.send $ Async.mkException (error ("cannot convert WithdrawResultStatus")) loc
+          withStatus frozenFunds $ Back.decodeWithdrawResultStatus status     
 handleAction (FillAmount s) 
   | not (isValidNote s) = 
       H.modify_ _ { compError = pure "number in the format of {xxx.xx} is expected" }
-handleAction (FillAmount s) = for_ (fromString s) \x -> H.modify_ _ { amount = x, compError = Nothing }
+handleAction (FillAmount s) = for_ (fromString s) \x -> H.modify_ _ { amount = Just x, compError = Nothing }
 handleAction (SetCurrency idx) = do
   logDebug $ loc <> " set currency"
-  H.modify_ _ { currencyidx = idx, compError = Nothing, amount = 0.0 }
+  H.modify_ _ { currencyidx = idx, compError = Nothing, amount = Nothing }
 handleAction AddAll = do 
   {currencyidx, balances} <- H.get
   for_ (M.lookup currencyidx balances) \{amount: value} -> 
-    H.modify_ _ { amount = value }
+    H.modify_ _ { amount = Just value }
 
 render {serverError: Just msg } = HH.text msg
 render {serverError: Nothing, balances } 
@@ -137,7 +143,7 @@ render {serverError: Nothing, amount, balances, compError } =
             HH.input
             [ HPExt.type_ HPExt.InputText
             , HE.onValueInput FillAmount
-            , HPExt.value $ show amount
+            , HPExt.value $ show $ fromMaybe 0.0 amount
             , HPExt.style "font-size:20px"
             , HPExt.size 16
             , HPExt.maxLength 16
@@ -155,6 +161,6 @@ render {serverError: Nothing, amount, balances, compError } =
       ,   HH.span [HPExt.style "padding-right:10px;padding-left:5px"] []    
       ,   HH.span_ [ HH.input [ HPExt.type_ HPExt.InputSubmit, HPExt.value "withdraw", HPExt.style "cursor: pointer;font-size:20px" ] ]
       ]
-  ,   HH.div [HPExt.style "padding-top:10px"] [] 
+  ,   HH.div [HPExt.style "padding-top:10px"] []
   ,   maybeElem compError \text -> HH.span [HPExt.style "color:red;font-size:20px;"] [HH.text text]    
   ]

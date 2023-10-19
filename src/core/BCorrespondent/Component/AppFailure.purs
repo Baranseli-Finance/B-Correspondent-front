@@ -1,4 +1,4 @@
-module BCorrespondent.Component.AppInitFailure (component) where
+module BCorrespondent.Component.AppFailure (component) where
 
 import Prelude
 
