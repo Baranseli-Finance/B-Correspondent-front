@@ -30,7 +30,7 @@ import Data.Time (hour, minute, Time (..), setHour, setMinute)
 import Data.Time as Time
 import Data.Enum (toEnum, fromEnum)
 import Data.Time.Component
-import Data.Array (uncons, last, sortBy, catMaybes, snoc, head)
+import Data.Array (uncons, last, sortBy, catMaybes, snoc, head, findIndex, modifyAt, (:))
 import Effect.Aff as Aff
 import Store (User)
 import Control.Monad.Rec.Class (forever)
@@ -64,7 +64,7 @@ type State =
        wallets :: Array Back.EnumResolvedWallet,
        timeline :: Array Back.GapItem,
        institution :: String,
-       transaction :: Maybe Back.GapItemUnit
+       transaction :: Maybe Transaction
      }
 
 delay = H.liftAff $ Aff.delay $ Aff.Milliseconds 300_000.0
@@ -173,23 +173,31 @@ component =
               H.tell Timeline.proxy 1 $ Timeline.NewTimeline newTimeline false false
       handleAction (HandleChild (Timeline.OutputTransactionUpdate timeline)) = do
         {transaction} <- H.get
-        for_ transaction \{hour, min, textualIdent: ident, status: newStatus} -> do
-          let newTimeline = 
+        for_ transaction \item -> do
+          let newTimeline =
                 flip map timeline \x ->
                   if x^.Back._start <<< Back._hour * 60 + 
                      x^.Back._start <<< Back._min <= 
-                     hour * 60 + min
+                     _.hour item * 60 + _.min item
                      && x^.Back._end <<< Back._hour * 
                         60 + x^.Back._end <<< Back._min >= 
-                     hour * 60 + min
-                  then x # Back._elements %~ \xs -> 
-                         flip map xs \el@{textualIdent} -> 
-                           if ident ==  textualIdent 
-                           then el { status = newStatus } 
-                           else el
+                     _.hour item * 60 + _.min item
+                  then 
+                    let idxm = 
+                          flip findIndex (x^.Back._elements) 
+                            \{textualIdent} -> _.textualIdent item == textualIdent
+                        modify el = el { status = _.status item }  
+                        res = join $ flip map idxm \idx -> modifyAt idx modify (x^.Back._elements)
+                        newItem = 
+                              { status: _.status item, 
+                                textualIdent: _.textualIdent item, 
+                                ident: _.ident item, 
+                                tm: _.tm item
+                              }
+                    in x # Back._elements .~ fromMaybe (newItem : x^.Back._elements) res 
                   else x
           H.tell Timeline.proxy 1 $ Timeline.WithNewTransaction newTimeline
-   
+
 
 handleBackward timeline = do 
   { config: Config { apiBCorrespondentHost: host }, user } <- getStore

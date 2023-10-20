@@ -21,7 +21,9 @@ type Transaction =
        dayOfYear :: Int,
        hour :: Int,
        min :: Int,
-       textualIdent :: String
+       textualIdent :: String,
+       tm :: String,
+       ident :: Int
      }
 
 type Wallet = 
