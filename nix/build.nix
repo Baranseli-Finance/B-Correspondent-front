@@ -21,6 +21,7 @@ pkgs.mkShell {
     npm install superagent
     npm install crypto-js
     npm install @fingerprintjs/fingerprintjs
+    npm install --save string-pixel-width
     export PATH=${ps}:$PATH
    '';
   }
