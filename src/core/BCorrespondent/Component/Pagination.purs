@@ -87,9 +87,16 @@ render { currenPage, segment: Just { xs, next } } =
           `cons`
             ( xs <#> \page ->
                 HH.li
-                  [ css ( "pagination-ul-li " <> if currenPage == page then "disabled" else mempty) ]
-                  [ HH.a [ HPExt.href "#", css (if currenPage == page then "pagination-ul-li-a-active" else "pagination-ul-li-a"), HE.onClick (Next page) ]
-                      [ HH.text (show page) ]
+                  [ css "pagination-ul-li" ]
+                  [ HH.a 
+                    [ HPExt.href "#", 
+                      css $
+                        if currenPage == page 
+                        then "pagination-ul-li-a-active" 
+                        else "pagination-ul-li-a", 
+                      HE.onClick (Next page) 
+                    ]
+                    [ HH.text (show page) ]
                   ]
             )
           `snoc` makeCorner next "Next"

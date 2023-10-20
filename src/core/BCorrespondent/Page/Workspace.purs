@@ -86,7 +86,7 @@ component =
               }
               { year: fromEnum $ D.year now, 
                 month: fromEnum $ D.month now, 
-                day: fromEnum $ D.day now
+                day: fromEnum (D.day now) - 1
               }
             Workspace.Menu.Wallet -> Wallet
             Workspace.Menu.TechSupport -> TechSupport
