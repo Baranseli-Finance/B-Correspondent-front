@@ -26,6 +26,7 @@ import Store (User)
 import Effect.Exception (message, error)
 import Data.Int (toNumber)
 import Data.Array (sort, length, zip, (..), head, (:), findIndex, updateAt)
+import Data.Array as A
 import Data.Number (fromString)
 import Data.Either (Either (..), isLeft, fromLeft)
 import String.Regex (isValidNote)
@@ -188,7 +189,7 @@ component =
           H.modify_ _ { history = xs, total = total }          
     handleAction (UpdateWithdrawalhistoryItem {total, items}) =
       for_ (head items) \x -> do
-        {history} <- H.get
+        {history, perPage} <- H.get
         tm <- H.liftEffect $ format $ x^.Back._created
         let item = 
               { currency: 
@@ -203,8 +204,18 @@ component =
                 ident: x^.Back._ident
               }
         let idx = flip findIndex history $ \y -> _.ident y == _.ident x
-        let newHistory = fromMaybe (item : history) $ join $ flip map idx \i -> updateAt i item history
-        H.modify_ \s -> s { history = newHistory, total = total } 
+        let newHistory = 
+              fromMaybe (item : history) $ 
+                join $ 
+                  flip map idx \i -> 
+                    updateAt i item history
+        H.modify_ \s -> 
+          s { total = total, 
+              history = 
+                if length newHistory > perPage 
+                then A.take 10 newHistory 
+                else newHistory
+            } 
     handleAction Finalize = do
         { wsVar } <- getStore
         wsm <- H.liftEffect $ Async.tryTake wsVar
