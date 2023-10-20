@@ -57,6 +57,7 @@
   , "decimals"
   , "halogen-svg-elems"
   , "profunctor-lenses"
+  , "numbers"
   ]
 , packages = ./packages.dhall
 , sources = [ "src/**/*.purs", "test/**/*.purs" ]
