@@ -25,7 +25,7 @@ import Data.Traversable (for)
 import Store (User)
 import Effect.Exception (message, error)
 import Data.Int (toNumber)
-import Data.Array (sort, length, zip, (..), head, (:), findIndex, insertAt)
+import Data.Array (sort, length, zip, (..), head, (:), findIndex, updateAt)
 import Data.Number (fromString)
 import Data.Either (Either (..), isLeft, fromLeft)
 import String.Regex (isValidNote)
@@ -34,6 +34,9 @@ import Data.List (toUnfoldable)
 import Data.Lens
 import Foreign (unsafeFromForeign)
 import Date.Format (format)
+import Effect.AVar as Async
+import String.Pixel (lengthToPixels)
+import Data.String (take)
 
 import Undefined
 
@@ -51,6 +54,7 @@ data Action =
      | AddAll
      | HandleChildPagination Pagination.Output
      | UpdateWithdrawalhistoryItem Back.WithdrawalHistory
+     | Finalize
 
 type State = 
      { serverError :: Maybe String, 
@@ -80,7 +84,8 @@ component =
     , render: render
     , eval: H.mkEval H.defaultEval
       { handleAction = handleAction
-      , initialize = pure Initialize 
+      , initialize = pure Initialize
+      , finalize = pure Finalize 
       }
     }
   where
@@ -197,8 +202,16 @@ component =
                 ident: x^.Back._ident
               }
         let idx = flip findIndex history $ \y -> _.ident y == _.ident x
-        let newHistory = fromMaybe (item : history) $ join $ flip map idx \i -> insertAt i item history
+        let newHistory = fromMaybe (item : history) $ join $ flip map idx \i -> updateAt i item history
         H.modify_ \s -> s { history = newHistory, total = total } 
+    handleAction Finalize = do
+        { wsVar } <- getStore
+        wsm <- H.liftEffect $ Async.tryTake wsVar
+        for_ wsm \xs ->
+          for_ xs \{ ws, forkId } -> do
+            H.kill forkId
+            H.liftEffect $ WS.close ws
+            logDebug $ loc <> " ---> ws has been killed"
 
 
 render {serverError: Just msg } = HH.text msg
@@ -242,10 +255,19 @@ renderHistory xs =
   xs <#> \{currency, initiator, amount, created, withdrawalStatus} ->
     HH.div_ 
     [
-        HH.span [css "withdraw-history-container-item", HPExt.style "width:60px"] [HH.text (show amount)],
+        HH.span [css "withdraw-history-container-item", 
+                 HPExt.style "width:60px"] 
+        [HH.text (show amount)],
         HH.span [css "withdraw-history-container-item"] [HH.text (show currency)],
-        HH.span [css "withdraw-history-container-item"] [HH.text (show withdrawalStatus)],
-        HH.span [css "withdraw-history-container-item"] [HH.text initiator],
+        HH.span [css "withdraw-history-container-item", 
+                 HPExt.style $ "width:60px;color:" <> Back.mkColour withdrawalStatus ] 
+        [HH.text (show withdrawalStatus)],
+        HH.span [css "withdraw-history-container-item",
+                 HPExt.style "width:220px" ] 
+        [HH.text $ mkInitiator initiator],
         HH.span [css "withdraw-history-container-item"] [HH.text created],
         HH.div [HPExt.style "padding-top:10px"] []
     ]
+
+mkInitiator s | lengthToPixels s 16 > 220 = take 10 s <> "..."
+              | otherwise = s

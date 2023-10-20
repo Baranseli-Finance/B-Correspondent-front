@@ -23,6 +23,7 @@ module BCorrespondent.Api.Foreign.Institution
   , decodeWithdrawalStatus
   , fetchWithdrawHistoryPage
   , initWithdrawal
+  , mkColour
   , mkInstitutionApi
   , withdraw
   )
@@ -85,6 +86,13 @@ instance Show WithdrawalStatus where
   show Processing = "pending"
   show Confirmed = "ok"
   show Declined = "declined"
+
+mkColour :: WithdrawalStatus -> String
+mkColour WithdrawalStatusNotResolved = "black"
+mkColour Registered = "black"
+mkColour Processing = "black"
+mkColour Confirmed  = "breen"
+mkColour Declined  = "red"
 
 type WithdrawalHistoryItem =
      { ident :: Int, 
