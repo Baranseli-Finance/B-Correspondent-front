@@ -14,6 +14,8 @@ module BCorrespondent.Api.Foreign.Frontend
   , Init
   , InvoiceSince
   , NextGap
+  , Notification
+  , Notifications
   , Sha
   , Transaction
   , TransactionValue
@@ -42,6 +44,7 @@ module BCorrespondent.Api.Foreign.Frontend
   , decodeWalletType
   , encodeCurrency
   , encodeDirection
+  , fetchNotifications
   , fetchShiftHistoryTimeline
   , fetchTimelineForParticularHour
   , fetchTrnsaction
@@ -357,3 +360,12 @@ printTimline timeline =
   flip map (timeline :: Array GapItem) \ x -> 
     x # _elements %~ map printGapItemUnit 
       # _amounts %~ map printGapItemAmount
+
+type Notification = { text :: String } 
+
+type Notifications = { count :: Int, items :: Array Notification }
+
+foreign import _fetchNotifications :: Fn2 WithError FrontApi (AC.EffectFnAff (Object (Response Notifications)))
+
+fetchNotifications :: FrontApi -> AC.EffectFnAff (Object (Response Notifications))
+fetchNotifications = runFn2 _fetchNotifications withError
