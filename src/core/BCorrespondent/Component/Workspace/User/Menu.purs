@@ -12,6 +12,7 @@ import BCorrespondent.Component.Auth.SignOut as SignOut
 import BCorrespondent.Component.HTML.Utils (css, whenElem)
 import BCorrespondent.Component.Auth.SendResetPassLink as Auth.SendResetPassLink
 import BCorrespondent.Component.Async as Async
+import BCorrespondent.Capability.LogMessages (logDebug)
 
 import Halogen as H
 import Halogen.HTML as HH
@@ -37,6 +38,7 @@ data Action =
      | HandleChildResetPassword Auth.SendResetPassLink.Output
      | Close 
      | CancelClose
+     | Initialize
 
 data Output = LoggedOut
 
@@ -51,16 +53,14 @@ component =
     , eval: H.mkEval H.defaultEval
       { handleAction = handleAction
       , handleQuery = handleQuery 
+      , initialize = pure Initialize
       }
    }
    where 
+     handleAction Initialize = forkCloseTimer
      handleAction (HandleChildSignOut SignOut.LoggedOut) = 
        H.raise LoggedOut
-     handleAction Close = do 
-       forkId <-  H.fork $ do 
-         H.liftAff $ Aff.delay $ Aff.Milliseconds 3000.0 
-         H.modify_ _ { isOpen = false }
-       H.modify_ _ { forkId = Just forkId }  
+     handleAction Close = forkCloseTimer 
      handleAction CancelClose = 
        map (_.forkId) H.get >>= flip for_ H.kill
      handleAction 
@@ -76,8 +76,16 @@ component =
      handleQuery 
       :: forall a s . Query a
       -> H.HalogenM State Action s Output AppM (Maybe a)
-     handleQuery (Open a) = 
+     handleQuery (Open a) = do
+       forkCloseTimer
        H.modify_ _ { isOpen = true } $> Just a
+
+forkCloseTimer = do
+  forkId <- H.fork $ do
+    H.liftAff $ Aff.delay $ Aff.Milliseconds 3000.0
+    logDebug $ loc <> " ----> close signal is emitted  " 
+    H.modify_ _ { isOpen = false, forkId = Nothing }
+  H.modify_ _ { forkId = Just forkId }
 
 render { isOpen } =
   whenElem isOpen $

@@ -12,6 +12,7 @@ import BCorrespondent.Component.Workspace.History as Workspace.History
 import BCorrespondent.Component.Workspace.Dashboard as Workspace.Dashboard
 import BCorrespondent.Component.Workspace.Wallet as Workspace.Wallet
 import BCorrespondent.Component.Workspace.TechSupport as Workspace.TechSupport
+import BCorrespondent.Component.Workspace.User.Notification as User.Notification
 import BCorrespondent.Component.Async as Async
 
 import Halogen as H
@@ -41,11 +42,11 @@ data Acion =
 data Output = SignOutForward 
 
 data Component = 
-       Dashboard 
+       Dashboard
      | History 
+       {year :: Int, month :: Int, day :: Int}
        {year :: Int, month :: Int, day :: Int} 
-       {year :: Int, month :: Int, day :: Int} 
-     | Wallet 
+     | Wallet
      | TechSupport
 
 type State = { component :: Component }
@@ -70,11 +71,10 @@ component =
       handleAction
         (HandleChildWorkspace 
          Workspace.User.Notification) =
-        let msg = "notifications are to be implemented in the next release" 
-        in Async.send $ Async.mkOrdinary msg Async.Debug Nothing
+        H.tell User.Notification.proxy 2 $ User.Notification.Open
       handleAction (HandleChildWorkspaceMenu out) = do
         {now, since} <- getStore
-        H.modify_ _ { 
+        H.modify_ _ {
           component = 
           case out of
             Workspace.Menu.Dashboard -> Dashboard
@@ -98,10 +98,17 @@ render { component } =
       HH.div [css "user-menu"]
       [ stylishDiv [css "black-square"],
         Workspace.User.slot 0 HandleChildWorkspace, 
-        Workspace.User.Menu.slot 1 HandleChildWorkspaceUser 
+        Workspace.User.Menu.slot 1 HandleChildWorkspaceUser,
+        User.Notification.slot 2
+
       ]
-  ,   Workspace.Menu.slot 2 HandleChildWorkspaceMenu
-  ,   HH.div [css "workspace-body"] [ HH.div [css "centre-container"] [chooseComponent component 3] ]
+  ,   Workspace.Menu.slot 3 HandleChildWorkspaceMenu
+  ,   HH.div
+      [css "workspace-body"]
+      [ HH.div
+        [css "centre-container"]
+        [chooseComponent component 4] 
+      ]
   ]
 
 chooseComponent Dashboard = Workspace.Dashboard.slot

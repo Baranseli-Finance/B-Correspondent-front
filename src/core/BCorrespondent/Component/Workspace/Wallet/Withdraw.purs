@@ -189,6 +189,7 @@ component =
     handleAction (UpdateWithdrawalhistoryItem {total, items}) =
       for_ (head items) \x -> do
         {history} <- H.get
+        tm <- H.liftEffect $ format $ x^.Back._created
         let item = 
               { currency: 
                   Back.decodeCurrency $ 
@@ -198,7 +199,7 @@ component =
                   Back.decodeWithdrawalStatus $ 
                     x^.Back._withdrawalStatus,
                 initiator: x^.Back._initiator,
-                created: x^.Back._created,
+                created: tm,
                 ident: x^.Back._ident
               }
         let idx = flip findIndex history $ \y -> _.ident y == _.ident x
@@ -256,7 +257,7 @@ renderHistory xs =
     HH.div_ 
     [
         HH.span [css "withdraw-history-container-item", 
-                 HPExt.style "width:60px"] 
+                 HPExt.style "width:150px"] 
         [HH.text (show amount)],
         HH.span [css "withdraw-history-container-item"] [HH.text (show currency)],
         HH.span [css "withdraw-history-container-item", 
