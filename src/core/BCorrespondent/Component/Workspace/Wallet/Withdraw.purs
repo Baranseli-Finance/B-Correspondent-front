@@ -25,7 +25,7 @@ import Data.Traversable (for)
 import Store (User)
 import Effect.Exception (message, error)
 import Data.Int (toNumber)
-import Data.Array (sort, length, zip, (..), head, (:), findIndex, updateAt, tail, init)
+import Data.Array (sort, length, zip, (..), head, (:), findIndex, updateAt, tail, init, elem)
 import Data.Array as A
 import Data.Number (fromString)
 import Data.Either (Either (..), isLeft, fromLeft)
@@ -193,14 +193,15 @@ component =
       for_ (head items) \x -> do
         {history, perPage, currPage} <- H.get
         tm <- H.liftEffect $ format $ x^.Back._created
+        let itemStatus = 
+               Back.decodeWithdrawalStatus $ 
+              x^.Back._withdrawalStatus
         let item = 
               { currency: 
                   Back.decodeCurrency $ 
                     x^.Back._currencyW, 
                 amount: x^.Back._amountW,
-                withdrawalStatus: 
-                  Back.decodeWithdrawalStatus $ 
-                    x^.Back._withdrawalStatus,
+                withdrawalStatus: itemStatus,
                 initiator: x^.Back._initiator,
                 created: tm,
                 ident: x^.Back._ident
@@ -211,11 +212,14 @@ component =
                 join $ 
                   flip map idx \i -> 
                     updateAt i item history
+        let {statuses} = Back.getWithdrawalFlowStatuses            
         if length newHistory > perPage && 
            (currPage == 1 || 
             perPage * currPage > total)
         then H.modify_ \s ->  s { total = total, history = A.take perPage newHistory }
-        else if length newHistory <= perPage && currPage == 1
+        else if 
+          (length newHistory <= perPage && currPage == 1) || 
+          elem itemStatus statuses
         then H.modify_ \s ->  s { total = total, history = newHistory }
         else modifyItemsOnPage total currPage
     handleAction Finalize = do
