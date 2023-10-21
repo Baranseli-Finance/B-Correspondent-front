@@ -211,8 +211,12 @@ component =
                 join $ 
                   flip map idx \i -> 
                     updateAt i item history
-        if length newHistory > perPage && currPage == 1
+        if length newHistory > perPage && 
+           (currPage == 1 || 
+            perPage * currPage > total)
         then H.modify_ \s ->  s { total = total, history = A.take perPage newHistory }
+        else if length newHistory <= perPage && currPage == 1
+        then H.modify_ \s ->  s { total = total, history = newHistory }
         else modifyItemsOnPage total currPage
     handleAction Finalize = do
         { wsVar } <- getStore
@@ -290,22 +294,25 @@ modifyItemsOnPage total page = do
     let failure e = Async.send $ Async.mkException e loc
     onFailure resp failure \{success: {items, total}} -> do
       for_ (head items) \x -> do
-        {history, perPage} <- H.get
-        tm <- H.liftEffect $ format $ x^.Back._created
-        let item =
-                { currency: 
-                    Back.decodeCurrency $ 
-                    x^.Back._currencyW, 
-                  amount: x^.Back._amountW,
-                  withdrawalStatus: 
-                    Back.decodeWithdrawalStatus $ 
-                    x^.Back._withdrawalStatus,
-                  initiator: x^.Back._initiator,
-                  created: tm,
-                  ident: x^.Back._ident
-                }
-        if length history == perPage
-        then 
-            for_ (init history) \xs ->
-              H.modify_ \s ->  s { total = total, history = item : xs }
-        else H.modify_ \s ->  s { total = total, history = item : history }
+        let itemStatus = 
+              Back.decodeWithdrawalStatus $ 
+              x^.Back._withdrawalStatus
+        let {status} = Back.getWithdrawalStatus      
+        when (itemStatus == status) $ do       
+          {history, perPage} <- H.get
+          tm <- H.liftEffect $ format $ x^.Back._created
+          let item =
+                  { currency: 
+                      Back.decodeCurrency $ 
+                      x^.Back._currencyW, 
+                    amount: x^.Back._amountW,
+                    withdrawalStatus: itemStatus,
+                    initiator: x^.Back._initiator,
+                    created: tm,
+                    ident: x^.Back._ident
+                  }
+          if length history == perPage
+          then 
+              for_ (init history) \xs ->
+                H.modify_ \s ->  s { total = total, history = item : xs }
+          else H.modify_ \s ->  s { total = total, history = item : history }

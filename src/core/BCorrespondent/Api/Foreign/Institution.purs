@@ -11,6 +11,7 @@ module BCorrespondent.Api.Foreign.Institution
   , WithdrawalHistory
   , WithdrawalHistoryItem
   , WithdrawalStatus
+  , WithdrawalStatusWrapper
   , _amountB
   , _amountW
   , _created
@@ -22,6 +23,7 @@ module BCorrespondent.Api.Foreign.Institution
   , decodeWithdrawResultStatus
   , decodeWithdrawalStatus
   , fetchWithdrawHistoryPage
+  , getWithdrawalStatus
   , initWithdrawal
   , mkColour
   , mkInstitutionApi
@@ -76,6 +78,7 @@ _created = lens _.created $ \el x -> el { created = x }
 data WithdrawalStatus = WithdrawalStatusNotResolved | Registered | Processing | Confirmed | Declined
 
 derive instance genericWithdrawalStatus :: Generic WithdrawalStatus _
+derive instance eqWithdrawalStatus :: Eq WithdrawalStatus
 
 decodeWithdrawalStatus :: Foreign -> WithdrawalStatus
 decodeWithdrawalStatus = fromMaybe WithdrawalStatusNotResolved <<< decodeEnumG
@@ -93,6 +96,11 @@ mkColour Registered = "black"
 mkColour Processing = "black"
 mkColour Confirmed  = "breen"
 mkColour Declined  = "red"
+
+type WithdrawalStatusWrapper = { status :: WithdrawalStatus }
+
+getWithdrawalStatus :: WithdrawalStatusWrapper
+getWithdrawalStatus = { status: Registered }
 
 type WithdrawalHistoryItem =
      { ident :: Int, 
