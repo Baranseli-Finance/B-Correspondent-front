@@ -3,10 +3,10 @@ module Halogen.HTML.Properties.Extended
   , ariaLabel
   , dataDismiss
   , dataLabel
-  , size
   , maxLength
   , module Properties
   , role
+  , size
   , tabindex
   )
   where

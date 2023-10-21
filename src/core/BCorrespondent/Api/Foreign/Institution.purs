@@ -97,7 +97,7 @@ mkColour :: WithdrawalStatus -> String
 mkColour WithdrawalStatusNotResolved = "black"
 mkColour Registered = "black"
 mkColour Processing = "black"
-mkColour Confirmed  = "breen"
+mkColour Confirmed  = "green"
 mkColour Declined  = "red"
 
 type WithdrawalStatusWrapper = { status :: WithdrawalStatus }

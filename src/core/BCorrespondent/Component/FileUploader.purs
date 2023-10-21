@@ -13,6 +13,8 @@ import BCorrespondent.Data.Config (Config(..))
 import BCorrespondent.Api.Foreign.Request as Request
 import BCorrespondent.Api.Foreign.Back as Back
 import BCorrespondent.Api.Foreign.Request.Handler (withError)
+import BCorrespondent.Component.HTML.Utils (whenElem)
+import BCorrespondent.Component.HTML.Utils (css)
 
 import Halogen as H
 import Halogen.HTML as HH
@@ -69,6 +71,7 @@ component =
     handleAction (Upload fs) = do
       { config: Config { apiBCorrespondentHost: host }, user } <- getStore
       {bucket} <- H.get
+      H.modify_ _ { files = [], count = 0, processed = 0 }
       for_ user \{token} -> do
         for_ fs \file -> do
           resp <- Request.makeAuth (Just token) host Back.mkFileApi $
@@ -77,7 +80,7 @@ component =
             H.modify_ \s ->
               let el = {ident: ident, title: name file } 
               in 
-                s { files = el : _.files s, 
+                s { files = el : _.files s,
                     processed = _.processed s + 1, 
                     count = length fs
                   }
@@ -90,18 +93,20 @@ component =
         traverse_ (H.liftEffect <<< removeFile)
       map (const (Just a)) $ H.modify_ _ { files = [], processed = 0, count = 0 }
 
-render { processed, count } = 
-  HH.label 
-  [ HPExt.style "cursor: pointer" ] 
-  [  HH.text "choose files"
-  ,  HH.input
-     [ HPExt.type_ HPExt.InputFile
-     , HE.onFileUpload Upload
-     , HPExt.multiple true
-     , HPExt.style "display:none"
-     , HPExt.ref $ RefLabel "file"
-     ]
-  , if processed == 0 
-     then HH.text mempty 
-     else HH.text $ "processed " <> show processed <> " of " <> show count
+render { processed, count } =
+  HH.label [css "file-container"]
+  [  
+      HH.div_
+      [
+          HH.text "choose files"
+      ,   HH.input
+          [ HPExt.type_ HPExt.InputFile
+          , HE.onFileUpload Upload
+          , HPExt.multiple true
+          , HPExt.style "display:none"
+          , HPExt.ref $ RefLabel "file"
+          ]
+      ]
+  ,   whenElem(processed /= 0) $ 
+        HH.div_ [ HH.text $ "processed " <> show processed <> " of " <> show count ]
   ]
