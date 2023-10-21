@@ -25,7 +25,7 @@ import Data.Traversable (for)
 import Store (User)
 import Effect.Exception (message, error)
 import Data.Int (toNumber)
-import Data.Array (sort, length, zip, (..), head, (:), findIndex, updateAt)
+import Data.Array (sort, length, zip, (..), head, (:), findIndex, updateAt, tail, init)
 import Data.Array as A
 import Data.Number (fromString)
 import Data.Either (Either (..), isLeft, fromLeft)
@@ -65,7 +65,8 @@ type State =
        currencyidx :: Int,
        compError :: Maybe String,
        perPage :: Int,
-       total :: Int
+       total :: Int,
+       currPage :: Int
      }
 
 component =
@@ -80,7 +81,8 @@ component =
          currencyidx: 0,
          compError: Nothing,
          perPage: 0,
-         total: 0
+         total: 0,
+         currPage: 1
        }
     , render: render
     , eval: H.mkEval H.defaultEval
@@ -98,7 +100,7 @@ component =
         onFailure resp failure \{success: { walletBalances, history: {items, total} }} -> do
           let ys = 
                   flip map walletBalances \x -> 
-                    { currency: Back.decodeCurrency $ x^.Back._currencyB, 
+                    { currency: Back.decodeCurrency $ x^.Back._currencyB,
                       amount: x^.Back._amountB,
                       walletIdent: x^.Back._walletIdent
                     }
@@ -186,10 +188,10 @@ component =
                       created: tm,
                       ident: x^.Back._ident
                     }
-          H.modify_ _ { history = xs, total = total }          
+          H.modify_ _ { history = xs, total = total,currPage = page }          
     handleAction (UpdateWithdrawalhistoryItem {total, items}) =
       for_ (head items) \x -> do
-        {history, perPage} <- H.get
+        {history, perPage, currPage} <- H.get
         tm <- H.liftEffect $ format $ x^.Back._created
         let item = 
               { currency: 
@@ -209,13 +211,9 @@ component =
                 join $ 
                   flip map idx \i -> 
                     updateAt i item history
-        H.modify_ \s -> 
-          s { total = total, 
-              history = 
-                if length newHistory > perPage 
-                then A.take 10 newHistory 
-                else newHistory
-            } 
+        if length newHistory > perPage && currPage == 1
+        then H.modify_ \s ->  s { total = total, history = A.take 10 newHistory }
+        else modifyItemsOnPage total currPage
     handleAction Finalize = do
         { wsVar } <- getStore
         wsm <- H.liftEffect $ Async.tryTake wsVar
@@ -283,3 +281,31 @@ renderHistory xs =
 
 mkInitiator s | lengthToPixels s 16 > 220 = take 10 s <> "..."
               | otherwise = s
+
+modifyItemsOnPage total page = do
+  { config: Config { apiBCorrespondentHost: host }, user } <- getStore
+  for_ (user :: Maybe User) \{ token } -> do
+    resp <- Request.makeAuth (Just token) host Back.mkInstitutionApi $ 
+          Back.fetchWithdrawHistoryPage $ page
+    let failure e = Async.send $ Async.mkException e loc
+    onFailure resp failure \{success: {items, total}} -> do
+      for_ (head items) \x -> do
+        {history, perPage} <- H.get
+        tm <- H.liftEffect $ format $ x^.Back._created
+        let item =
+                { currency: 
+                    Back.decodeCurrency $ 
+                    x^.Back._currencyW, 
+                  amount: x^.Back._amountW,
+                  withdrawalStatus: 
+                    Back.decodeWithdrawalStatus $ 
+                    x^.Back._withdrawalStatus,
+                  initiator: x^.Back._initiator,
+                  created: tm,
+                  ident: x^.Back._ident
+                }
+        if length history == perPage
+        then 
+            for_ (init history) \xs ->
+              H.modify_ \s ->  s { total = total, history = item : xs }
+        else H.modify_ \s ->  s { total = total, history = item : history }
