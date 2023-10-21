@@ -293,26 +293,23 @@ modifyItemsOnPage total page = do
           Back.fetchWithdrawHistoryPage $ page
     let failure e = Async.send $ Async.mkException e loc
     onFailure resp failure \{success: {items, total}} -> do
-      for_ (head items) \x -> do
-        let itemStatus = 
-              Back.decodeWithdrawalStatus $ 
-              x^.Back._withdrawalStatus
-        let {status} = Back.getWithdrawalStatus      
-        when (itemStatus == status) $ do       
-          {history, perPage} <- H.get
-          tm <- H.liftEffect $ format $ x^.Back._created
-          let item =
-                  { currency: 
-                      Back.decodeCurrency $ 
-                      x^.Back._currencyW, 
-                    amount: x^.Back._amountW,
-                    withdrawalStatus: itemStatus,
-                    initiator: x^.Back._initiator,
-                    created: tm,
-                    ident: x^.Back._ident
-                  }
-          if length history == perPage
-          then 
-              for_ (init history) \xs ->
-                H.modify_ \s ->  s { total = total, history = item : xs }
-          else H.modify_ \s ->  s { total = total, history = item : history }
+      for_ (head items) \x -> do 
+        {history, perPage} <- H.get
+        tm <- H.liftEffect $ format $ x^.Back._created
+        let item =
+                { currency: 
+                    Back.decodeCurrency $ 
+                    x^.Back._currencyW, 
+                  amount: x^.Back._amountW,
+                  withdrawalStatus: 
+                    Back.decodeWithdrawalStatus $ 
+                    x^.Back._withdrawalStatus ,
+                  initiator: x^.Back._initiator,
+                  created: tm,
+                  ident: x^.Back._ident
+                }
+        if length history == perPage
+        then 
+            for_ (init history) \xs ->
+              H.modify_ \s ->  s { total = total, history = item : xs }
+        else H.modify_ \s ->  s { total = total, history = item : history }

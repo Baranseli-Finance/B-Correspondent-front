@@ -12,6 +12,7 @@ module BCorrespondent.Api.Foreign.Institution
   , WithdrawalHistoryItem
   , WithdrawalStatus
   , WithdrawalStatusWrapper
+  , WithdrawalStatusesWrapper
   , _amountB
   , _amountW
   , _created
@@ -23,7 +24,8 @@ module BCorrespondent.Api.Foreign.Institution
   , decodeWithdrawResultStatus
   , decodeWithdrawalStatus
   , fetchWithdrawHistoryPage
-  , getWithdrawalStatus
+  , getWithdrawalFlowStatuses
+  , getWithdrawalRegisterStatus
   , initWithdrawal
   , mkColour
   , mkInstitutionApi
@@ -45,6 +47,7 @@ import Data.Lens
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (fromMaybe)
 import Foreign.Enum
+import Data.Array (singleton, (:))
 
 foreign import data InstitutionApi :: Type
 
@@ -99,8 +102,13 @@ mkColour Declined  = "red"
 
 type WithdrawalStatusWrapper = { status :: WithdrawalStatus }
 
-getWithdrawalStatus :: WithdrawalStatusWrapper
-getWithdrawalStatus = { status: Registered }
+getWithdrawalRegisterStatus :: WithdrawalStatusWrapper
+getWithdrawalRegisterStatus = { status: Registered  }
+
+type WithdrawalStatusesWrapper = { statuses :: Array WithdrawalStatus }
+
+getWithdrawalFlowStatuses :: WithdrawalStatusesWrapper
+getWithdrawalFlowStatuses = { statuses: Processing : Confirmed : singleton Declined }
 
 type WithdrawalHistoryItem =
      { ident :: Int, 
