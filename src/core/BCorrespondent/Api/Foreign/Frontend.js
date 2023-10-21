@@ -82,3 +82,12 @@ export const _fetchNotifications =
             })
         };
     }
+
+export const _submitIssue =
+    function(withError, issue, api) {
+        return function(onError, onOk) {
+            api.frontendUserIssuePut(issue).then(onOk).catch(resp => {
+                return withError(resp, onError)
+            })
+        };
+    }

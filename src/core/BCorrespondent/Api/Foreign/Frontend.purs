@@ -13,6 +13,7 @@ module BCorrespondent.Api.Foreign.Frontend
   , HistoryTimeline
   , Init
   , InvoiceSince
+  , Issue
   , NextGap
   , Notification
   , Notifications
@@ -59,6 +60,7 @@ module BCorrespondent.Api.Foreign.Frontend
   , printInit
   , printTimline
   , shaPred
+  , submitIssue
   )
   where
 
@@ -369,3 +371,10 @@ foreign import _fetchNotifications :: Fn2 WithError FrontApi (AC.EffectFnAff (Ob
 
 fetchNotifications :: FrontApi -> AC.EffectFnAff (Object (Response Notifications))
 fetchNotifications = runFn2 _fetchNotifications withError
+
+type Issue = { description :: String, files :: Array Int }
+
+foreign import _submitIssue  :: Fn3 WithError Issue FrontApi (AC.EffectFnAff (Object (Response Unit)))
+
+submitIssue :: Issue -> FrontApi -> AC.EffectFnAff (Object (Response Unit))
+submitIssue = runFn3 _submitIssue withError
