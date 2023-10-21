@@ -212,7 +212,7 @@ component =
                   flip map idx \i -> 
                     updateAt i item history
         if length newHistory > perPage && currPage == 1
-        then H.modify_ \s ->  s { total = total, history = A.take 10 newHistory }
+        then H.modify_ \s ->  s { total = total, history = A.take perPage newHistory }
         else modifyItemsOnPage total currPage
     handleAction Finalize = do
         { wsVar } <- getStore
