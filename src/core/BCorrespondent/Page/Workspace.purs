@@ -13,6 +13,7 @@ import BCorrespondent.Component.Workspace.Dashboard as Workspace.Dashboard
 import BCorrespondent.Component.Workspace.Wallet as Workspace.Wallet
 import BCorrespondent.Component.Workspace.TechSupport as Workspace.TechSupport
 import BCorrespondent.Component.Workspace.User.Notification as User.Notification
+import BCorrespondent.Component.Workspace.BalancedBook as Workspace.BalancedBook
 import BCorrespondent.Component.Async as Async
 
 import Halogen as H
@@ -43,6 +44,7 @@ data Output = SignOutForward
 
 data Component = 
        Dashboard
+     | BalancedBook  
      | History 
        {year :: Int, month :: Int, day :: Int}
        {year :: Int, month :: Int, day :: Int} 
@@ -78,6 +80,7 @@ component =
           component = 
           case out of
             Workspace.Menu.Dashboard -> Dashboard
+            Workspace.Menu.BalancedBook -> BalancedBook
             Workspace.Menu.History -> 
               History 
               { year: _.year since , 
@@ -112,6 +115,7 @@ render { component } =
   ]
 
 chooseComponent Dashboard = Workspace.Dashboard.slot
+chooseComponent BalancedBook = Workspace.BalancedBook.slot
 chooseComponent (History from to) = Workspace.History.slot from to
 chooseComponent Wallet = Workspace.Wallet.slot
 chooseComponent TechSupport = Workspace.TechSupport.slot
