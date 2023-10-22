@@ -30,22 +30,22 @@ echo >&2 '
 ************
 '
 
-if [[ -z "${API_LOGIN_ENV}" ]]; then
-  oops "no API_LOGIN_ENV is set. cannot proceed"
-else
-  login="${API_LOGIN_ENV}"
-fi
+# if [[ -z "${API_LOGIN_ENV}" ]]; then
+#   oops "no API_LOGIN_ENV is set. cannot proceed"
+# else
+#   login="${API_LOGIN_ENV}"
+# fi
 
-if [[ -z "${API_PASS_ENV}" ]]; then
-  oops "no API_PASS_ENV is set. cannot proceed"
-else
-  pass="${API_PASS_ENV}"
-fi
+# if [[ -z "${API_PASS_ENV}" ]]; then
+#   oops "no API_PASS_ENV is set. cannot proceed"
+# else
+#   pass="${API_PASS_ENV}"
+# fi
 
-credentials="$login:$pass"
+# credentials="$login:$pass"
 
 generate() { 
-  node api-downloader.mjs $url $file $credentials
+  # node api-downloader.mjs $url $file $credentials
   openapi-generator-cli \
   generate -i $file -g javascript -o src/core/BCorrespondent/Api/Foreign/$api \
   --additional-properties=usePromises=true,emitModelMethods=true

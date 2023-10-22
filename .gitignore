@@ -4,7 +4,7 @@
 !.dockerignore
 !.docker-nix
 
-output
+[o]utput
 output-es
 generated-docs
 node_modules
@@ -20,3 +20,5 @@ src/lib/BCorrespondent/Web/Bowser
 app/*.js
 
 api*.json
+
+!/src/core/Data/Output

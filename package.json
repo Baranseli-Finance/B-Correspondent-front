@@ -28,6 +28,7 @@
     "mocha": "^10.2.0",
     "purs-tidy": "^0.9.3",
     "querystring": "^0.2.1",
+    "string-pixel-width": "^1.11.0",
     "superagent": "^8.1.2"
   }
 }

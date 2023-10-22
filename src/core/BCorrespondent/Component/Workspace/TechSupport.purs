@@ -23,6 +23,7 @@ import Data.Array ((:), concat)
 import Store (User)
 import Halogen.Store.Monad (getStore)
 import Data.Maybe (Maybe (Nothing))
+import Data.String (length)
 
 proxy = Proxy :: _ "workspace_tech_support"
 
@@ -57,16 +58,17 @@ handleAction (SumbitIssueRequest ev) = do
   { config: Config { apiBCorrespondentHost: host }, user } <- getStore
   for_ (user :: Maybe User) \{ token } -> do
     {files, issue} <- H.get
-    logDebug $ loc <> " files ----> " <> show files
-    resp <- Request.makeAuth (Just token) host Back.mkFrontApi $ 
-      Back.submitIssue {files: files, description: issue}
-    let failure e = do 
-          finilise
-          Async.send $ Async.mkException e loc
-    onFailure resp failure \{success: _} -> do
-      let msg = "issue has been submitted"
-      finilise
-      Async.send $ Async.mkOrdinary msg Async.Success Nothing
+    when (length issue > 0) $ do
+      logDebug $ loc <> " files ----> " <> show files
+      resp <- Request.makeAuth (Just token) host Back.mkFrontApi $ 
+        Back.submitIssue {files: files, description: issue}
+      let failure e = do 
+            finilise
+            Async.send $ Async.mkException e loc
+      onFailure resp failure \{success: _} -> do
+        let msg = "issue has been submitted"
+        finilise
+        Async.send $ Async.mkOrdinary msg Async.Success Nothing
 
 finilise = do 
   H.modify_ _ { issue = mempty, files = [] }
