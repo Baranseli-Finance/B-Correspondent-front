@@ -14,6 +14,7 @@ import Data.Enum (class Enum, class BoundedEnum, fromEnum, toEnum)
 import Data.Enum.Generic 
        (genericCardinality, genericToEnum, 
         genericFromEnum, genericSucc, genericPred)
+import Data.Maybe (fromMaybe, Maybe)
 
 import Undefined
 
@@ -23,7 +24,7 @@ loc = "BCorrespondent.Component.Workspace.BalancedBook"
 
 slot n = HH.slot_ proxy n component unit
 
-data Week = 
+data DayOfWeek = 
         Monday 
       | Tuesday 
       | Wednesday 
@@ -32,19 +33,29 @@ data Week =
       | Saturday 
       | Sunday
 
-derive instance genericWeek :: Generic Week _
-derive instance eqWeek :: Eq Week
-derive instance ordWeek :: Ord Week
+derive instance genericDayOfWeek :: Generic DayOfWeek _
+derive instance eqDayOfWeek :: Eq DayOfWeek
+derive instance ordDayOfWeek :: Ord DayOfWeek
 
-instance Enum Week where
+instance Show DayOfWeek where
+  show Monday = "monday"
+  show Tuesday = "tuesday"
+  show Wednesday = "wednesday"
+  show Thursday = "thursday"
+  show Friday = "friday"
+  show Saturday = "saturday"
+  show Sunday = "sunday"
+
+
+instance Enum DayOfWeek where
   succ = genericSucc
   pred = genericPred
 
-instance Bounded Week where
+instance Bounded DayOfWeek where
   top = Monday
   bottom = Sunday
 
-instance BoundedEnum Week where
+instance BoundedEnum DayOfWeek where
   cardinality = genericCardinality
   toEnum = genericToEnum
   fromEnum = genericFromEnum
@@ -61,10 +72,12 @@ render = HH.div [css "book-container"] [ renderTimeline ]
 
 renderTimeline = 
   HH.div [css "book-timeline"] $ 
-    HH.div [css "book-timeline-item"] [HH.text "time"] : 
-    (zip (0 .. 23) (1 .. 24) <#> \tpl -> 
-      HH.div [css "book-timeline-item"] 
-      [HH.text $ 
-         show (tpl^._1) <> "-" <> 
-         show (if tpl^._2 == 24 then 0 else tpl^._2)
+    HH.span 
+    [css "book-timeline-item", 
+     HPExt.style "border-left: 1px solid black"]
+    [HH.text "time"] : 
+      ((fromEnum Monday .. fromEnum Sunday) <#> \idx ->
+        HH.span [css "book-timeline-item" ]
+        [HH.text $ show $ 
+          fromMaybe undefined ((toEnum idx) :: Maybe DayOfWeek)
       ])
