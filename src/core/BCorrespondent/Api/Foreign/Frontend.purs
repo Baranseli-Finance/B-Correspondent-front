@@ -54,6 +54,7 @@ module BCorrespondent.Api.Foreign.Frontend
   , initDashboard
   , initHistoryTimeline
   , loadNextGap
+  , markNotificationRead
   , mkFrontApi
   , printGapItemAmount
   , printGapItemUnit
@@ -363,7 +364,7 @@ printTimline timeline =
     x # _elements %~ map printGapItemUnit 
       # _amounts %~ map printGapItemAmount
 
-type Notification = { text :: String } 
+type Notification = { ident :: Int, text :: String } 
 
 type Notifications = { count :: Int, items :: Array Notification }
 
@@ -378,3 +379,8 @@ foreign import _submitIssue  :: Fn3 WithError Issue FrontApi (AC.EffectFnAff (Ob
 
 submitIssue :: Issue -> FrontApi -> AC.EffectFnAff (Object (Response Unit))
 submitIssue = runFn3 _submitIssue withError
+
+foreign import _markNotificationRead :: Fn3 WithError Int FrontApi (AC.EffectFnAff (Object (Response Unit)))
+
+markNotificationRead :: Int -> FrontApi -> AC.EffectFnAff (Object (Response Unit))
+markNotificationRead = runFn3 _markNotificationRead withError

@@ -3,6 +3,7 @@ module Halogen.HTML.Properties.Extended
   , ariaLabel
   , dataDismiss
   , dataLabel
+  , ident
   , maxLength
   , module Properties
   , role
@@ -30,3 +31,6 @@ size = Properties.prop (PropName "size")
 
 maxLength :: forall r i. Int -> Properties.IProp (maxLength :: Int | r) i
 maxLength = Properties.prop (PropName "maxLength")
+
+-- ident :: forall r i. String -> Properties.IProp (ident :: String | r) i
+ident = Properties.prop (PropName "ident")

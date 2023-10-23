@@ -91,3 +91,12 @@ export const _submitIssue =
             })
         };
     }
+
+export const _markNotificationRead =
+    function(withError, ident, api) {
+        return function(onError, onOk) {
+            api.frontendUserNotificationPost(ident).then(onOk).catch(resp => {
+                return withError(resp, onError)
+            })
+        };
+    }
