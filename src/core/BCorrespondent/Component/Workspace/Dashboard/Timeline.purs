@@ -203,6 +203,8 @@ populatGaps timeline xs =
 applyTimezone :: Int -> Back.GapItem -> Back.GapItem
 applyTimezone _ x = x
 
+canvas = 1420
+
 mkBackwardButton isBackward = 
   Svg.g 
   [onClick (const Backward)] 
@@ -212,7 +214,7 @@ mkBackwardButton isBackward =
       if isBackward 
       then "timeline-travel-button-active" 
       else "timeline-travel-button-blocked",
-      Svg.x (toNumber ((1440 / 2) - 50)), 
+      Svg.x (toNumber (canvas / 2 - 80)), 
       Svg.y (toNumber 950), 
       Svg.fill (Svg.Named "black"),
       Svg.fontSize Svg.Large]
@@ -228,7 +230,7 @@ mkForwardButton isForward =
       if isForward 
       then "timeline-travel-button-active" 
       else "timeline-travel-button-blocked",
-      Svg.x (toNumber ((1440 / 2) + 50)), 
+      Svg.x (toNumber (canvas / 2 + 10)),
       Svg.y (toNumber 950), 
       Svg.fill (Svg.Named "black"),
       Svg.fontSize Svg.Large]
@@ -239,12 +241,12 @@ render {institution, isBackward, isForward, timezone, timeline, currentGapIdx} =
    HH.div [css "timeline-container"]
    [ 
        Svg.svg 
-       [Svg.width (toNumber 1440), 
+       [Svg.width (toNumber canvas), 
         Svg.height (toNumber 1000)
        ]
        [ 
             Svg.text 
-            [Svg.x (toNumber ((1440 / 2))), 
+            [Svg.x (toNumber ((canvas / 2 - 80))), 
              Svg.y (toNumber 20), 
              Svg.fill (Svg.Named "black"),
              Svg.fontSize Svg.XXLarge
