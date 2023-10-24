@@ -15,6 +15,7 @@ import Data.Maybe (Maybe (..))
 import Web.Event.Event (preventDefault, Event)
 import Data.Array (snoc)
 import Effect.Aff as Aff
+import Data.Traversable (for_)
 
 proxy = Proxy :: _ "workspace_balanced_book_amount"
 
@@ -28,13 +29,14 @@ data Action = Close Event
 
 type State = 
     { isOpen :: Boolean, 
-      amount :: Array Back.ForeignDayOfWeeksHourlyTotalSum
+      amount :: Array Back.ForeignDayOfWeeksHourlyTotalSum,
+      fork :: Maybe H.ForkId
     }
 
 component =
   H.mkComponent
     { initialState: 
-      const { isOpen: false, amount: [] }
+      const { isOpen: false, amount: [], fork: Nothing }
     , render: render
     , eval: H.mkEval H.defaultEval { handleQuery = handleQuery }
     }
@@ -42,11 +44,15 @@ component =
       handleQuery 
         :: forall a s . Query a
         -> H.HalogenM State Action s Unit AppM (Maybe a)
+      handleQuery (Open [] a) = pure $ Just a 
       handleQuery (Open xs a) = do
-        void $ H.fork $ do
-          H.liftAff $ Aff.delay $ Aff.Milliseconds 3000.0
-          H.modify_ _ { isOpen = false, amount = [] }
-        map (const (Just a)) $ H.modify_ _ { isOpen = true, amount = xs }
+        {fork} <- H.get
+        for_ fork H.kill 
+        ident <- H.fork $ do
+            H.liftAff $ Aff.delay $ Aff.Milliseconds 3000.0
+            H.modify_ _ { isOpen = false, amount = [], fork = Nothing }
+        map (const (Just a)) $ H.modify_ _ { isOpen = true, amount = xs, fork = Just ident }
+
 
 render {isOpen, amount: xs} =
   HH.div 
