@@ -30,7 +30,10 @@ import Data.Foldable (for_)
 import Store (User)
 import Effect.Exception (message)
 import Data.Lens ((^.), _2)
-import System.Time (addDays)
+import System.Time (addDays, nowDate, nowTime)
+import Data.DateTime as D
+import Effect.Aff as Aff
+import Control.Monad.Rec.Class (forever)
 
 import Undefined
 
@@ -84,10 +87,13 @@ data Action =
 
 type Timeline = { date :: String, from :: Int }
 
+type Now = { weekday :: Int, hour :: Int } 
+
 type State = 
      { book :: Maybe Back.BalancedBook, 
        error :: Maybe String,
-       timeline :: Maybe Timeline
+       timeline :: Maybe Timeline,
+       now :: Now
      }
 
 component =
@@ -96,7 +102,8 @@ component =
       const 
       { book: Nothing, 
         error: Nothing, 
-        timeline: Nothing
+        timeline: Nothing,
+        now: { weekday: 0, hour: 0 }
       }
     , render: render
     , eval: H.mkEval H.defaultEval
@@ -105,13 +112,25 @@ component =
       }
     }
 
-handleAction Initialize = do 
+handleAction Initialize = do
   { config: Config { apiBCorrespondentHost: host }, user } <- getStore
   for_ (user :: Maybe User) \{ token } -> do 
     resp <- Request.makeAuth (Just token) host Back.mkFrontApi $ 
       Back.initBalancedBook
     let faiure e = H.modify_ _ { error = pure e } 
-    onFailure resp faiure \{success: book} -> H.modify_ _ { book = pure book }  
+    onFailure resp faiure \{success: book} -> do
+      dow <- map (fromEnum <<< D.weekday) $ H.liftEffect nowDate
+      currHour <- map (fromEnum <<< D.hour) $ H.liftEffect nowTime
+      H.modify_ _ { book = pure book, now = {weekday: dow, hour: currHour}  }
+
+      void $ H.fork $ forever $ do
+        H.liftAff $ Aff.delay $ Aff.Milliseconds 60000.0
+        dow <- map (fromEnum <<< D.weekday) $ H.liftEffect nowDate
+        currHour <- map (fromEnum <<< D.hour) $ H.liftEffect nowTime
+        {now: {weekday, hour}} <- H.get
+        when (hour /= currHour || 
+              dow /= weekday) $
+          H.modify_ _ { now = {weekday: dow, hour: currHour} }
 handleAction (LoadTimeline 0 _ _) = pure unit
 handleAction (LoadTimeline _ idx hour) = do 
   {book} <- H.get
@@ -134,11 +153,11 @@ render { book: Nothing, error: Nothing } =
   HH.div [css "book-container"] [HH.text "book loading..."]
 render { book: Nothing, error: Just e } = 
   HH.div [css "book-container"] [ HH.text $ "error occured during loading: " <> message e ]
-render { book: Just { from, to, institutions: xs }, timeline: Nothing } = 
+render { book: Just { from, to, institutions: xs }, timeline: Nothing, now } = 
   HH.div [css "book-container"] 
   [
       HH.div_ [HH.h2_ [HH.text $ "accounting period: " <> from <> " - " <> to]]
-  ,   maybeElem (head xs) renderTimeline
+  ,   maybeElem (head xs) $ renderTimeline now
   ]
 render { book: Just _, timeline: Just {date, from} } = 
   HH.div [css "book-container"] [Timeline.slot 1 {date: date, from: from} HandleChildTimeline]
@@ -146,7 +165,7 @@ render { book: Just _, timeline: Just {date, from} } =
 
 type Row = { shift :: Int, rows :: forall w i . Array (HTML w i) }
 
-renderTimeline {title, dayOfWeeksHourly: xs} =
+renderTimeline now {title, dayOfWeeksHourly: xs} =
   HH.div_
   ([
       Amount.slot 0
@@ -161,9 +180,9 @@ renderTimeline {title, dayOfWeeksHourly: xs} =
           [HH.text $ show $ 
             fromMaybe undefined ((toEnum idx) :: Maybe DayOfWeek)
         ]) `snoc` HH.span [css "book-timeline-item" ] [HH.text "total"]
-  ] <> (_.rows $ foldl renderRow { shift: 100, rows: [] } (xs :: Array Back.DayOfWeekHourly) ))
+  ] <> (_.rows $ foldl (renderRow now) { shift: 100, rows: [] } (xs :: Array Back.DayOfWeekHourly) ))
 
-renderRow {shift: oldShift, rows} {to, from, amountInDayOfWeek: xs, total: ys} =
+renderRow {weekday, hour} {shift: oldShift, rows} {to, from, amountInDayOfWeek: xs, total: ys} =
   let newShift = oldShift + 20
       renderTotal {amount, currency} = show amount <> "..."
       x = 
@@ -178,7 +197,10 @@ renderRow {shift: oldShift, rows} {to, from, amountInDayOfWeek: xs, total: ys} =
                     then "-"
                     else show total
                   style | total > 0 = "book-timeline-item-active pulse"
-                        | otherwise = "book-timeline-item" 
+                        | dow == weekday && 
+                          _.hour from == hour = 
+                          "book-timeline-item-active-live pulse-live"
+                        | otherwise = "book-timeline-item"
               in HH.span [css style, HE.onClick (const (LoadTimeline total dow (_.hour from)))] [HH.text text])
              `snoc`
              let style | length ys > 0 = "book-timeline-item-active pulse"
