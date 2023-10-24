@@ -26,3 +26,10 @@ export const _addMinutes = minutes => tm => () => {
 export const getTimezone = () => {
     return (new Date().getTimezoneOffset() * (-1) / 60);
 }
+
+export const addDays = days => date => () => {
+    let tmp = new Date(date);
+    tmp.setDate(tmp.getDate() + days);
+    let result = tmp.getDate() + "-" + (tmp.getMonth() + 1) + "-" + tmp.getFullYear()
+    return result;
+}

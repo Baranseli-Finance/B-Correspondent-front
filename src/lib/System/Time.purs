@@ -1,5 +1,6 @@
 module System.Time
-  ( addMinutes
+  ( addDays
+  , addMinutes
   , dateToTimestamp
   , getTimestamp
   , getTimezone
@@ -40,3 +41,7 @@ addMinutes secs tm = do
    map (time <<< toDateTime) $ _addMinutes secs old
 
 foreign import getTimezone :: Effect Int
+
+foreign import addDays :: Int -> String -> Effect String
+
+
