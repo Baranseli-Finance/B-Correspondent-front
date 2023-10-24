@@ -13,14 +13,14 @@ import Halogen.HTML as HH
 import Halogen.HTML.Properties.Extended as HPExt
 import Halogen.HTML.Core (HTML)
 import Type.Proxy (Proxy(..))
-import Data.Array (zip, (..), (:), snoc, head, foldr)
+import Data.Array (zip, (..), (:), snoc, head, foldl)
 import Data.Lens (_1, _2, (^.))
 import Data.Generic.Rep (class Generic)
 import Data.Enum (class Enum, class BoundedEnum, fromEnum, toEnum)
 import Data.Enum.Generic 
        (genericCardinality, genericToEnum, 
         genericFromEnum, genericSucc, genericPred)
-import Data.Maybe (fromMaybe, Maybe (..))
+import Data.Maybe (fromMaybe, Maybe (..), maybe)
 import Halogen.Store.Monad (getStore)
 import Data.Foldable (for_)
 import Store (User)
@@ -122,9 +122,22 @@ renderTimeline {title, dayOfWeeksHourly: xs} =
           [HH.text $ show $ 
             fromMaybe undefined ((toEnum idx) :: Maybe DayOfWeek)
         ]) `snoc` HH.span [css "book-timeline-item" ] [HH.text "total"]
-  ] <> (_.rows $ foldr renderRow { shift: 100, rows: [] } xs))
+  ] <> (_.rows $ foldl renderRow { shift: 100, rows: [] } (xs :: Array Back.DayOfWeekHourly) ))
 
-renderRow _ {shift: oldShift, rows: xs} =
+renderRow {shift: oldShift, rows} {to, from, amountInDayOfWeek: xs, total: ys} =
   let newShift = oldShift + 20
-      x = HH.div [css "book-timeline", HPExt.style $ "top:" <> show newShift <> "px" ] [HH.text (show oldShift)]
-  in { shift: newShift, rows: xs `snoc` x }
+      renderTotal {amount, currency} = show amount <> "..."
+      x = 
+          HH.div [css "book-timeline", HPExt.style $ "top:" <> show newShift <> "px" ] $
+            HH.span 
+            [css "book-timeline-item", 
+             HPExt.style "border-left: 1px solid black"]
+             [HH.text $ show (_.hour from) <> " - " <> show (_.hour to)] :
+            (xs <#> \{total} -> HH.span [css "book-timeline-item" ] [HH.text (show total)])
+             `snoc` 
+            HH.span
+            [css "book-timeline-item",
+             HPExt.style "border-right: 1px solid black"] 
+            [HH.text (maybe "0" renderTotal (head ys))]
+              
+  in { shift: newShift, rows: rows `snoc` x }
