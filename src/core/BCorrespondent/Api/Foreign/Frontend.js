@@ -100,3 +100,12 @@ export const _markNotificationRead =
             })
         };
     }
+
+export const _initBalancedBook =
+    function(withError, api) {
+        return function(onError, onOk) {
+            api.frontendUserBalancedBookGet().then(onOk).catch(resp => {
+                return withError(resp, onError)
+            })
+        };
+    }

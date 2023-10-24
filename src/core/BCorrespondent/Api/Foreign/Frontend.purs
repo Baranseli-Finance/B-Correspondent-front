@@ -1,9 +1,14 @@
 module BCorrespondent.Api.Foreign.Frontend
-  ( Currency(..)
+  ( AmountInDayOfWeek
+  , BalancedBook
+  , BalancedBookInstitution
+  , Currency(..)
   , DailyBalanceSheet
+  , DayOfWeekHourly
   , Direction(..)
   , EnumResolvedWallet
   , FetchShiftHistoryTimelineParams
+  , ForeignDayOfWeeksHourlyTotalSum
   , FrontApi
   , GapItem
   , GapItemAmount
@@ -51,6 +56,7 @@ module BCorrespondent.Api.Foreign.Frontend
   , fetchTrnsaction
   , getJwtStatus
   , init
+  , initBalancedBook
   , initDashboard
   , initHistoryTimeline
   , loadNextGap
@@ -384,3 +390,33 @@ foreign import _markNotificationRead :: Fn3 WithError Int FrontApi (AC.EffectFnA
 
 markNotificationRead :: Int -> FrontApi -> AC.EffectFnAff (Object (Response Unit))
 markNotificationRead = runFn3 _markNotificationRead withError
+
+type AmountInDayOfWeek = { value :: Int, total :: Int }
+
+type ForeignDayOfWeeksHourlyTotalSum = 
+     { amount :: Number, 
+       currency :: Foreign  
+     }
+
+type DayOfWeekHourly = 
+     { from :: GapItemTime, 
+       to :: GapItemTime, 
+       total :: Array ForeignDayOfWeeksHourlyTotalSum,
+       amountInDayOfWeek :: Array AmountInDayOfWeek 
+     }
+
+type BalancedBookInstitution = 
+     { title :: String,
+       dayOfWeeksHourly :: Array DayOfWeekHourly
+     }
+
+type BalancedBook =
+     { from :: String,
+       to :: String,
+       institutions :: Array BalancedBookInstitution 
+     }
+
+foreign import _initBalancedBook :: Fn2 WithError FrontApi (AC.EffectFnAff (Object (Response BalancedBook)))
+
+initBalancedBook :: FrontApi -> AC.EffectFnAff (Object (Response BalancedBook))
+initBalancedBook = runFn2 _initBalancedBook withError
