@@ -8,7 +8,8 @@ import BCorrespondent.Api.Foreign.Back as Back
 import BCorrespondent.Api.Foreign.Request.Handler (onFailure)
 import BCorrespondent.Data.Config (Config(..))
 import BCorrespondent.Capability.LogMessages (logDebug)
-import BCorrespondent.Component.Workspace.BalancedBook.Timeline as Timeline  
+import BCorrespondent.Component.Workspace.BalancedBook.Timeline as Timeline
+import BCorrespondent.Component.Workspace.BalancedBook.Amount as Amount
 
 import Halogen as H
 import Halogen.HTML as HH
@@ -16,7 +17,7 @@ import Halogen.HTML.Properties.Extended as HPExt
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Core (HTML)
 import Type.Proxy (Proxy(..))
-import Data.Array (zip, (..), (:), snoc, head, foldl)
+import Data.Array (zip, (..), (:), snoc, head, foldl, length)
 import Data.Lens (_1, _2, (^.))
 import Data.Generic.Rep (class Generic)
 import Data.Enum (class Enum, class BoundedEnum, fromEnum, toEnum)
@@ -79,6 +80,7 @@ data Action =
        Initialize 
      | LoadTimeline Int Int Int 
      | HandleChildTimeline Timeline.Output
+     | ShowAmount (Array Back.ForeignDayOfWeeksHourlyTotalSum)
 
 type Timeline = { date :: String, from :: Int }
 
@@ -126,7 +128,7 @@ handleAction (LoadTimeline _ idx hour) = do
     logDebug msg
     H.modify_ _ { timeline = Just { date: from', from: hour } }
 handleAction (HandleChildTimeline Timeline.OutputBack) = H.modify_ _ { timeline = Nothing }
-
+handleAction (ShowAmount xs) = H.tell Amount.proxy 0 $ Amount.Open xs
 
 render { book: Nothing, error: Nothing } = 
   HH.div [css "book-container"] [HH.text "book loading..."]
@@ -139,7 +141,7 @@ render { book: Just { from, to, institutions: xs }, timeline: Nothing } =
   ,   maybeElem (head xs) renderTimeline
   ]
 render { book: Just _, timeline: Just {date, from} } = 
-  HH.div [css "book-container"] [Timeline.slot 0 {date: date, from: from} HandleChildTimeline]
+  HH.div [css "book-container"] [Timeline.slot 1 {date: date, from: from} HandleChildTimeline]
 
 
 type Row = { shift :: Int, rows :: forall w i . Array (HTML w i) }
@@ -147,7 +149,8 @@ type Row = { shift :: Int, rows :: forall w i . Array (HTML w i) }
 renderTimeline {title, dayOfWeeksHourly: xs} =
   HH.div_
   ([
-      HH.div [css "book-timeline-title"] [HH.text title]
+      Amount.slot 0
+  ,   HH.div [css "book-timeline-title"] [HH.text title]
   ,   HH.div [css "book-timeline"] $
         HH.span 
         [css "book-timeline-item", 
@@ -177,10 +180,13 @@ renderRow {shift: oldShift, rows} {to, from, amountInDayOfWeek: xs, total: ys} =
                   style | total > 0 = "book-timeline-item-active pulse"
                         | otherwise = "book-timeline-item" 
               in HH.span [css style, HE.onClick (const (LoadTimeline total dow (_.hour from)))] [HH.text text])
-             `snoc` 
-            HH.span
-            [css "book-timeline-item",
-             HPExt.style "border-right: 1px solid black"] 
-            [HH.text (maybe "-" renderTotal (head ys))]
+             `snoc`
+             let style | length ys > 0 = "book-timeline-item-active pulse"
+                       | otherwise = "book-timeline-item" 
+             in HH.span
+                [css style,
+                 HPExt.style "border-right: 1px solid black",
+                 HE.onClick (const (ShowAmount ys)) ] 
+                [HH.text (maybe "-" renderTotal (head ys))]
               
   in { shift: newShift, rows: rows `snoc` x }
