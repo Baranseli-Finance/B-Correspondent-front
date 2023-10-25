@@ -78,7 +78,31 @@ component =
       }
     }
     where
-      handleAction Initialize = pure unit
+      handleAction Initialize = do 
+        { config: Config { apiBCorrespondentHost: host }, user } <- getStore
+        for_ (user :: Maybe User) \{ token } -> do
+          {year, month, day, hour} <- H.get
+          let params = {year: year, month: month, day: day, direction: Back.encodeDirection Back.Forward, hour: hour}
+          resp <- Request.makeAuth (Just token) host Back.mkFrontApi $ 
+            Back.fetchShiftHistoryTimeline params
+          onFailure resp (Async.send <<< flip Async.mkException loc) 
+            \{success: gaps} -> do
+                time <- H.liftEffect $ nowTime
+                let from = Timeline.setTime 0 hour time
+                let to = Timeline.setTime 0 (hour + 1) time
+                let newTimeline = 
+                      flip Timeline.populatGaps gaps $ 
+                        Timeline.initTimeline from to
+                let isBackward = hour /= 0 
+                let isForward = hour /= 23
+
+                let showableTimeline = 
+                      flip map (newTimeline :: Array Back.GapItem) \x -> 
+                        x # Back._elements %~ map Back.printGapItemUnit 
+                          # Back._amounts %~ map Back.printGapItemAmount
+                logDebug $ loc <> " ---> timeline gaps " <> show showableTimeline
+                H.modify_ _ { isInit = false, timeline = newTimeline }
+                H.tell Timeline.proxy 0 $ Timeline.NewTimeline newTimeline isBackward isForward
       handleAction (HandleChild (Timeline.OutputDirection direction timeline)) = do
         logDebug $ loc <> "  ---> HandleChild  " <> show direction <> " " <> show (Back.printTimline timeline)
         let go hour = 
@@ -109,7 +133,7 @@ component =
                       let isForward = 
                             direction == Back.Backward || 
                             (direction == Back.Forward && hour /= 23)
-                      H.tell Timeline.proxy 1 $ Timeline.NewTimeline newTimeline isBackward isForward
+                      H.tell Timeline.proxy 0 $ Timeline.NewTimeline newTimeline isBackward isForward
         case direction of 
           Back.Backward -> for_ (head timeline) \el -> go $ el^.Back._start <<< Back._hour
           Back.Forward -> for_ (last timeline) \el -> go $ el^.Back._end <<< Back._hour

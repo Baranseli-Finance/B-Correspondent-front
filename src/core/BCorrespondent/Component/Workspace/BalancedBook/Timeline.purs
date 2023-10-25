@@ -52,7 +52,7 @@ handleAction Initialize = do
         y <- join $ index dateXs 2
         m <- join $ index dateXs 1
         d <- join $ index dateXs 0
-        pure { year: y, month: m, day: d }  
+        pure { year: y, month: m, day: d }
   for_ dateRecord \{year: y , month: m, day: d} ->
     if fromEnum (D.year now) == y && 
        fromEnum (D.month now) == m && 
