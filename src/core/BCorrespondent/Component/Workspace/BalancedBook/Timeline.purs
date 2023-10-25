@@ -18,7 +18,6 @@ import Data.String.Pattern (Pattern (..))
 import Data.Int (fromString)
 import Data.Array (index)
 import Data.Foldable (for_)
-import Data.Enum (fromEnum)
 import Data.Maybe (Maybe (..))
 
 proxy = Proxy :: _ "workspace_balanced_book_timeline"
@@ -53,12 +52,7 @@ handleAction Initialize = do
         m <- join $ index dateXs 1
         d <- join $ index dateXs 0
         pure { year: y, month: m, day: d }
-  for_ dateRecord \{year: y , month: m, day: d} ->
-    if fromEnum (D.year now) == y && 
-       fromEnum (D.month now) == m && 
-       fromEnum (D.day now) == d 
-    then logDebug $ loc <> " ---> loading live timeline"
-    else do 
+  for_ dateRecord \{year: y , month: m, day: d} -> do
       logDebug $ loc <> " ---> loading history timeline"
       H.modify_ _ { history = Just {year: y , month: m, day: d, hour: from} }
 

@@ -288,7 +288,7 @@ renderTimeline coordX idx xs currGap =
       item i h m xs ys = 
         Svg.g [onMouseMove (TotalAmountInGap i xs), onMouseOut (const CancelTotalAmountInGap) ] $ 
           [gap, mkTm h m (coordX - toNumber 10)] <> 
-          populateTransactions coordX height width ys <> 
+          populateTransactions coordX height width ys <>
           [tmCircle]
   in case uncons xs of
        Nothing -> []

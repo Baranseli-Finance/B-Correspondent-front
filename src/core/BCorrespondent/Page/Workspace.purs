@@ -37,12 +37,13 @@ data Acion =
         HandleChildWorkspaceUser Workspace.User.Menu.Output
       | HandleChildWorkspace Workspace.User.Output
       | HandleChildWorkspaceMenu Workspace.Menu.Output
+      | HandleChildBalancedBook Workspace.BalancedBook.Output
 
 
 data Output = SignOutForward 
 
 data Component = 
-       Dashboard
+       Dashboard (Maybe Int)
      | BalancedBook
      | Wallet
      | TechSupport
@@ -51,7 +52,7 @@ type State = { component :: Component }
 
 component =
   H.mkComponent
-    { initialState: const { component: Dashboard }
+    { initialState: const { component: Dashboard Nothing }
     , render: render
     , eval: H.mkEval H.defaultEval
       { handleAction = handleAction }
@@ -70,11 +71,14 @@ component =
         (HandleChildWorkspace 
          Workspace.User.Notification) =
         H.tell User.Notification.proxy 2 $ User.Notification.Open
+      handleAction 
+        (HandleChildBalancedBook
+         (Workspace.BalancedBook.OutputLive from)) =  H.modify_ _ { component = Dashboard Nothing }
       handleAction (HandleChildWorkspaceMenu out) =
         H.modify_ _ {
           component = 
           case out of
-            Workspace.Menu.Dashboard -> Dashboard
+            Workspace.Menu.Dashboard -> Dashboard Nothing
             Workspace.Menu.BalancedBook -> BalancedBook
             Workspace.Menu.Wallet -> Wallet
             Workspace.Menu.TechSupport -> TechSupport
@@ -99,7 +103,7 @@ render { component } =
       ]
   ]
 
-chooseComponent Dashboard = Workspace.Dashboard.slot
-chooseComponent BalancedBook = Workspace.BalancedBook.slot
+chooseComponent (Dashboard _) = Workspace.Dashboard.slot
+chooseComponent BalancedBook = flip Workspace.BalancedBook.slot HandleChildBalancedBook
 chooseComponent Wallet = Workspace.Wallet.slot
 chooseComponent TechSupport = Workspace.TechSupport.slot

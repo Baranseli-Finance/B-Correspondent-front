@@ -1,4 +1,4 @@
-module BCorrespondent.Component.Workspace.BalancedBook (slot) where
+module BCorrespondent.Component.Workspace.BalancedBook (slot, Output (..)) where
 
 import Prelude
 
@@ -41,7 +41,9 @@ proxy = Proxy :: _ "workspace_balanced_book"
 
 loc = "BCorrespondent.Component.Workspace.BalancedBook"
 
-slot n = HH.slot_ proxy n component unit
+slot n = HH.slot proxy n component unit
+
+data Output = OutputLive Int
 
 data DayOfWeek = 
         Monday 
@@ -131,21 +133,27 @@ handleAction Initialize = do
         when (hour /= currHour || 
               dow /= weekday) $
           H.modify_ _ { now = {weekday: dow, hour: currHour} }
-handleAction (LoadTimeline 0 _ _) = pure unit
-handleAction (LoadTimeline _ idx hour) = do 
-  {book} <- H.get
-  for_ book \{from} -> do
-    let days 
-          | toEnum idx == Just Monday || 
-            toEnum idx == Just Sunday = 0
-          | otherwise = idx - 1
-    from' <- H.liftEffect $ addDays days from
-    let msg = 
-             loc <> " ----> loading timeline for " <> 
-             from' <> ", time gap: " <>
-             show hour <> "-" <> show (hour + 1)
-    logDebug msg
-    H.modify_ _ { timeline = Just { date: from', from: hour } }
+handleAction (LoadTimeline amount idx hour) = do 
+  {book, now: {weekday, hour: currHour}} <- H.get
+  if amount == 0 && idx /= weekday
+  then pure unit
+  else if idx == weekday
+  then H.raise $ OutputLive currHour
+  else if amount /= 0 
+  then
+    for_ book \{from} -> do
+      let days 
+           | toEnum idx == Just Monday || 
+             toEnum idx == Just Sunday = 0
+           | otherwise = idx - 1
+      from' <- H.liftEffect $ addDays days from
+      let msg = 
+            loc <> " ----> loading timeline for " <> 
+            from' <> ", time gap: " <>
+            show hour <> "-" <> show (hour + 1)
+      logDebug msg
+      H.modify_ _ { timeline = Just { date: from', from: hour } }
+  else pure unit    
 handleAction (HandleChildTimeline Timeline.OutputBack) = H.modify_ _ { timeline = Nothing }
 handleAction (ShowAmount xs) = H.tell Amount.proxy 0 $ Amount.Open xs
 
