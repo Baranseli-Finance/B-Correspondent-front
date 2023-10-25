@@ -27,7 +27,7 @@ export const _initDashboard =
 export const _loadNextGap =
     function(withError, from, to, api) {
         return function(onError, onOk) {
-            api.frontendUserDashboardDailyBalanceSheetGapGet(from, to).then(onOk).catch(resp => {
+            api.frontendUserDashboardTimelineGapGet(from, to).then(onOk).catch(resp => {
                 return withError(resp, onError)
             })
         };
@@ -36,7 +36,7 @@ export const _loadNextGap =
 export const _fetchTimelineForParticularHour =
     function(withError, direction, point, api) {
         return function(onError, onOk) {
-            api.frontendUserDashboardDailyBalanceSheetTimelineDirectionGet(direction, point).then(onOk).catch(resp => {
+            api.frontendUserDashboardTimelineDirectionGet(direction, point).then(onOk).catch(resp => {
                 return withError(resp, onError)
             })
         };

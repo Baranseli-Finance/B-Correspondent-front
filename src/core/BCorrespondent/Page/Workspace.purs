@@ -8,7 +8,6 @@ import BCorrespondent.Component.HTML.Utils (css, maybeElem, stylishDiv)
 import BCorrespondent.Component.Auth.SendResetPassLink as SendResetPassLink
 import BCorrespondent.Component.FileUploader as FileUploader 
 import BCorrespondent.Component.Workspace.Menu as Workspace.Menu
-import BCorrespondent.Component.Workspace.History as Workspace.History
 import BCorrespondent.Component.Workspace.Dashboard as Workspace.Dashboard
 import BCorrespondent.Component.Workspace.Wallet as Workspace.Wallet
 import BCorrespondent.Component.Workspace.TechSupport as Workspace.TechSupport
@@ -44,10 +43,7 @@ data Output = SignOutForward
 
 data Component = 
        Dashboard
-     | BalancedBook  
-     | History 
-       {year :: Int, month :: Int, day :: Int}
-       {year :: Int, month :: Int, day :: Int} 
+     | BalancedBook
      | Wallet
      | TechSupport
 
@@ -74,23 +70,12 @@ component =
         (HandleChildWorkspace 
          Workspace.User.Notification) =
         H.tell User.Notification.proxy 2 $ User.Notification.Open
-      handleAction (HandleChildWorkspaceMenu out) = do
-        {now, since} <- getStore
+      handleAction (HandleChildWorkspaceMenu out) =
         H.modify_ _ {
           component = 
           case out of
             Workspace.Menu.Dashboard -> Dashboard
             Workspace.Menu.BalancedBook -> BalancedBook
-            Workspace.Menu.History -> 
-              History 
-              { year: _.year since , 
-                month: _.month since, 
-                day: _.day since
-              }
-              { year: fromEnum $ D.year now, 
-                month: fromEnum $ D.month now, 
-                day: fromEnum (D.day now) - 1
-              }
             Workspace.Menu.Wallet -> Wallet
             Workspace.Menu.TechSupport -> TechSupport
         }
@@ -116,6 +101,5 @@ render { component } =
 
 chooseComponent Dashboard = Workspace.Dashboard.slot
 chooseComponent BalancedBook = Workspace.BalancedBook.slot
-chooseComponent (History from to) = Workspace.History.slot from to
 chooseComponent Wallet = Workspace.Wallet.slot
 chooseComponent TechSupport = Workspace.TechSupport.slot

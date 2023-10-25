@@ -29,7 +29,7 @@ loc = "BCorrespondent.Component.Workspace.Menu"
 
 slot n = HH.slot proxy n component unit
 
-data Output = Dashboard | BalancedBook | History | Wallet | TechSupport
+data Output = Dashboard | BalancedBook | Wallet | TechSupport
 
 derive instance genericOutput :: Generic Output _
 derive instance eqOutput :: Eq Output
@@ -48,7 +48,7 @@ instance BoundedEnum Output where
   toEnum = genericToEnum
   fromEnum = genericFromEnum
 
-data Action = OpenDashboard | OpenBalancedBook | OpenHistory | OpenWallet | OpenTechSupport
+data Action = OpenDashboard | OpenBalancedBook | OpenWallet | OpenTechSupport
 
 derive instance genericAction :: Generic Action _
 derive instance eqAction :: Eq Action
@@ -83,9 +83,6 @@ component =
       handleAction OpenBalancedBook =
         H.modify_ _ { selected = fromEnum OpenBalancedBook } *> 
           H.raise (fromMaybe undefined (toEnum (fromEnum OpenBalancedBook)))
-      handleAction OpenHistory = 
-        H.modify_ _ { selected = fromEnum OpenHistory } *> 
-          H.raise (fromMaybe undefined (toEnum (fromEnum OpenHistory)))
       handleAction OpenWallet = 
         H.modify_ _ { selected = fromEnum OpenWallet } *>  
           H.raise (fromMaybe undefined (toEnum (fromEnum OpenWallet)))
@@ -111,15 +108,11 @@ render { selected } =
               ]    
           ,   HH.li [HPExt.style "padding-top:30px"]
               [ 
-                HH.div [onClick (const OpenHistory)] [ HH.i [css "fa fa-history", HPExt.style ("font-size:30px;color:white;" <> mkCursor 2 selected)] [] ]
+                HH.div [onClick (const OpenWallet)] [ HH.i [css "fa fa-wallet", HPExt.style ("font-size:30px;color:white;" <> mkCursor 2 selected)] [] ]
               ]
           ,   HH.li [HPExt.style "padding-top:30px"]
               [ 
-                HH.div [onClick (const OpenWallet)] [ HH.i [css "fa fa-wallet", HPExt.style ("font-size:30px;color:white;" <> mkCursor 3 selected)] [] ]
-              ]
-          ,   HH.li [HPExt.style "padding-top:30px"]
-              [ 
-                HH.div [onClick (const OpenTechSupport)] [ HH.i [css "fa fa-wrench", HPExt.style ("font-size:30px;color:white;" <> mkCursor 4 selected)] [] ]
+                HH.div [onClick (const OpenTechSupport)] [ HH.i [css "fa fa-wrench", HPExt.style ("font-size:30px;color:white;" <> mkCursor 3 selected)] [] ]
               ]           
           ]
       ]

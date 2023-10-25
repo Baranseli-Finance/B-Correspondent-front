@@ -196,10 +196,11 @@ renderRow {weekday, hour} {shift: oldShift, rows} {to, from, amountInDayOfWeek: 
                     if total == 0
                     then "-"
                     else show total
-                  style | total > 0 = "book-timeline-item-active pulse"
-                        | dow == weekday && 
-                          _.hour from == hour = 
-                          "book-timeline-item-active-live pulse-live"
+                  isNow = 
+                    dow == weekday && 
+                    _.hour from == hour  
+                  style | total > 0 && not isNow = "book-timeline-item-active pulse"
+                        | isNow = "book-timeline-item-active-live pulse-live"
                         | otherwise = "book-timeline-item"
               in HH.span [css style, HE.onClick (const (LoadTimeline total dow (_.hour from)))] [HH.text text])
              `snoc`
