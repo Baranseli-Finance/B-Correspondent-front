@@ -74,7 +74,7 @@ component =
       handleAction 
         (HandleChildBalancedBook
          (Workspace.BalancedBook.OutputLive from)) = do 
-           H.modify_ _ { component = Dashboard Nothing }
+           H.modify_ _ { component = Dashboard (Just from) }
            H.tell Workspace.Menu.proxy 3 $ 
              Workspace.Menu.SwithToMenu 
                (fromEnum Workspace.Menu.OpenDashboard)

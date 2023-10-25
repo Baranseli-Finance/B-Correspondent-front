@@ -207,12 +207,13 @@ renderRow {weekday, hour} {shift: oldShift, rows} {to, from, amountInDayOfWeek: 
                   isNow = 
                     dow == weekday && 
                     _.hour from == hour  
-                  style | total > 0 && not isNow = "book-timeline-item-active pulse"
+                  style | total > 0 && dow == weekday = "book-timeline-item-today"
+                        | total > 0 && not isNow = "book-timeline-item-past"
                         | isNow = "book-timeline-item-active-live pulse-live"
                         | otherwise = "book-timeline-item"
               in HH.span [css style, HE.onClick (const (LoadTimeline total dow (_.hour from)))] [HH.text text])
              `snoc`
-             let style | length ys > 0 = "book-timeline-item-active pulse"
+             let style | length ys > 0 = "book-timeline-item-past pulse"
                        | otherwise = "book-timeline-item" 
              in HH.span
                 [css style,
