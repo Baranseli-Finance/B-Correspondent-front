@@ -38,6 +38,7 @@ import Data.String (split)
 import Data.String.Pattern (Pattern (..))
 import Data.Int (fromString)
 import Data.Array (index)
+import Data.DateTime as D
 
 import Undefined
 
@@ -101,7 +102,8 @@ type State =
      { book :: Maybe Back.BalancedBook, 
        error :: Maybe String,
        timeline :: Maybe Timeline,
-       now :: Now
+       now :: Now,
+       isPast :: Boolean
      }
 
 component =
@@ -111,7 +113,8 @@ component =
       { book: Nothing, 
         error: Nothing, 
         timeline: Nothing,
-        now: { weekday: 0, hour: 0 }
+        now: { weekday: 0, hour: 0 },
+        isPast: false
       }
     , render: render
     , eval: H.mkEval H.defaultEval
@@ -163,33 +166,42 @@ handleAction (LoadTimeline amount idx hour) = do
 handleAction (HandleChildTimeline Timeline.OutputBack) = H.modify_ _ { timeline = Nothing }
 handleAction (ShowAmount xs) = H.tell Amount.proxy 0 $ Amount.Open xs
 handleAction (LoadWeek direction) = do
-  {book} <- H.get
-  for_ book \{from, to} -> do
-    { config: Config { apiBCorrespondentHost: host }, user } <- getStore
-    for_ (user :: Maybe User) \{ token } -> do
-      let point | direction == Back.Forward = to
-                | otherwise = from
-      let dateXs = split (Pattern "-") point <#> fromString
-      let dateRecord = do
-           y <- join $ index dateXs 2
-           m <- join $ index dateXs 1
-           d <- join $ index dateXs 0
-           pure { year: y, month: m, day: d }
-      for_ dateRecord \{ year, month, day } -> do 
-        resp <- Request.makeAuth (Just token) host Back.mkFrontApi $ 
-          Back.fetchBalancedBook year month day direction
-        let faiure e = H.modify_ _ { error = pure e }   
-        onFailure resp faiure \{success: book} -> H.modify_ _ { book = pure book }
+  {book, isPast} <- H.get
+  when (isPast || direction == Back.Backward) $
+    for_ book \{from, to} -> do
+      { config: Config { apiBCorrespondentHost: host }, user } <- getStore
+      for_ (user :: Maybe User) \{ token } -> do
+        let point | direction == Back.Forward = to
+                  | otherwise = from
+        let dateXs = split (Pattern "-") point <#> fromString
+        let dateRecord = do
+              y <- join $ index dateXs 0
+              m <- join $ index dateXs 1
+              d <- join $ index dateXs 2
+              pure { year: y, month: m, day: d }
+        for_ dateRecord \{ year, month, day } -> do 
+          resp <- Request.makeAuth (Just token) host Back.mkFrontApi $ 
+            Back.fetchBalancedBook year month day direction
+          let faiure e = H.modify_ _ { error = pure e }
+          onFailure resp faiure \{success: book@{from, to}} -> do 
+            now <- H.liftEffect nowDate
+            let mkNowDate = 
+                    show (fromEnum (D.year now)) <> "-" <> 
+                    show (fromEnum (D.month now)) <> "-" <> 
+                    show (fromEnum (D.day now))
+            let isPast | mkNowDate >= from && mkNowDate <= to = false
+                        | otherwise = true
+            H.modify_ _ { book = pure book, isPast = isPast }
 
 render { book: Nothing, error: Nothing } = 
   HH.div [css "book-container"] [HH.text "book loading..."]
 render { book: _, error: Just e } = 
   HH.div [css "book-container"] [ HH.text $ "error occured during loading: " <> message e ]
-render { book: Just { from, to, institutions: xs }, timeline: Nothing, now } = 
+render { book: Just { from, to, institutions: xs }, timeline: Nothing, now, isPast } = 
   HH.div [css "book-container"] 
   [
       HH.div_ [HH.h2_ [HH.text $ "accounting period: " <> from <> " - " <> to]]
-  ,   maybeElem (head xs) $ renderTimeline now
+  ,   maybeElem (head xs) $ renderTimeline now isPast
   ]
 render { book: Just _, timeline: Just {date, from} } = 
   HH.div [css "book-container"] [Timeline.slot 1 {date: date, from: from} HandleChildTimeline]
@@ -197,7 +209,7 @@ render { book: Just _, timeline: Just {date, from} } =
 
 type Row = { shift :: Int, rows :: forall w i . Array (HTML w i) }
 
-renderTimeline now {title, dayOfWeeksHourly: xs} =
+renderTimeline now isPast {title, dayOfWeeksHourly: xs} =
   HH.div_ $
   ([
       Amount.slot 0
@@ -213,7 +225,7 @@ renderTimeline now {title, dayOfWeeksHourly: xs} =
             fromMaybe undefined ((toEnum idx) :: Maybe DayOfWeek)
         ]) `snoc` HH.span [css "book-timeline-item" ] [HH.text "total"]
   ] <> 
-  (_.rows $ foldl (renderRow now) { shift: 100, rows: [] } (xs :: Array Back.DayOfWeekHourly) )) <>
+  (_.rows $ foldl (renderRow now isPast) { shift: 100, rows: [] } (xs :: Array Back.DayOfWeekHourly) )) <>
   [
       HH.span 
       [HE.onClick (const (LoadWeek Back.Backward)), 
@@ -221,11 +233,12 @@ renderTimeline now {title, dayOfWeeksHourly: xs} =
       [HH.text "previous week"]
   ,   HH.span 
       [HE.onClick (const (LoadWeek Back.Forward)), 
-       css "balanced-book-travel-button-next"] 
+       css "balanced-book-travel-button-next", 
+       HPExt.style $ "cursor:" <> if isPast then "pointer" else "not-allowed" ] 
       [HH.text "next week"]
   ]
 
-renderRow {weekday, hour} {shift: oldShift, rows} {to, from, amountInDayOfWeek: xs, total: ys} =
+renderRow {weekday, hour} isPast {shift: oldShift, rows} {to, from, amountInDayOfWeek: xs, total: ys} =
   let newShift = oldShift + 20
       renderTotal {amount, currency} = show amount <> "..."
       x = 
@@ -241,10 +254,10 @@ renderRow {weekday, hour} {shift: oldShift, rows} {to, from, amountInDayOfWeek: 
                     else show total
                   isNow = 
                     dow == weekday && 
-                    _.hour from == hour  
+                    _.hour from == hour
                   style | total > 0 && dow == weekday = "book-timeline-item-today"
                         | total > 0 && not isNow = "book-timeline-item-past"
-                        | isNow = "book-timeline-item-active-live pulse-live"
+                        | isNow && not isPast = "book-timeline-item-active-live pulse-live"
                         | otherwise = "book-timeline-item"
               in HH.span [css style, HE.onClick (const (LoadTimeline total dow (_.hour from)))] [HH.text text])
              `snoc`
