@@ -50,6 +50,7 @@ module BCorrespondent.Api.Foreign.Frontend
   , decodeWalletType
   , encodeCurrency
   , encodeDirection
+  , fetchBalancedBook
   , fetchNotifications
   , fetchShiftHistoryTimeline
   , fetchTimelineForParticularHour
@@ -75,7 +76,7 @@ import Prelude
 
 import BCorrespondent.Api.Foreign.Common
 
-import Data.Function.Uncurried (Fn1, Fn3, runFn3, Fn2, runFn2, runFn4, Fn4)
+import Data.Function.Uncurried (Fn1, Fn3, runFn3, Fn2, runFn2, runFn4, Fn4, Fn6, runFn6)
 import Effect.Aff.Compat as AC
 import Foreign.Object (Object)
 import Data.Argonaut.Encode (encodeJson)
@@ -420,3 +421,8 @@ foreign import _initBalancedBook :: Fn2 WithError FrontApi (AC.EffectFnAff (Obje
 
 initBalancedBook :: FrontApi -> AC.EffectFnAff (Object (Response BalancedBook))
 initBalancedBook = runFn2 _initBalancedBook withError
+
+foreign import _fetchBalancedBook :: Fn6 WithError Int Int Int Foreign FrontApi (AC.EffectFnAff (Object (Response BalancedBook)))
+
+fetchBalancedBook :: Int -> Int -> Int -> Direction -> FrontApi -> AC.EffectFnAff (Object (Response BalancedBook))
+fetchBalancedBook y m d direction = runFn6 _fetchBalancedBook withError y m d (encodeDirection direction)

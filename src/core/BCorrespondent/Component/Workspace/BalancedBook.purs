@@ -34,6 +34,10 @@ import System.Time (addDays, nowDate, nowTime)
 import Data.DateTime as D
 import Effect.Aff as Aff
 import Control.Monad.Rec.Class (forever)
+import Data.String (split)
+import Data.String.Pattern (Pattern (..))
+import Data.Int (fromString)
+import Data.Array (index)
 
 import Undefined
 
@@ -81,11 +85,13 @@ instance BoundedEnum DayOfWeek where
   toEnum = genericToEnum
   fromEnum = genericFromEnum
 
+
 data Action = 
        Initialize 
      | LoadTimeline Int Int Int 
      | HandleChildTimeline Timeline.Output
      | ShowAmount (Array Back.ForeignDayOfWeeksHourlyTotalSum)
+     | LoadWeek Back.Direction
 
 type Timeline = { date :: String, from :: Int }
 
@@ -156,10 +162,28 @@ handleAction (LoadTimeline amount idx hour) = do
   else pure unit    
 handleAction (HandleChildTimeline Timeline.OutputBack) = H.modify_ _ { timeline = Nothing }
 handleAction (ShowAmount xs) = H.tell Amount.proxy 0 $ Amount.Open xs
+handleAction (LoadWeek direction) = do
+  {book} <- H.get
+  for_ book \{from, to} -> do
+    { config: Config { apiBCorrespondentHost: host }, user } <- getStore
+    for_ (user :: Maybe User) \{ token } -> do
+      let point | direction == Back.Forward = to
+                | otherwise = from
+      let dateXs = split (Pattern "-") point <#> fromString
+      let dateRecord = do
+           y <- join $ index dateXs 2
+           m <- join $ index dateXs 1
+           d <- join $ index dateXs 0
+           pure { year: y, month: m, day: d }
+      for_ dateRecord \{ year, month, day } -> do 
+        resp <- Request.makeAuth (Just token) host Back.mkFrontApi $ 
+          Back.fetchBalancedBook year month day direction
+        let faiure e = H.modify_ _ { error = pure e }   
+        onFailure resp faiure \{success: book} -> H.modify_ _ { book = pure book }
 
 render { book: Nothing, error: Nothing } = 
   HH.div [css "book-container"] [HH.text "book loading..."]
-render { book: Nothing, error: Just e } = 
+render { book: _, error: Just e } = 
   HH.div [css "book-container"] [ HH.text $ "error occured during loading: " <> message e ]
 render { book: Just { from, to, institutions: xs }, timeline: Nothing, now } = 
   HH.div [css "book-container"] 
@@ -174,7 +198,7 @@ render { book: Just _, timeline: Just {date, from} } =
 type Row = { shift :: Int, rows :: forall w i . Array (HTML w i) }
 
 renderTimeline now {title, dayOfWeeksHourly: xs} =
-  HH.div_
+  HH.div_ $
   ([
       Amount.slot 0
   ,   HH.div [css "book-timeline-title"] [HH.text title]
@@ -188,7 +212,18 @@ renderTimeline now {title, dayOfWeeksHourly: xs} =
           [HH.text $ show $ 
             fromMaybe undefined ((toEnum idx) :: Maybe DayOfWeek)
         ]) `snoc` HH.span [css "book-timeline-item" ] [HH.text "total"]
-  ] <> (_.rows $ foldl (renderRow now) { shift: 100, rows: [] } (xs :: Array Back.DayOfWeekHourly) ))
+  ] <> 
+  (_.rows $ foldl (renderRow now) { shift: 100, rows: [] } (xs :: Array Back.DayOfWeekHourly) )) <>
+  [
+      HH.span 
+      [HE.onClick (const (LoadWeek Back.Backward)), 
+       css "balanced-book-travel-button-previous"] 
+      [HH.text "previous week"]
+  ,   HH.span 
+      [HE.onClick (const (LoadWeek Back.Forward)), 
+       css "balanced-book-travel-button-next"] 
+      [HH.text "next week"]
+  ]
 
 renderRow {weekday, hour} {shift: oldShift, rows} {to, from, amountInDayOfWeek: xs, total: ys} =
   let newShift = oldShift + 20
