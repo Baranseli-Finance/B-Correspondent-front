@@ -2,8 +2,9 @@ module BCorrespondent.Component.Workspace.BalancedBook.Timeline (Output(..), slo
 
 import Prelude
 
-import BCorrespondent.Component.HTML.Utils (css)
+import BCorrespondent.Component.HTML.Utils (css, maybeElem)
 import BCorrespondent.Capability.LogMessages (logDebug)
+import BCorrespondent.Component.Workspace.BalancedBook.History as History
 
 import Halogen as H
 import Halogen.HTML as HH
@@ -18,6 +19,7 @@ import Data.Int (fromString)
 import Data.Array (index)
 import Data.Foldable (for_)
 import Data.Enum (fromEnum)
+import Data.Maybe (Maybe (..))
 
 proxy = Proxy :: _ "workspace_balanced_book_timeline"
 
@@ -29,14 +31,12 @@ data Output = OutputBack
 
 data Action = Initialize | Back
 
-type State = { date :: String, from :: Int }
-
-type Date = { year :: Int, month :: Int, day :: Int }
+type State = { date :: String, from :: Int, history :: Maybe History.Date }
 
 component =
   H.mkComponent
-    { initialState: identity
-    , render: const render
+    { initialState: \{date, from} -> { date: date, from: from, history: Nothing }
+    , render: render
     , eval: H.mkEval H.defaultEval
       { handleAction = handleAction
       , initialize = pure Initialize 
@@ -46,7 +46,7 @@ component =
 handleAction Back = H.raise OutputBack
 handleAction Initialize = do
   now <- H.liftEffect nowDate
-  {date} <- H.get
+  {date, from} <- H.get
   let dateXs = split (Pattern "-") date <#> fromString
   let dateRecord = do
         y <- join $ index dateXs 2
@@ -58,9 +58,11 @@ handleAction Initialize = do
        fromEnum (D.month now) == m && 
        fromEnum (D.day now) == d 
     then logDebug $ loc <> " ---> loading live timeline"
-    else logDebug $ loc <> " ---> loading history timeline"
+    else do 
+      logDebug $ loc <> " ---> loading history timeline"
+      H.modify_ _ { history = Just {year: y , month: m, day: d, hour: from} }
 
-render = 
+render {history} = 
   HH.div_
   [ 
       HH.div 
@@ -69,6 +71,7 @@ render =
           HH.span 
           [HPExt.style "cursor:pointer", 
            HE.onClick (const Back)]
-          [HH.i [HPExt.style "font-size:40px", css "fa fa-arrow-left fa-2xs" ] [] ]
+          [HH.i [HPExt.style "font-size:40px", css "fa fa-arrow-left fa-2xs" ] [] ]  
       ]
+  ,   maybeElem history $ History.slot 0       
   ]
