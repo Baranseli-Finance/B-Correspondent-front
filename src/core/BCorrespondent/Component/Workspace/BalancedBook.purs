@@ -103,7 +103,8 @@ type State =
        error :: Maybe String,
        timeline :: Maybe Timeline,
        now :: Now,
-       isPast :: Boolean
+       isPast :: Boolean,
+       canTravelBack :: Boolean
      }
 
 component =
@@ -114,7 +115,8 @@ component =
         error: Nothing, 
         timeline: Nothing,
         now: { weekday: 0, hour: 0 },
-        isPast: false
+        isPast: false,
+        canTravelBack: true
       }
     , render: render
     , eval: H.mkEval H.defaultEval
@@ -123,16 +125,24 @@ component =
       }
     }
 
+canMoveBack from to = do 
+  {since: ({year, month, day} :: Back.InvoiceSince) } <- getStore
+  let mkNow = show year <> "-" <> show month <> "-" <> show day
+  pure $ not $ mkNow >= from && mkNow <= to
+
 handleAction Initialize = do
   { config: Config { apiBCorrespondentHost: host }, user } <- getStore
   for_ (user :: Maybe User) \{ token } -> do 
     resp <- Request.makeAuth (Just token) host Back.mkFrontApi $ 
       Back.initBalancedBook
     let faiure e = H.modify_ _ { error = pure e } 
-    onFailure resp faiure \{success: book} -> do
+    onFailure resp faiure \{success: book@{from, to}} -> do
       dow <- map (fromEnum <<< D.weekday) $ H.liftEffect nowDate
       currHour <- map (fromEnum <<< D.hour) $ H.liftEffect nowTime
-      H.modify_ _ { book = pure book, now = {weekday: dow, hour: currHour}  }
+      
+      can <- canMoveBack from to
+
+      H.modify_ _ { book = pure book, now = {weekday: dow, hour: currHour}, canTravelBack = can }
 
       void $ H.fork $ forever $ do
         H.liftAff $ Aff.delay $ Aff.Milliseconds 60000.0
@@ -165,43 +175,51 @@ handleAction (LoadTimeline amount idx hour) = do
   else pure unit    
 handleAction (HandleChildTimeline Timeline.OutputBack) = H.modify_ _ { timeline = Nothing }
 handleAction (ShowAmount xs) = H.tell Amount.proxy 0 $ Amount.Open xs
-handleAction (LoadWeek direction) = do
-  {book, isPast} <- H.get
-  when (isPast || direction == Back.Backward) $
-    for_ book \{from, to} -> do
-      { config: Config { apiBCorrespondentHost: host }, user } <- getStore
-      for_ (user :: Maybe User) \{ token } -> do
-        let point | direction == Back.Forward = to
-                  | otherwise = from
-        let dateXs = split (Pattern "-") point <#> fromString
-        let dateRecord = do
-              y <- join $ index dateXs 0
-              m <- join $ index dateXs 1
-              d <- join $ index dateXs 2
-              pure { year: y, month: m, day: d }
-        for_ dateRecord \{ year, month, day } -> do 
-          resp <- Request.makeAuth (Just token) host Back.mkFrontApi $ 
-            Back.fetchBalancedBook year month day direction
-          let faiure e = H.modify_ _ { error = pure e }
-          onFailure resp faiure \{success: book@{from, to}} -> do 
-            now <- H.liftEffect nowDate
-            let mkNowDate = 
-                    show (fromEnum (D.year now)) <> "-" <> 
-                    show (fromEnum (D.month now)) <> "-" <> 
-                    show (fromEnum (D.day now))
-            let isPast | mkNowDate >= from && mkNowDate <= to = false
-                        | otherwise = true
-            H.modify_ _ { book = pure book, isPast = isPast }
+handleAction (LoadWeek direction) 
+  | direction == Back.Forward = do 
+      {isPast} <- H.get
+      when isPast $ fetchBalancedBook direction
+  | otherwise = do 
+      {canTravelBack} <- H.get
+      when canTravelBack $ fetchBalancedBook direction
+
+fetchBalancedBook direction = do
+  {book} <- H.get
+  for_ book \{from, to} -> do
+    { config: Config { apiBCorrespondentHost: host }, user } <- getStore
+    for_ (user :: Maybe User) \{ token } -> do
+      let point | direction == Back.Forward = to
+                | otherwise = from
+      let dateXs = split (Pattern "-") point <#> fromString
+      let dateRecord = do
+            y <- join $ index dateXs 0
+            m <- join $ index dateXs 1
+            d <- join $ index dateXs 2
+            pure { year: y, month: m, day: d }
+      for_ dateRecord \{ year, month, day } -> do 
+        resp <- Request.makeAuth (Just token) host Back.mkFrontApi $ 
+          Back.fetchBalancedBook year month day direction
+        let faiure e = H.modify_ _ { error = pure e }
+        onFailure resp faiure \{success: book@{from, to}} -> do
+          can <- canMoveBack from to
+          now <- H.liftEffect nowDate
+          let mkNowDate = 
+                show (fromEnum (D.year now)) <> "-" <> 
+                show (fromEnum (D.month now)) <> "-" <> 
+                show (fromEnum (D.day now))
+          let isPast | mkNowDate >= from && mkNowDate <= to = false
+                     | otherwise = true
+          H.modify_ _ { book = pure book, isPast = isPast, canTravelBack = can }
 
 render { book: Nothing, error: Nothing } = 
   HH.div [css "book-container"] [HH.text "book loading..."]
 render { book: _, error: Just e } = 
   HH.div [css "book-container"] [ HH.text $ "error occured during loading: " <> message e ]
-render { book: Just { from, to, institutions: xs }, timeline: Nothing, now, isPast } = 
+render { book: Just { from, to, institutions: xs }, timeline: Nothing, now, isPast, canTravelBack } = 
   HH.div [css "book-container"] 
   [
       HH.div_ [HH.h2_ [HH.text $ "accounting period: " <> from <> " - " <> to]]
-  ,   maybeElem (head xs) $ renderTimeline now isPast
+  ,   maybeElem (head xs) $ renderTimeline now isPast canTravelBack
   ]
 render { book: Just _, timeline: Just {date, from} } = 
   HH.div [css "book-container"] [Timeline.slot 1 {date: date, from: from} HandleChildTimeline]
@@ -209,7 +227,7 @@ render { book: Just _, timeline: Just {date, from} } =
 
 type Row = { shift :: Int, rows :: forall w i . Array (HTML w i) }
 
-renderTimeline now isPast {title, dayOfWeeksHourly: xs} =
+renderTimeline now isPast canTravelBack {title, dayOfWeeksHourly: xs} =
   HH.div_ $
   ([
       Amount.slot 0
@@ -229,7 +247,8 @@ renderTimeline now isPast {title, dayOfWeeksHourly: xs} =
   [
       HH.span 
       [HE.onClick (const (LoadWeek Back.Backward)), 
-       css "balanced-book-travel-button-previous"] 
+       css "balanced-book-travel-button-previous", 
+       HPExt.style $ "cursor:" <> if canTravelBack then "pointer" else "not-allowed" ]
       [HH.text "previous week"]
   ,   HH.span 
       [HE.onClick (const (LoadWeek Back.Forward)), 
