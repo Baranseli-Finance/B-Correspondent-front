@@ -1,4 +1,11 @@
-module BCorrespondent.Component.Workspace.Menu (slot, Output (..)) where
+module BCorrespondent.Component.Workspace.Menu
+  ( Action(..)
+  , Output(..)
+  , Query(..)
+  , proxy
+  , slot
+  )
+  where
 
 import Prelude
 
@@ -19,7 +26,8 @@ import Data.Enum.Generic
         genericFromEnum
        )
 import Data.Bounded (class Bounded)
-import Data.Maybe (fromMaybe)
+import Data.Maybe (Maybe (..), fromMaybe)
+import AppM (AppM)
 
 import Undefined
 
@@ -30,6 +38,8 @@ loc = "BCorrespondent.Component.Workspace.Menu"
 slot n = HH.slot proxy n component unit
 
 data Output = Dashboard | BalancedBook | Wallet | TechSupport
+
+data Query a = SwithToMenu Int a
 
 derive instance genericOutput :: Generic Output _
 derive instance eqOutput :: Eq Output
@@ -69,12 +79,15 @@ instance BoundedEnum Action where
 
 type State = { selected :: Int }
 
+
 component =
   H.mkComponent
     { initialState: const { selected: 0 }
     , render: render
     , eval: H.mkEval H.defaultEval
-      { handleAction = handleAction }
+      { handleAction = handleAction
+      , handleQuery = handleQuery
+      }
     }
     where
       handleAction OpenDashboard = 
@@ -89,6 +102,10 @@ component =
       handleAction OpenTechSupport = 
         H.modify_ _ { selected = fromEnum OpenTechSupport } *>  
           H.raise (fromMaybe undefined (toEnum (fromEnum OpenTechSupport)))
+      handleQuery 
+        :: forall a s . Query a
+        -> H.HalogenM State Action s Output AppM (Maybe a)
+      handleQuery (SwithToMenu idx a) = map (const (Just a)) $ H.modify_ _ { selected = idx }
 
 render { selected } = 
   HH.div [css "workspace-menu"]

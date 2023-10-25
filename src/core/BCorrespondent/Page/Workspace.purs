@@ -73,7 +73,11 @@ component =
         H.tell User.Notification.proxy 2 $ User.Notification.Open
       handleAction 
         (HandleChildBalancedBook
-         (Workspace.BalancedBook.OutputLive from)) =  H.modify_ _ { component = Dashboard Nothing }
+         (Workspace.BalancedBook.OutputLive from)) = do 
+           H.modify_ _ { component = Dashboard Nothing }
+           H.tell Workspace.Menu.proxy 3 $ 
+             Workspace.Menu.SwithToMenu 
+               (fromEnum Workspace.Menu.OpenDashboard)
       handleAction (HandleChildWorkspaceMenu out) =
         H.modify_ _ {
           component = 
