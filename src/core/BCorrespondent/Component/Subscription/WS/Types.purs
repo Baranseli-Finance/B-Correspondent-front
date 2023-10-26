@@ -1,8 +1,10 @@
 module BCorrespondent.Component.Subscription.WS.Types
   ( Resource(..)
   , Transaction
+  , TransactionBalancedBook
   , Wallet
   , encodeResource
+  , transactionBalancedBookUrl
   , transactionUrl
   , walletUrl
   , withdrawalUrl
@@ -31,7 +33,20 @@ type Wallet =
        amount :: Number
      }
 
-data Resource = Transaction | Wallet | Withdrawal
+type TransactionBalancedBook =
+      { from :: Int, 
+        to :: Int, 
+        amount :: Number, 
+        currency :: Foreign,
+        dow :: Int,
+        institutionTitle :: String
+      }
+
+data Resource = 
+       Transaction 
+     | Wallet 
+     | Withdrawal 
+     | BalancedBookTransaction
 
 derive instance genericResource :: Generic Resource _
 
@@ -41,3 +56,4 @@ encodeResource = unsafeFromForeign <<< genericEncodeEnum {constructorTagTransfor
 transactionUrl = "frontend/user/dashboard/transaction/update"
 walletUrl = "frontend/user/dashboard/wallet/update"
 withdrawalUrl = "institution/fiat/withdraw/history/item/update"
+transactionBalancedBookUrl = "frontend/user/balanced-book/transaction/add"

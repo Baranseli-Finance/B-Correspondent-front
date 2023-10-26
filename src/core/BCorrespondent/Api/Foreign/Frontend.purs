@@ -36,6 +36,7 @@ module BCorrespondent.Api.Foreign.Frontend
   , _end
   , _hour
   , _ident
+  , _institutionBalancedBook
   , _min
   , _senderAddress
   , _senderBank
@@ -416,6 +417,9 @@ type BalancedBook =
        to :: String,
        institutions :: Array BalancedBookInstitution 
      }
+
+_institutionBalancedBook = lens _.institutions $ \el x -> el { institutions = x }
+
 
 foreign import _initBalancedBook :: Fn2 WithError FrontApi (AC.EffectFnAff (Object (Response BalancedBook)))
 

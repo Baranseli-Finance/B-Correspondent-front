@@ -10,6 +10,8 @@ import BCorrespondent.Data.Config (Config(..))
 import BCorrespondent.Capability.LogMessages (logDebug)
 import BCorrespondent.Component.Workspace.BalancedBook.Timeline as Timeline
 import BCorrespondent.Component.Workspace.BalancedBook.Amount as Amount
+import BCorrespondent.Component.Subscription.WS as WS
+import BCorrespondent.Component.Subscription.WS.Types (TransactionBalancedBook)
 
 import Halogen as H
 import Halogen.HTML as HH
@@ -27,9 +29,9 @@ import Data.Enum.Generic
 import Data.Maybe (fromMaybe, Maybe (..), maybe)
 import Halogen.Store.Monad (getStore)
 import Data.Foldable (for_)
-import Store (User)
+import Store (User, WS)
 import Effect.Exception (message)
-import Data.Lens ((^.), _2)
+import Data.Lens ((^.), _2, (%~))
 import System.Time (addDays, nowDate, nowTime)
 import Data.DateTime as D
 import Effect.Aff as Aff
@@ -37,8 +39,13 @@ import Control.Monad.Rec.Class (forever)
 import Data.String (split)
 import Data.String.Pattern (Pattern (..))
 import Data.Int (fromString)
-import Data.Array (index)
+import Data.Array (index, singleton, findIndex, modifyAt)
 import Data.DateTime as D
+import Web.Socket as WS
+import Effect.AVar as Async
+import AppM (AppM)
+import Data.Maybe (fromMaybe)
+
 
 import Undefined
 
@@ -86,13 +93,19 @@ instance BoundedEnum DayOfWeek where
   toEnum = genericToEnum
   fromEnum = genericFromEnum
 
+type Slot q = 
+      (workspace_balanced_book_amount :: H.Slot Amount.Query Unit Int, 
+       workspace_balanced_book_timeline :: H.Slot q Timeline.Output Int 
+      )
 
 data Action = 
-       Initialize 
+       Initialize
+     | Finalize
      | LoadTimeline Int Int Int 
      | HandleChildTimeline Timeline.Output
      | ShowAmount (Array Back.ForeignDayOfWeeksHourlyTotalSum)
      | LoadWeek Back.Direction
+     | AddTransaction TransactionBalancedBook
 
 type Timeline = { date :: String, from :: Int }
 
@@ -122,6 +135,7 @@ component =
     , eval: H.mkEval H.defaultEval
       { handleAction = handleAction
       , initialize = pure Initialize
+      , finalize = pure Finalize
       }
     }
 
@@ -130,12 +144,14 @@ canMoveBack from to = do
   let mkNow = show year <> "-" <> show month <> "-" <> show day
   pure $ not $ mkNow >= from && mkNow <= to
 
+
+handleAction :: forall q . Action -> H.HalogenM State Action (Slot q) Output AppM Unit
 handleAction Initialize = do
   { config: Config { apiBCorrespondentHost: host }, user } <- getStore
   for_ (user :: Maybe User) \{ token } -> do 
     resp <- Request.makeAuth (Just token) host Back.mkFrontApi $ 
       Back.initBalancedBook
-    let faiure e = H.modify_ _ { error = pure e } 
+    let faiure e = H.modify_ _ { error = pure $ message e } 
     onFailure resp faiure \{success: book@{from, to}} -> do
       dow <- map (fromEnum <<< D.weekday) $ H.liftEffect nowDate
       currHour <- map (fromEnum <<< D.hour) $ H.liftEffect nowTime
@@ -152,6 +168,17 @@ handleAction Initialize = do
         when (hour /= currHour || 
               dow /= weekday) $
           H.modify_ _ { now = {weekday: dow, hour: currHour} }
+
+      WS.subscribe loc WS.transactionBalancedBookUrl (Just (WS.encodeResource WS.BalancedBookTransaction)) $
+        handleAction <<< AddTransaction <<< _.success
+handleAction Finalize = do
+  { wsVar } <- getStore
+  wsm <- H.liftEffect $ Async.tryTake (wsVar :: Async.AVar (Array WS))
+  for_ wsm \xs ->
+    for_ xs \{ ws, forkId } -> do
+      H.kill forkId
+      H.liftEffect $ WS.close ws
+      logDebug $ loc <> " ---> ws has been killed"          
 handleAction (LoadTimeline amount idx hour) = do 
   {book, now: {weekday, hour: currHour}} <- H.get
   if amount == 0 && idx /= weekday
@@ -182,6 +209,32 @@ handleAction (LoadWeek direction)
   | otherwise = do 
       {canTravelBack} <- H.get
       when canTravelBack $ fetchBalancedBook direction
+handleAction (AddTransaction t) =
+  H.modify_ \s -> 
+    s { book = _.book s <#> \b -> b # Back._institutionBalancedBook %~ modify }
+  where 
+    modify xs = 
+      xs <#> \x@{title} -> 
+        if title /= _.institutionTitle t 
+        then x
+        else x { dayOfWeeksHourly = 
+                   _.dayOfWeeksHourly x <#> \y@{from, to} -> 
+                     if _.hour from == _.from t 
+                        && _.hour to == _.to t
+                     then y {amountInDayOfWeek =
+                              let idxm = flip findIndex (_.amountInDayOfWeek y) \{value} -> value == _.dow t
+                                  add i = flip (modifyAt i) (_.amountInDayOfWeek y) \z -> z { total = _.total z + 1 }
+                              in maybe (singleton { value: _.dow t, total: 1 }) (fromMaybe undefined <<< add) idxm,
+                             total =
+                              let idxm = 
+                                    flip findIndex (_.total y) \{currency} -> 
+                                      Back.decodeCurrency currency ==
+                                      Back.decodeCurrency (_.currency t)
+                                  add i = flip (modifyAt i) (_.total y) \z -> z { amount = _.amount z + _.amount t }
+                              in maybe (singleton { currency: _.currency t, amount: _.amount t }) (fromMaybe undefined <<< add) idxm
+                            }
+                     else y
+               }
 
 fetchBalancedBook direction = do
   {book} <- H.get
@@ -199,7 +252,7 @@ fetchBalancedBook direction = do
       for_ dateRecord \{ year, month, day } -> do 
         resp <- Request.makeAuth (Just token) host Back.mkFrontApi $ 
           Back.fetchBalancedBook year month day direction
-        let faiure e = H.modify_ _ { error = pure e }
+        let faiure e = H.modify_ _ { error = pure $ message e }
         onFailure resp faiure \{success: book@{from, to}} -> do
           can <- canMoveBack from to
           now <- H.liftEffect nowDate
@@ -214,7 +267,7 @@ fetchBalancedBook direction = do
 render { book: Nothing, error: Nothing } = 
   HH.div [css "book-container"] [HH.text "book loading..."]
 render { book: _, error: Just e } = 
-  HH.div [css "book-container"] [ HH.text $ "error occured during loading: " <> message e ]
+  HH.div [css "book-container"] [ HH.text $ "error occured during loading: " <> e ]
 render { book: Just { from, to, institutions: xs }, timeline: Nothing, now, isPast, canTravelBack } = 
   HH.div [css "book-container"] 
   [
@@ -274,13 +327,18 @@ renderRow {weekday, hour} isPast {shift: oldShift, rows} {to, from, amountInDayO
                   isNow = 
                     dow == weekday && 
                     _.hour from == hour
-                  style | total > 0 && dow == weekday = "book-timeline-item-today"
+                  style | total > 0 && dow == weekday = 
+                           "book-timeline-item-today pointer-to-live-tm"
                         | total > 0 && not isNow = "book-timeline-item-past"
-                        | isNow && not isPast = "book-timeline-item-active-live pulse-live"
-                        | otherwise = "book-timeline-item"
-              in HH.span [css style, HE.onClick (const (LoadTimeline total dow (_.hour from)))] [HH.text text])
+                        | otherwise = 
+                            "book-timeline-item " <> 
+                            if dow == weekday 
+                            then "pointer-to-live-tm" 
+                            else mempty
+                  pulseStyle = "book-timeline-item-active-live pulse-live"     
+              in HH.span [css (if isNow && not isPast then pulseStyle else style), HE.onClick (const (LoadTimeline total dow (_.hour from)))] [HH.text text])
              `snoc`
-             let style | length ys > 0 = "book-timeline-item-past pulse"
+             let style | length ys > 0 = "book-timeline-item-past"
                        | otherwise = "book-timeline-item" 
              in HH.span
                 [css style,
