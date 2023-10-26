@@ -336,7 +336,10 @@ renderRow {weekday, hour} isPast {shift: oldShift, rows} {to, from, amountInDayO
                             then "pointer-to-live-tm" 
                             else mempty
                   pulseStyle = "book-timeline-item-active-live pulse-live"     
-              in HH.span [css (if isNow && not isPast then pulseStyle else style), HE.onClick (const (LoadTimeline total dow (_.hour from)))] [HH.text text])
+              in HH.span 
+                 [css (if isNow && not isPast then pulseStyle else style), 
+                  HE.onClick (const (LoadTimeline total dow (_.hour from)))] 
+                  [HH.text text])
              `snoc`
              let style | length ys > 0 = "book-timeline-item-past"
                        | otherwise = "book-timeline-item" 
