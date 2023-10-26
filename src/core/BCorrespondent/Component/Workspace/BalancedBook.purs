@@ -280,7 +280,7 @@ render { book: Just _, timeline: Just {date, from} } =
 
 type Row = { shift :: Int, rows :: forall w i . Array (HTML w i) }
 
-renderTimeline now isPast canTravelBack {title, dayOfWeeksHourly: xs} =
+renderTimeline now isPast canTravelBack {title, dayOfWeeksHourly: xs, balances: ys} =
   HH.div_ $
   ([
       Amount.slot 0
@@ -297,6 +297,7 @@ renderTimeline now isPast canTravelBack {title, dayOfWeeksHourly: xs} =
         ]) `snoc` HH.span [css "book-timeline-item" ] [HH.text "total"]
   ] <> 
   (_.rows $ foldl (renderRow now isPast) { shift: 100, rows: [] } (xs :: Array Back.DayOfWeekHourly) )) <>
+  [HH.div [css "balanced-book-wallets"] (_.rows $ foldl renderWallet { shift: 100, rows: [] } (ys :: Array Back.Balances) )] <>
   [
       HH.span 
       [HE.onClick (const (LoadWeek Back.Backward)), 
@@ -350,3 +351,12 @@ renderRow {weekday, hour} isPast {shift: oldShift, rows} {to, from, amountInDayO
                 [HH.text (maybe "-" renderTotal (head ys))]
               
   in { shift: newShift, rows: rows `snoc` x }
+
+renderWallet record {amount, currency, walletType} = 
+  let x = 
+        HH.div_ 
+        [
+            HH.span [css "balanced-book-wallet-text"] [HH.text (show (Back.decodeWalletType walletType))]
+        ,   HH.span [css "wallet-amount"] [HH.text (show amount <> " " <> show (Back.decodeCurrency currency))]
+        ]
+  in { shift: 0, rows: _.rows record `snoc` x }

@@ -2,6 +2,7 @@ module BCorrespondent.Api.Foreign.Frontend
   ( AmountInDayOfWeek
   , BalancedBook
   , BalancedBookInstitution
+  , Balances
   , Currency(..)
   , DailyBalanceSheet
   , DayOfWeekHourly
@@ -224,8 +225,8 @@ instance Show WalletType where
   show Credit = "credit"
   show WalletTypeNotResolved = "wallet type not resolved"
 
-decodeWalletType :: Foreign -> Maybe WalletType
-decodeWalletType = decodeEnumG
+decodeWalletType :: Foreign -> WalletType
+decodeWalletType = fromMaybe WalletTypeNotResolved <<< decodeEnumG
 
 data Currency = CurrencyNotResolved | USD | EUR
 
@@ -407,9 +408,16 @@ type DayOfWeekHourly =
        amountInDayOfWeek :: Array AmountInDayOfWeek 
      }
 
+type Balances = 
+     { amount :: Number,
+       currency :: Foreign,
+       walletType :: Foreign
+     }
+
 type BalancedBookInstitution = 
      { title :: String,
-       dayOfWeeksHourly :: Array DayOfWeekHourly
+       dayOfWeeksHourly :: Array DayOfWeekHourly,
+       balances :: Array Balances
      }
 
 type BalancedBook =

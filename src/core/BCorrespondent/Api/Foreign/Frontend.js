@@ -110,11 +110,11 @@ export const _initBalancedBook =
         };
     }
 
-export const _fetchBalancedBook = 
-function(withError, y, m, d, dir, api) {
-    return function(onError, onOk) {
-        api.frontendUserBalancedBookYearMonthDayDirectionGet(y, m, d, dir).then(onOk).catch(resp => {
-            return withError(resp, onError)
-        })
-    };
-}
+export const _fetchBalancedBook =
+    function(withError, y, m, d, dir, api) {
+        return function(onError, onOk) {
+            api.frontendUserBalancedBookYearMonthDayDirectionGet(y, m, d, dir).then(onOk).catch(resp => {
+                return withError(resp, onError)
+            })
+        };
+    }

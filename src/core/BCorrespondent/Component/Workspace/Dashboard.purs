@@ -308,10 +308,8 @@ handleforward timeline updater = do
 
 resolveEnums :: Back.Wallet -> Back.EnumResolvedWallet
 resolveEnums x = 
-  x { walletType = 
-       fromMaybe Back.WalletTypeNotResolved $
-         Back.decodeWalletType (_.walletType x),
-     currency = Back.decodeCurrency (_.currency x) 
+  x { walletType = Back.decodeWalletType (_.walletType x),
+      currency = Back.decodeCurrency (_.currency x) 
     }
 
 renderWallets xs = 
