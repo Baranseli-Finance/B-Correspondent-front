@@ -103,7 +103,7 @@ data Action =
      | Finalize
      | LoadTimeline Int Int Int Int
      | HandleChildTimeline Timeline.Output
-     | ShowAmount (Array Back.ForeignDayOfWeeksHourlyTotalSum)
+     | ShowAmount Int (Array Back.ForeignDayOfWeeksHourlyTotalSum)
      | LoadWeek Back.Direction
      | AddTransaction TransactionBalancedBook
 
@@ -213,7 +213,7 @@ handleAction (LoadTimeline institution amount idx hour) = do
     else let msg = "you should be granted an additional right to monitor the second part"
          in Async.send $ Async.mkOrdinary msg Async.Error Nothing
 handleAction (HandleChildTimeline Timeline.OutputBack) = H.modify_ _ { timeline = Nothing }
-handleAction (ShowAmount xs) = H.tell Amount.proxy 0 $ Amount.Open xs
+handleAction (ShowAmount idx xs) = H.tell Amount.proxy idx $ Amount.Open xs
 handleAction (LoadWeek direction) 
   | direction == Back.Forward = do 
       {isPast} <- H.get
@@ -303,7 +303,7 @@ render { book: Just { from, to, institutions: xs }, timeline: Nothing, now, isPa
       [HE.onClick (const (LoadWeek Back.Backward)), 
        css "balanced-book-travel-button-previous", 
        HPExt.style $ "cursor:" <> if canTravelBack then "pointer" else "not-allowed" ]
-      [HH.text "previous week"]
+      [HH.text "prev week"]
   ,   HH.span 
       [HE.onClick (const (LoadWeek Back.Forward)), 
        css "balanced-book-travel-button-next", 
@@ -322,26 +322,37 @@ renderTimeline now isPast canTravelBack {institution, position, wallet, containe
         HH.span 
         [css "book-timeline-item", 
          HPExt.style "border-left: 1px solid black"]
-        [HH.text "time"] : 
+        [HH.text "time"] `timeOp`
         (weekdays <#> \idx ->
           HH.span [css "book-timeline-item" ]
           [HH.text $ show $ 
             fromMaybe undefined ((toEnum idx) :: Maybe DayOfWeek)
-        ]) `snoc` HH.span [css "book-timeline-item" ] [HH.text "total"]
+        ]) `totalOp` HH.span [css "book-timeline-item" ] [HH.text "total"]
   ] <> 
-  (_.rows $ foldl (renderRow ident container now isPast) { shift: 100, rows: [] } (xs :: Array Back.DayOfWeekHourly) )) <>
+  (_.rows $ foldl (renderRow position ident container now isPast) { shift: 100, rows: [] } (xs :: Array Back.DayOfWeekHourly) )) <>
   [HH.div [css wallet] (_.rows $ foldl (renderWallet position) { shift: 100, rows: [] } (ys :: Array Back.Balances) )]
-  where weekdays = (fromEnum Monday .. fromEnum Sunday)
-      
-renderRow ident container {weekday, hour} isPast {shift: oldShift, rows} {to, from, amountInDayOfWeek: xs, total: ys} =
+  where weekdays | position == 1 = (fromEnum Monday .. fromEnum Sunday)
+                 | otherwise = (fromEnum Sunday .. fromEnum Monday)
+        timeOp | position == 1 = (:)
+               | otherwise = flip snoc
+        totalOp | position == 1 = snoc
+                | otherwise = flip (:)     
+
+renderRow position ident container {weekday, hour} isPast {shift: oldShift, rows} {to, from, amountInDayOfWeek: xs, total: ys} =
   let newShift = oldShift + 20
+      totalOp | position == 1 = snoc
+              | otherwise = flip (:)
+      timeOp |  position == 1 = (:)
+             | otherwise = flip snoc
+      timeStyle | position == 1 = "border-left: 1px solid black"
+                | otherwise = "border-right: 1px solid black"  
       renderTotal {amount, currency} = show amount <> "..."
       x = 
           HH.div [css container, HPExt.style $ "top:" <> show newShift <> "px" ] $
             HH.span 
             [css "book-timeline-item", 
-             HPExt.style "border-left: 1px solid black"]
-             [HH.text $ show (_.hour from) <> " - " <> show (_.hour to)] :
+             HPExt.style timeStyle]
+             [HH.text $ show (_.hour from) <> " - " <> show (_.hour to)] `timeOp`
             (xs <#> \{total, value: dow} -> 
               let text = 
                     if total == 0
@@ -363,13 +374,13 @@ renderRow ident container {weekday, hour} isPast {shift: oldShift, rows} {to, fr
                  [css (if isNow && not isPast then pulseStyle else style), 
                   HE.onClick (const (LoadTimeline ident total dow (_.hour from)))] 
                   [HH.text text])
-             `snoc`
+             `totalOp`
              let style | length ys > 0 = "book-timeline-item-past"
                        | otherwise = "book-timeline-item" 
              in HH.span
                 [css style,
                  HPExt.style "border-right: 1px solid black",
-                 HE.onClick (const (ShowAmount ys)) ] 
+                 HE.onClick (const (ShowAmount position ys)) ] 
                 [HH.text (maybe "-" renderTotal (head ys))]
               
   in { shift: newShift, rows: rows `snoc` x }
@@ -387,10 +398,10 @@ renderWallet position record {amount, currency, walletType} =
             ]
          else
             [
-                HH.span [css "balanced-book-wallet-text"] [HH.text (show amount)]
+                HH.span [css "balanced-book-wallet-amount-2"] [HH.text (show amount)]
             ,   let text = 
                       show (Back.decodeWalletType walletType) <> "(" <> 
                       show (Back.decodeCurrency currency) <> ")"
-                in HH.span [css "balanced-book-wallet-amount"] [HH.text text]
+                in HH.span [css "balanced-book-wallet-text-2"] [HH.text text]
             ] 
   in { shift: 0, rows: _.rows record `snoc` HH.div_ item }
