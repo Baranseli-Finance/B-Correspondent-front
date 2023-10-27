@@ -356,7 +356,10 @@ renderWallet record {amount, currency, walletType} =
   let x = 
         HH.div_ 
         [
-            HH.span [css "balanced-book-wallet-text"] [HH.text (show (Back.decodeWalletType walletType))]
-        ,   HH.span [css "wallet-amount"] [HH.text (show amount <> " " <> show (Back.decodeCurrency currency))]
+            let text = 
+                  show (Back.decodeWalletType walletType) <> "(" <> 
+                  show (Back.decodeCurrency currency) <> ")"
+            in HH.span [css "balanced-book-wallet-text"] [HH.text text]
+        ,   HH.span [css "balanced-book-wallet-amount"] [HH.text (show amount)]
         ]
   in { shift: 0, rows: _.rows record `snoc` x }

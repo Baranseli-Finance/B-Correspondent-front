@@ -30,7 +30,7 @@ import Data.Time (hour, minute, Time (..), setHour, setMinute)
 import Data.Time as Time
 import Data.Enum (toEnum, fromEnum)
 import Data.Time.Component
-import Data.Array (uncons, last, sortBy, catMaybes, snoc, head, findIndex, modifyAt, (:))
+import Data.Array (uncons, last, snoc, head, findIndex, modifyAt, (:))
 import Effect.Aff as Aff
 import Store (User)
 import Control.Monad.Rec.Class (forever)
@@ -125,10 +125,7 @@ component =
 
             H.modify_ _ 
               { forkId = Just forkId,
-                wallets = 
-                  flip sortBy (map resolveEnums wallets) \x y -> 
-                    compare (_.walletType x) (_.walletType y) <> 
-                    compare (_.currency x) (_.currency y),
+                wallets = map resolveEnums wallets,
                 timeline = timeline,
                 institution = title
               }
@@ -313,18 +310,12 @@ resolveEnums x =
     }
 
 renderWallets xs = 
-  [  HH.div [css "wallet"] (catMaybes (map (go ((==) Back.Debit)) xs))
-  ,  HH.div [css "wallet"] (catMaybes (map (go ((==) Back.Credit)) xs))
-  ]
-  where 
-    go cond {walletType, currency, amount} 
-      | cond walletType = 
-          Just $ 
-            HH.div_
-            [HH.span [css "wallet-text"] [HH.text (show walletType <> "(" <> show currency <> "): ")], 
-             HH.span [css "wallet-amount"] [HH.text (show amount)]
-            ]
-      | otherwise = Nothing
+  xs <#> \{walletType, currency, amount} -> 
+    HH.div [css "wallet"] 
+    [
+        HH.span [css "wallet-text"] [HH.text (show walletType <> "(" <> show currency <> "): ")]
+    ,   HH.span [css "wallet-amount"] [HH.text (show amount)]
+    ]
 
 render {error: Just e} = HH.text e
 render { timeline: [] } = HH.div_ [HH.text "loading..."]
