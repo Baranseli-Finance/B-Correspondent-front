@@ -204,7 +204,7 @@ handleBackward timeline = do
       resp <- Request.makeAuth (Just token) host Back.mkFrontApi $
         Back.fetchTimelineForParticularHour Back.Backward point
       let failure = Async.send <<< flip Async.mkException loc  
-      onFailure resp failure \{success: gaps} -> ok gaps p
+      onFailure resp failure \{success: {items: gaps }} -> ok gaps p
   where 
     ok gaps {hour, min} = 
         do
@@ -261,7 +261,7 @@ handleforward timeline updater = do
         resp <- Request.makeAuth (Just token) host Back.mkFrontApi $
           Back.fetchTimelineForParticularHour Back.Forward point
         let failure = Async.send <<< flip Async.mkException loc  
-        onFailure resp failure \{success: gaps} -> do
+        onFailure resp failure \{success: {items: gaps }} -> do
           {stepsBackward} <- H.get
           let checkForward = if stepsBackward - 1 == 0 then false else true
           forkId <- 

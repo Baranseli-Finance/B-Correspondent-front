@@ -30,11 +30,13 @@ data Output = OutputBack
 
 data Action = Initialize | Back
 
-type State = { date :: String, from :: Int, history :: Maybe History.Date }
+type State = { date :: String, from :: Int, institution :: Int, history :: Maybe History.Date }
 
 component =
   H.mkComponent
-    { initialState: \{date, from} -> { date: date, from: from, history: Nothing }
+    { initialState: 
+        \{date, from, institution} -> 
+           { date: date, from: from, history: Nothing, institution: institution }
     , render: render
     , eval: H.mkEval H.defaultEval
       { handleAction = handleAction
@@ -45,7 +47,7 @@ component =
 handleAction Back = H.raise OutputBack
 handleAction Initialize = do
   now <- H.liftEffect nowDate
-  {date, from} <- H.get
+  {date, from, institution} <- H.get
   let dateXs = split (Pattern "-") date <#> fromString
   let dateRecord = do
         y <- join $ index dateXs 2
@@ -54,7 +56,7 @@ handleAction Initialize = do
         pure { year: y, month: m, day: d }
   for_ dateRecord \{year: y , month: m, day: d} -> do
       logDebug $ loc <> " ---> loading history timeline"
-      H.modify_ _ { history = Just {year: y , month: m, day: d, hour: from} }
+      H.modify_ _ { history = Just {year: y , month: m, day: d, hour: from, institution: institution} }
 
 render {history} = 
   HH.div_

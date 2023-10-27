@@ -68,7 +68,8 @@ export const _fetchShiftHistoryTimeline =
             let d = params['day']
             let direction = params['direction']
             let hour = params['hour']
-            api.frontendUserHistoryTimelineYearMonthDayDirectionGet(y, m, d, direction, hour).then(onOk).catch(resp => {
+            let inst = params['institution']
+            api.frontendUserHistoryTimelineYearMonthDayDirectionInstitutionGetWithHttpInfo(y, m, d, direction, inst, hour).then(onOk).catch(resp => {
                 return withError(resp, onError)
             })
         };

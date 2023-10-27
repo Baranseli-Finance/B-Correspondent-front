@@ -39,7 +39,7 @@ data Action =
        Initialize
      | HandleChild Timeline.Output
 
-type Date = { year :: Int, month :: Int, day :: Int }
+type Date = { year :: Int, month :: Int, day :: Int, institution :: Int }
 
 type State = 
      { year :: Int,
@@ -50,7 +50,8 @@ type State =
        loaded :: Boolean,
        error :: Maybe String,
        timeline :: Array Back.GapItem,
-       institution :: String
+       institution :: String,
+       institutionIdent :: Int
      }
 
 _timeline = lens _.timeline $ \el x -> el { timeline = x }
@@ -60,7 +61,7 @@ _loaded = lens _.loaded $ \el x -> el { loaded = x }
 
 component =
   H.mkComponent
-    { initialState: \{year, month, day, hour } ->  
+    { initialState: \{year, month, day, hour, institution } ->  
       { year: year,
         month: month,
         day: day,
@@ -69,7 +70,8 @@ component =
         loaded: false,
         error: Nothing,
         timeline: [],
-        institution: mempty :: String
+        institution: mempty :: String,
+        institutionIdent: institution
       }
     , render: render
     , eval: H.mkEval H.defaultEval
@@ -81,12 +83,20 @@ component =
       handleAction Initialize = do 
         { config: Config { apiBCorrespondentHost: host }, user } <- getStore
         for_ (user :: Maybe User) \{ token } -> do
-          {year, month, day, hour} <- H.get
-          let params = {year: year, month: month, day: day, direction: Back.encodeDirection Back.Forward, hour: hour}
+          {year, month, day, hour, institutionIdent} <- H.get
+          let params = 
+                { year: year, 
+                  month: month, 
+                  day: day, 
+                  direction: 
+                    Back.encodeDirection Back.Forward, 
+                  hour: hour, 
+                  institution: institutionIdent
+                }
           resp <- Request.makeAuth (Just token) host Back.mkFrontApi $ 
             Back.fetchShiftHistoryTimeline params
           onFailure resp (Async.send <<< flip Async.mkException loc) 
-            \{success: gaps} -> do
+            \{success: { items: gaps }} -> do
                 time <- H.liftEffect $ nowTime
                 let from = Timeline.setTime 0 hour time
                 let to = Timeline.setTime 0 (hour + 1) time
@@ -109,12 +119,20 @@ component =
               do
                 { config: Config { apiBCorrespondentHost: host }, user } <- getStore
                 for_ (user :: Maybe User) \{ token } -> do
-                  {year, month, day} <- H.get
-                  let params = {year: year, month: month, day: day, direction: Back.encodeDirection direction, hour: hour}
+                  {year, month, day, institutionIdent} <- H.get
+                  let params = 
+                        { year: year, 
+                          month: month, 
+                          day: day, 
+                          direction: 
+                            Back.encodeDirection direction, 
+                            hour: hour, 
+                            institution: institutionIdent
+                        }
                   resp <- Request.makeAuth (Just token) host Back.mkFrontApi $ 
                     Back.fetchShiftHistoryTimeline params
                   onFailure resp (Async.send <<< flip Async.mkException loc) 
-                    \{success: gaps} -> do
+                    \{success: { items: gaps }} -> do
                       time <- H.liftEffect $ nowTime
                       let from = 
                             if direction == Back.Forward 

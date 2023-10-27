@@ -14,7 +14,8 @@ export const _mkApiClient = function(jwt, host) {
     }
 }
 
-export const _getDataFromObj = left => right => resp => {
+export const _getDataFromObj = left => right => income => {
+    let resp = income['data'] ? income['data'] : income;
     let success = resp.getSuccess();
 
     let errMsg = (xs) => {

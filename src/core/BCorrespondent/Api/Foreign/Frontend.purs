@@ -16,6 +16,7 @@ module BCorrespondent.Api.Foreign.Frontend
   , GapItemTime
   , GapItemUnit
   , GapItemUnitStatus(..)
+  , GapItemWrapper
   , HistoryTimeline
   , Init
   , InvoiceSince
@@ -289,7 +290,9 @@ type NextGap = { gap :: GapItem }
 loadNextGap :: String -> String -> FrontApi -> AC.EffectFnAff (Object (Response NextGap))
 loadNextGap = runFn4 _loadNextGap withError
 
-foreign import _fetchTimelineForParticularHour :: Fn4 WithError Foreign String FrontApi (AC.EffectFnAff (Object (Response (Array GapItem))))
+type GapItemWrapper = { items :: Array GapItem }
+
+foreign import _fetchTimelineForParticularHour :: Fn4 WithError Foreign String FrontApi (AC.EffectFnAff (Object (Response GapItemWrapper)))
 
 data Direction = Backward | Forward
 
@@ -303,7 +306,7 @@ derive instance eqDirection :: Eq Direction
 encodeDirection :: Direction -> Foreign
 encodeDirection = genericEncodeEnum {constructorTagTransform: toLower}
 
-fetchTimelineForParticularHour :: Direction -> String -> FrontApi -> AC.EffectFnAff (Object (Response (Array GapItem)))
+fetchTimelineForParticularHour :: Direction -> String -> FrontApi -> AC.EffectFnAff (Object (Response GapItemWrapper))
 fetchTimelineForParticularHour direction = runFn4 _fetchTimelineForParticularHour withError (encodeDirection direction)
 
 type Transaction = { transaction :: TransactionValue }
@@ -360,12 +363,13 @@ type FetchShiftHistoryTimelineParams =
        month :: Int,
        day :: Int,
        direction :: Foreign,
-       hour :: Int 
+       hour :: Int,
+       institution :: Int
      }
 
-foreign import _fetchShiftHistoryTimeline :: Fn3 WithError FetchShiftHistoryTimelineParams FrontApi (AC.EffectFnAff (Object (Response (Array GapItem))))
+foreign import _fetchShiftHistoryTimeline :: Fn3 WithError FetchShiftHistoryTimelineParams FrontApi (AC.EffectFnAff (Object (Response GapItemWrapper)))
 
-fetchShiftHistoryTimeline :: FetchShiftHistoryTimelineParams -> FrontApi -> AC.EffectFnAff (Object (Response (Array GapItem)))
+fetchShiftHistoryTimeline :: FetchShiftHistoryTimelineParams -> FrontApi -> AC.EffectFnAff (Object (Response GapItemWrapper))
 fetchShiftHistoryTimeline = runFn3 _fetchShiftHistoryTimeline withError
 
 printTimline timeline = 
@@ -416,6 +420,7 @@ type Balances =
 
 type BalancedBookInstitution = 
      { title :: String,
+       ident :: Int,
        dayOfWeeksHourly :: Array DayOfWeekHourly,
        balances :: Array Balances
      }

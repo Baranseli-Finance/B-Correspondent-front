@@ -23,7 +23,8 @@ type JwtUser =
      { ident :: Int, 
        jwtuuid :: String, 
        login :: String, 
-       jwtclaims :: JwtClaims 
+       jwtclaims :: JwtClaims,
+       institution :: Int
      }
 
 foreign import parse :: String -> Effect JwtUser

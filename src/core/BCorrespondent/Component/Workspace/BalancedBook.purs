@@ -12,6 +12,7 @@ import BCorrespondent.Component.Workspace.BalancedBook.Timeline as Timeline
 import BCorrespondent.Component.Workspace.BalancedBook.Amount as Amount
 import BCorrespondent.Component.Subscription.WS as WS
 import BCorrespondent.Component.Subscription.WS.Types (TransactionBalancedBook)
+import BCorrespondent.Component.Async as Async
 
 import Halogen as H
 import Halogen.HTML as HH
@@ -100,13 +101,13 @@ type Slot q =
 data Action = 
        Initialize
      | Finalize
-     | LoadTimeline Int Int Int 
+     | LoadTimeline Int Int Int Int
      | HandleChildTimeline Timeline.Output
      | ShowAmount (Array Back.ForeignDayOfWeeksHourlyTotalSum)
      | LoadWeek Back.Direction
      | AddTransaction TransactionBalancedBook
 
-type Timeline = { date :: String, from :: Int }
+type Timeline = { date :: String, from :: Int, institution :: Int }
 
 type Now = { weekday :: Int, hour :: Int } 
 
@@ -187,27 +188,30 @@ handleAction Finalize = do
       H.kill forkId
       H.liftEffect $ WS.close ws
       logDebug $ loc <> " ---> ws has been killed"          
-handleAction (LoadTimeline amount idx hour) = do 
+handleAction (LoadTimeline institution amount idx hour) = do 
   {book, now: {weekday, hour: currHour}} <- H.get
-  if amount == 0 && idx /= weekday
-  then pure unit
-  else if idx == weekday
-  then H.raise $ OutputLive currHour
-  else if amount /= 0 
-  then
-    for_ book \{from} -> do
-      let days 
-           | toEnum idx == Just Monday || 
-             toEnum idx == Just Sunday = 0
-           | otherwise = idx - 1
-      from' <- H.liftEffect $ addDays days from
-      let msg = 
-            loc <> " ----> loading timeline for " <> 
-            from' <> ", time gap: " <>
-            show hour <> "-" <> show (hour + 1)
-      logDebug msg
-      H.modify_ _ { timeline = Just { date: from', from: hour } }
-  else pure unit    
+  {user} <- getStore
+  for_ user \{jwtUser: {institution: ident} } ->
+    if amount == 0 && idx /= weekday
+    then pure unit
+    else if idx == weekday && ident == institution
+    then H.raise $ OutputLive currHour
+    else if amount /= 0  && ident == institution
+    then
+        for_ book \{from} -> do
+        let days 
+              | toEnum idx == Just Monday || 
+                toEnum idx == Just Sunday = 0
+              | otherwise = idx - 1
+        from' <- H.liftEffect $ addDays days from
+        let msg = 
+                loc <> " ----> loading timeline for " <> 
+                from' <> ", time gap: " <>
+                show hour <> "-" <> show (hour + 1)
+        logDebug msg
+        H.modify_ _ { timeline = Just { date: from', from: hour, institution: institution } }
+    else let msg = "you should be granted an additional right to monitor the second part"
+         in Async.send $ Async.mkOrdinary msg Async.Error Nothing
 handleAction (HandleChildTimeline Timeline.OutputBack) = H.modify_ _ { timeline = Nothing }
 handleAction (ShowAmount xs) = H.tell Amount.proxy 0 $ Amount.Open xs
 handleAction (LoadWeek direction) 
@@ -306,13 +310,13 @@ render { book: Just { from, to, institutions: xs }, timeline: Nothing, now, isPa
        HPExt.style $ "cursor:" <> if isPast then "pointer" else "not-allowed" ] 
       [HH.text "next week"]
   ]
-render { book: Just _, timeline: Just {date, from} } = 
-  HH.div [css "book-container"] [Timeline.slot 1 {date: date, from: from} HandleChildTimeline]
+render { book: Just _, timeline: Just {date, from, institution} } = 
+  HH.div [css "book-container"] [Timeline.slot 0 {date: date, from: from, institution: institution} HandleChildTimeline]
 
-renderTimeline now isPast canTravelBack {institution, position, wallet, container} {title, dayOfWeeksHourly: xs, balances: ys} =
+renderTimeline now isPast canTravelBack {institution, position, wallet, container} {title, ident, dayOfWeeksHourly: xs, balances: ys} =
   HH.div_ $
   ([
-      Amount.slot 0
+      Amount.slot position
   ,   HH.div [css institution] [HH.text title]
   ,   HH.div [css container] $
         HH.span 
@@ -325,11 +329,11 @@ renderTimeline now isPast canTravelBack {institution, position, wallet, containe
             fromMaybe undefined ((toEnum idx) :: Maybe DayOfWeek)
         ]) `snoc` HH.span [css "book-timeline-item" ] [HH.text "total"]
   ] <> 
-  (_.rows $ foldl (renderRow container now isPast) { shift: 100, rows: [] } (xs :: Array Back.DayOfWeekHourly) )) <>
+  (_.rows $ foldl (renderRow ident container now isPast) { shift: 100, rows: [] } (xs :: Array Back.DayOfWeekHourly) )) <>
   [HH.div [css wallet] (_.rows $ foldl (renderWallet position) { shift: 100, rows: [] } (ys :: Array Back.Balances) )]
   where weekdays = (fromEnum Monday .. fromEnum Sunday)
       
-renderRow container {weekday, hour} isPast {shift: oldShift, rows} {to, from, amountInDayOfWeek: xs, total: ys} =
+renderRow ident container {weekday, hour} isPast {shift: oldShift, rows} {to, from, amountInDayOfWeek: xs, total: ys} =
   let newShift = oldShift + 20
       renderTotal {amount, currency} = show amount <> "..."
       x = 
@@ -357,7 +361,7 @@ renderRow container {weekday, hour} isPast {shift: oldShift, rows} {to, from, am
                   pulseStyle = "book-timeline-item-active-live pulse-live"     
               in HH.span 
                  [css (if isNow && not isPast then pulseStyle else style), 
-                  HE.onClick (const (LoadTimeline total dow (_.hour from)))] 
+                  HE.onClick (const (LoadTimeline ident total dow (_.hour from)))] 
                   [HH.text text])
              `snoc`
              let style | length ys > 0 = "book-timeline-item-past"

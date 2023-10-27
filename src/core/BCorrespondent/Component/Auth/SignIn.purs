@@ -176,7 +176,7 @@ component =
         else H.modify_ _ { hash = Just hash, errMsg = Nothing }
 
 render { login, password, errMsg, hash, code, stage } =
-  HH.div [HPExt.style "position:absolute;top:30%;left:46%"]
+  HH.div [HPExt.style "position:absolute;top:100px;left:46%"]
   [                            
       HH.h4_ [ HH.text ("Sign in | " <> stage) ]
   ,   if isNothing errMsg then HH.div_ []
