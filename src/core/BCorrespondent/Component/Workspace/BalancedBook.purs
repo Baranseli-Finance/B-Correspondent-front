@@ -19,7 +19,7 @@ import Halogen.HTML.Properties.Extended as HPExt
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Core (HTML)
 import Type.Proxy (Proxy(..))
-import Data.Array (zip, (..), (:), snoc, head, foldl, length)
+import Data.Array (zip, (..), (:), snoc, head, foldl, length, index, singleton, findIndex, modifyAt, reverse)
 import Data.Lens (_1, _2, (^.))
 import Data.Generic.Rep (class Generic)
 import Data.Enum (class Enum, class BoundedEnum, fromEnum, toEnum)
@@ -39,13 +39,12 @@ import Control.Monad.Rec.Class (forever)
 import Data.String (split)
 import Data.String.Pattern (Pattern (..))
 import Data.Int (fromString)
-import Data.Array (index, singleton, findIndex, modifyAt)
 import Data.DateTime as D
 import Web.Socket as WS
 import Effect.AVar as Async
 import AppM (AppM)
 import Data.Maybe (fromMaybe)
-
+import Data.Tuple (uncurry)
 
 import Undefined
 
@@ -118,6 +117,15 @@ type State =
        now :: Now,
        isPast :: Boolean,
        canTravelBack :: Boolean
+     }
+
+type Row = { shift :: Int, rows :: forall w i . Array (HTML w i) }
+
+type BookCSS =
+     { institution :: String, 
+       wallet :: String,
+       container :: String,
+       position :: Int
      }
 
 component =
@@ -264,41 +272,29 @@ fetchBalancedBook direction = do
                      | otherwise = true
           H.modify_ _ { book = pure book, isPast = isPast, canTravelBack = can }
 
+
+bookCSSxs = 
+  [ { institution: "book-timeline-title",
+      container: "book-timeline",
+      wallet: "balanced-book-wallets",
+      position: 1 }
+  , { institution: "book-timeline-title-2", 
+      container: "book-timeline-2",
+      wallet: "balanced-book-wallets-2",
+      position: 2 }
+  ]
+
 render { book: Nothing, error: Nothing } = 
   HH.div [css "book-container"] [HH.text "book loading..."]
 render { book: _, error: Just e } = 
   HH.div [css "book-container"] [ HH.text $ "error occured during loading: " <> e ]
 render { book: Just { from, to, institutions: xs }, timeline: Nothing, now, isPast, canTravelBack } = 
-  HH.div [css "book-container"] 
+  HH.div [css "book-container"] $
   [
       HH.div_ [HH.h2_ [HH.text $ "accounting period: " <> from <> " - " <> to]]
-  ,   maybeElem (head xs) $ renderTimeline now isPast canTravelBack
-  ]
-render { book: Just _, timeline: Just {date, from} } = 
-  HH.div [css "book-container"] [Timeline.slot 1 {date: date, from: from} HandleChildTimeline]
-
-
-type Row = { shift :: Int, rows :: forall w i . Array (HTML w i) }
-
-renderTimeline now isPast canTravelBack {title, dayOfWeeksHourly: xs, balances: ys} =
-  HH.div_ $
-  ([
-      Amount.slot 0
-  ,   HH.div [css "book-timeline-title"] [HH.text title]
-  ,   HH.div [css "book-timeline"] $
-        HH.span 
-        [css "book-timeline-item", 
-         HPExt.style "border-left: 1px solid black"]
-        [HH.text "time"] : 
-        ((fromEnum Monday .. fromEnum Sunday) <#> \idx ->
-          HH.span [css "book-timeline-item" ]
-          [HH.text $ show $ 
-            fromMaybe undefined ((toEnum idx) :: Maybe DayOfWeek)
-        ]) `snoc` HH.span [css "book-timeline-item" ] [HH.text "total"]
   ] <> 
-  (_.rows $ foldl (renderRow now isPast) { shift: 100, rows: [] } (xs :: Array Back.DayOfWeekHourly) )) <>
-  [HH.div [css "balanced-book-wallets"] (_.rows $ foldl renderWallet { shift: 100, rows: [] } (ys :: Array Back.Balances) )] <>
-  [
+  (zip bookCSSxs xs <#> uncurry (renderTimeline now isPast canTravelBack)) <>
+  [  
       HH.span 
       [HE.onClick (const (LoadWeek Back.Backward)), 
        css "balanced-book-travel-button-previous", 
@@ -310,12 +306,34 @@ renderTimeline now isPast canTravelBack {title, dayOfWeeksHourly: xs, balances: 
        HPExt.style $ "cursor:" <> if isPast then "pointer" else "not-allowed" ] 
       [HH.text "next week"]
   ]
+render { book: Just _, timeline: Just {date, from} } = 
+  HH.div [css "book-container"] [Timeline.slot 1 {date: date, from: from} HandleChildTimeline]
 
-renderRow {weekday, hour} isPast {shift: oldShift, rows} {to, from, amountInDayOfWeek: xs, total: ys} =
+renderTimeline now isPast canTravelBack {institution, position, wallet, container} {title, dayOfWeeksHourly: xs, balances: ys} =
+  HH.div_ $
+  ([
+      Amount.slot 0
+  ,   HH.div [css institution] [HH.text title]
+  ,   HH.div [css container] $
+        HH.span 
+        [css "book-timeline-item", 
+         HPExt.style "border-left: 1px solid black"]
+        [HH.text "time"] : 
+        (weekdays <#> \idx ->
+          HH.span [css "book-timeline-item" ]
+          [HH.text $ show $ 
+            fromMaybe undefined ((toEnum idx) :: Maybe DayOfWeek)
+        ]) `snoc` HH.span [css "book-timeline-item" ] [HH.text "total"]
+  ] <> 
+  (_.rows $ foldl (renderRow container now isPast) { shift: 100, rows: [] } (xs :: Array Back.DayOfWeekHourly) )) <>
+  [HH.div [css wallet] (_.rows $ foldl (renderWallet position) { shift: 100, rows: [] } (ys :: Array Back.Balances) )]
+  where weekdays = (fromEnum Monday .. fromEnum Sunday)
+      
+renderRow container {weekday, hour} isPast {shift: oldShift, rows} {to, from, amountInDayOfWeek: xs, total: ys} =
   let newShift = oldShift + 20
       renderTotal {amount, currency} = show amount <> "..."
       x = 
-          HH.div [css "book-timeline", HPExt.style $ "top:" <> show newShift <> "px" ] $
+          HH.div [css container, HPExt.style $ "top:" <> show newShift <> "px" ] $
             HH.span 
             [css "book-timeline-item", 
              HPExt.style "border-left: 1px solid black"]
@@ -352,14 +370,23 @@ renderRow {weekday, hour} isPast {shift: oldShift, rows} {to, from, amountInDayO
               
   in { shift: newShift, rows: rows `snoc` x }
 
-renderWallet record {amount, currency, walletType} = 
-  let x = 
-        HH.div_ 
-        [
-            let text = 
-                  show (Back.decodeWalletType walletType) <> "(" <> 
-                  show (Back.decodeCurrency currency) <> ")"
-            in HH.span [css "balanced-book-wallet-text"] [HH.text text]
-        ,   HH.span [css "balanced-book-wallet-amount"] [HH.text (show amount)]
-        ]
-  in { shift: 0, rows: _.rows record `snoc` x }
+renderWallet position record {amount, currency, walletType} = 
+  let item =
+         if position == 1
+         then 
+            [
+                let text = 
+                      show (Back.decodeWalletType walletType) <> "(" <> 
+                      show (Back.decodeCurrency currency) <> ")"
+                in HH.span [css "balanced-book-wallet-text"] [HH.text text]
+            ,   HH.span [css "balanced-book-wallet-amount"] [HH.text (show amount)]
+            ]
+         else
+            [
+                HH.span [css "balanced-book-wallet-text"] [HH.text (show amount)]
+            ,   let text = 
+                      show (Back.decodeWalletType walletType) <> "(" <> 
+                      show (Back.decodeCurrency currency) <> ")"
+                in HH.span [css "balanced-book-wallet-amount"] [HH.text text]
+            ] 
+  in { shift: 0, rows: _.rows record `snoc` HH.div_ item }
