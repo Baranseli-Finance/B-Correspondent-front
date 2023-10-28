@@ -46,6 +46,7 @@ import Effect.AVar as Async
 import AppM (AppM)
 import Data.Maybe (fromMaybe)
 import Data.Tuple (uncurry)
+import Crypto.Jwt (fetchInstitution)
 
 import Undefined
 
@@ -191,27 +192,29 @@ handleAction Finalize = do
 handleAction (LoadTimeline institution amount idx hour) = do 
   {book, now: {weekday, hour: currHour}} <- H.get
   {user} <- getStore
-  for_ user \{jwtUser: {institution: ident} } ->
-    if amount == 0 && idx /= weekday
-    then pure unit
-    else if idx == weekday && ident == institution
-    then H.raise $ OutputLive currHour
-    else if amount /= 0  && ident == institution
-    then
+  for_ user \{jwtUser: {institution: identf} } -> do 
+    res <- fetchInstitution identf
+    for_ res \ident ->
+      if amount == 0 && idx /= weekday
+      then pure unit
+      else if idx == weekday && ident == institution
+      then H.raise $ OutputLive currHour
+      else if amount /= 0  && ident == institution
+      then
         for_ book \{from} -> do
-        let days 
-              | toEnum idx == Just Monday || 
-                toEnum idx == Just Sunday = 0
-              | otherwise = idx - 1
-        from' <- H.liftEffect $ addDays days from
-        let msg = 
-                loc <> " ----> loading timeline for " <> 
-                from' <> ", time gap: " <>
-                show hour <> "-" <> show (hour + 1)
-        logDebug msg
-        H.modify_ _ { timeline = Just { date: from', from: hour, institution: institution } }
-    else let msg = "you should be granted an additional right to monitor the second part"
-         in Async.send $ Async.mkOrdinary msg Async.Error Nothing
+          let days 
+                | toEnum idx == Just Monday || 
+                  toEnum idx == Just Sunday = 0
+                | otherwise = idx - 1
+          from' <- H.liftEffect $ addDays days from
+          let msg = 
+                  loc <> " ----> loading timeline for " <> 
+                  from' <> ", time gap: " <>
+                  show hour <> "-" <> show (hour + 1)
+          logDebug msg
+          H.modify_ _ { timeline = Just { date: from', from: hour, institution: institution } }
+      else let msg = "you should be granted an additional right to monitor the second part"
+           in Async.send $ Async.mkOrdinary msg Async.Error Nothing
 handleAction (HandleChildTimeline Timeline.OutputBack) = H.modify_ _ { timeline = Nothing }
 handleAction (ShowAmount idx xs) = H.tell Amount.proxy idx $ Amount.Open xs
 handleAction (LoadWeek direction) 

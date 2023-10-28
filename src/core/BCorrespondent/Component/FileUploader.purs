@@ -12,9 +12,10 @@ import Prelude
 import BCorrespondent.Data.Config (Config(..))
 import BCorrespondent.Api.Foreign.Request as Request
 import BCorrespondent.Api.Foreign.Back as Back
-import BCorrespondent.Api.Foreign.Request.Handler (withError)
+import BCorrespondent.Api.Foreign.Request.Handler (onFailure)
 import BCorrespondent.Component.HTML.Utils (whenElem)
 import BCorrespondent.Component.HTML.Utils (css)
+import BCorrespondent.Component.Async as Async
 
 import Halogen as H
 import Halogen.HTML as HH
@@ -76,7 +77,8 @@ component =
         for_ fs \file -> do
           resp <- Request.makeAuth (Just token) host Back.mkFileApi $
             Back.upload bucket file
-          withError resp \{ success: ident :: Int } ->
+          let failure = Async.send <<< flip Async.mkException loc 
+          onFailure resp failure \{ success: ident :: Int } ->
             H.modify_ \s ->
               let el = {ident: ident, title: name file } 
               in 

@@ -83,8 +83,7 @@ printStore store =
     <> ", telegramVar: <AVar>"
     <> ", logLevel: "
     <> show (_.logLevel store)
-    <> ", user:  "
-    <> show (_.user store)
+    <> ", user: <user>"
     <> ", wsVar: <AVar>"
     <> ", browserFp: " <> (_.browserFp store)
     <> ", jwtName: " <> (_.jwtName store)
