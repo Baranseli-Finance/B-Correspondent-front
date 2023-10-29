@@ -51,3 +51,4 @@ chooseElem :: forall p i. Boolean -> HH.HTML p i -> HH.HTML p i -> HH.HTML p i
 chooseElem cond elOk elNo = if cond then elOk else elNo
 
 stylishDiv props = HH.div props [] 
+

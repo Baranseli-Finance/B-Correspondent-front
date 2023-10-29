@@ -348,7 +348,7 @@ render { book: Just _, timeline: Just {date, from, institution} } =
   HH.div [css "book-container"] [Timeline.slot 0 {date: date, from: from, institution: institution} HandleChildTimeline]
 
 renderTimeline now isPast canTravelBack {institution, position, wallet, container} {title, ident, dayOfWeeksHourly: xs, balances: ys} =
-  HH.div_ $
+  HH.div [HPExt.style hiddenStyle] $
   ([
       Amount.slot position
   ,   HH.div [css institution] [HH.text title]
@@ -370,7 +370,8 @@ renderTimeline now isPast canTravelBack {institution, position, wallet, containe
         timeOp | position == 1 = (:)
                | otherwise = flip snoc
         totalOp | position == 1 = snoc
-                | otherwise = flip (:)     
+                | otherwise = flip (:)
+        hiddenStyle = if position == 2 then "background-color:white;opacity:0.5" else mempty        
 
 renderRow position ident container {weekday, hour} isPast {shift: oldShift, rows} {to, from, amountInDayOfWeek: xs, total: ys} =
   let newShift = oldShift + 20
