@@ -28,7 +28,7 @@ import Data.Foldable (for_)
 import Store (User)
 import Halogen.Store.Monad (getStore)
 import Data.Maybe (Maybe)
-import Data.Array ((:))
+import Data.Array ((:), null, nub, take)
 import Web.Event.Event (Event, target, preventDefault)
 import Web.DOM.Element (fromEventTarget, toNode, getAttribute, fromNode)
 import Web.DOM.Node (nodeName, childNodes)
@@ -47,11 +47,20 @@ notificationItemAttr = "notification-item"
 
 slot n = HH.slot_ proxy n component unit
 
-type State = { isOpen :: Boolean, forkId :: Maybe H.ForkId, list :: Array Back.Notification, isScroll :: Boolean }
+type State = 
+     { isOpen :: Boolean, 
+       forkId :: Maybe H.ForkId, 
+       list :: Array Back.Notification, 
+       isScroll :: Boolean,
+       isReadList :: Array Int
+     }
 
 data Query a = Open a
 
-data Action = Close | CancelClose | MakeNotificationReadRequest Event
+data Action = 
+        Close 
+      | CancelClose 
+      | MakeNotificationReadRequest Event
 
 component =
   H.mkComponent
@@ -59,7 +68,8 @@ component =
       { isOpen: false, 
         forkId: Nothing, 
         list: [],
-        isScroll: false
+        isScroll: false,
+        isReadList: []
       }
     , render: render
     , eval: H.mkEval H.defaultEval
@@ -71,7 +81,8 @@ component =
 forkCloseTimer = do
   forkId <- H.fork $ do
     H.liftAff $ Aff.delay $ Aff.Milliseconds 3000.0
-    logDebug $ loc <> " ----> close signal is emitted" 
+    logDebug $ loc <> " ----> close signal is emitted"
+    dumpNotifications
     H.modify_ _ { isOpen = false, forkId = Nothing, list = [] }
   H.modify_ _ { forkId = Just forkId }
 
@@ -96,17 +107,23 @@ handleAction (MakeNotificationReadRequest ev) = do
           for_ (fromNode x) \el -> do
             identm <- H.liftEffect $ getAttribute notificationItemAttr el
             for_ identm \ident -> do
-              for_ (fromNode div) \parentEl -> do
+              for_ (fromNode parent) \parentEl -> do
                 isVisible <- H.liftEffect $ onDetectVisibile parentEl el
                 when isVisible $ do
                   for_ (fromString ident) \i -> do
-                    { config: Config { apiBCorrespondentHost: host }, user } <- getStore
-                    for_ (user :: Maybe User) \{ token } -> do
-                      resp <- Request.makeAuth (Just token) host Back.mkFrontApi $
-                        Back.markNotificationRead i
-                      let failure = Async.send <<< flip Async.mkException loc  
-                      onFailure resp failure \{success: _} -> pure unit
-    H.modify_ _ { isScroll = false }                  
+                    H.modify_ \s -> s { isReadList = nub $ i : _.isReadList s }
+    H.modify_ _ { isScroll = false }
+
+dumpNotifications = do
+  { config: Config { apiBCorrespondentHost: host }, user } <- getStore
+  for_ (user :: Maybe User) \{ token } -> do
+    {isReadList} <- H.get
+    when (not null isReadList) $ do
+      logDebug $ loc <> " ----> notification are about to be sent for isRead: " <> show isReadList
+      resp <- Request.makeAuth (Just token) host Back.mkFrontApi $
+        Back.markNotificationRead isReadList
+      let failure = Async.send <<< flip Async.mkException loc 
+      onFailure resp failure \{success: _} -> pure unit
 
 handleQuery
   :: forall a s . Query a
@@ -121,23 +138,28 @@ handleQuery (Open a) = do
       let failure = Async.send <<< flip Async.mkException loc
       onFailure resp failure \{success: {items}} -> do
         logDebug $ loc <> " notification ----> " <> show (items :: Array Back.Notification)
-        H.modify_ _ { isOpen = true, list = items }
+        H.modify_ _ { isOpen = true, list = items, isReadList = take 6 $ map _.ident items }
 
 render {isOpen, list} = 
   whenElem isOpen $ 
-    HH.div 
+    HH.div
     [ onMouseOut (const Close),
       onMouseOver (const CancelClose),
       onScroll MakeNotificationReadRequest,
-      css "notification" 
+      css $ if null list then "no-notification" else "notification" 
     ] $
-     HH.div [HPExt.style "padding-top:10px"] [] :
-     (list <#> \{ident, text} -> 
-       HH.div_ 
-       [ 
-           HH.div 
-           [css "notification-item", 
-            HPExt.attr (AttrName notificationItemAttr) (show ident)] 
-           [ HH.text text ]
-       ,   HH.div [HPExt.style "padding-top:10px"] [] 
-       ])
+      if null list then
+        [renderNoNotification]
+      else  
+        HH.div [HPExt.style "padding-top:10px"] [] :
+        (list <#> \{ident, text} -> 
+          HH.div_ 
+          [ 
+              HH.div 
+              [css "notification-item", 
+                HPExt.attr (AttrName notificationItemAttr) (show ident)] 
+              [ HH.text text ]
+          ,   HH.div [HPExt.style "padding-top:10px"] [] 
+          ])
+
+renderNoNotification = HH.text "there are no new notifications"

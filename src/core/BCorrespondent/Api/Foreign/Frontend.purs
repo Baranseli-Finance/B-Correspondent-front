@@ -394,9 +394,9 @@ foreign import _submitIssue  :: Fn3 WithError Issue FrontApi (AC.EffectFnAff (Ob
 submitIssue :: Issue -> FrontApi -> AC.EffectFnAff (Object (Response Unit))
 submitIssue = runFn3 _submitIssue withError
 
-foreign import _markNotificationRead :: Fn3 WithError Int FrontApi (AC.EffectFnAff (Object (Response Unit)))
+foreign import _markNotificationRead :: Fn3 WithError (Array Int) FrontApi (AC.EffectFnAff (Object (Response Unit)))
 
-markNotificationRead :: Int -> FrontApi -> AC.EffectFnAff (Object (Response Unit))
+markNotificationRead :: Array Int -> FrontApi -> AC.EffectFnAff (Object (Response Unit))
 markNotificationRead = runFn3 _markNotificationRead withError
 
 type AmountInDayOfWeek = { value :: Int, total :: Int }
