@@ -31,6 +31,7 @@ module BCorrespondent.Api.Foreign.Frontend
   , WalletType(..)
   , _amount
   , _amounts
+  , _balancesBalancedBook
   , _correspondentBank
   , _correspondentBankSwiftSepaCode
   , _currency
@@ -413,7 +414,8 @@ type DayOfWeekHourly =
      }
 
 type Balances = 
-     { amount :: Number,
+     { ident :: Int,
+       amount :: Number,
        currency :: Foreign,
        walletType :: Foreign
      }
@@ -432,6 +434,7 @@ type BalancedBook =
      }
 
 _institutionBalancedBook = lens _.institutions $ \el x -> el { institutions = x }
+_balancesBalancedBook = lens _.balances $ \el x -> el { balances = x }
 
 
 foreign import _initBalancedBook :: Fn2 WithError FrontApi (AC.EffectFnAff (Object (Response BalancedBook)))

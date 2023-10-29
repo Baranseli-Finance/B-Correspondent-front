@@ -3,9 +3,11 @@ module BCorrespondent.Component.Subscription.WS.Types
   , Transaction
   , TransactionBalancedBook
   , Wallet
+  , WalletBalancedBook
   , encodeResource
   , transactionBalancedBookUrl
   , transactionUrl
+  , walletBalancedBookUrl
   , walletUrl
   , withdrawalUrl
   )
@@ -42,11 +44,18 @@ type TransactionBalancedBook =
         institutionTitle :: String
       }
 
+type WalletBalancedBook = 
+     { ident :: Int,
+        institution :: Int,
+        amount :: Number 
+     }
+
 data Resource = 
        Transaction 
      | Wallet 
      | Withdrawal 
      | BalancedBookTransaction
+     | BalancedBookWallet
 
 derive instance genericResource :: Generic Resource _
 
@@ -57,3 +66,4 @@ transactionUrl = "frontend/user/dashboard/transaction/update"
 walletUrl = "frontend/user/dashboard/wallet/update"
 withdrawalUrl = "institution/fiat/withdraw/history/item/update"
 transactionBalancedBookUrl = "frontend/user/balanced-book/transaction/add"
+walletBalancedBookUrl = "frontend/user/balanced-book/wallet/update"

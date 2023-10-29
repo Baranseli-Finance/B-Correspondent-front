@@ -11,7 +11,7 @@ import BCorrespondent.Capability.LogMessages (logDebug)
 import BCorrespondent.Component.Workspace.BalancedBook.Timeline as Timeline
 import BCorrespondent.Component.Workspace.BalancedBook.Amount as Amount
 import BCorrespondent.Component.Subscription.WS as WS
-import BCorrespondent.Component.Subscription.WS.Types (TransactionBalancedBook)
+import BCorrespondent.Component.Subscription.WS.Types (TransactionBalancedBook, WalletBalancedBook)
 import BCorrespondent.Component.Async as Async
 
 import Halogen as H
@@ -20,7 +20,10 @@ import Halogen.HTML.Properties.Extended as HPExt
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Core (HTML)
 import Type.Proxy (Proxy(..))
-import Data.Array (zip, (..), (:), snoc, head, foldl, length, index, singleton, findIndex, modifyAt, reverse)
+import Data.Array 
+       (zip, (..), (:), snoc, head, foldl, length, 
+        index, singleton, findIndex, modifyAt, reverse, find
+       )
 import Data.Lens (_1, _2, (^.))
 import Data.Generic.Rep (class Generic)
 import Data.Enum (class Enum, class BoundedEnum, fromEnum, toEnum)
@@ -33,6 +36,7 @@ import Data.Foldable (for_)
 import Store (User, WS)
 import Effect.Exception (message)
 import Data.Lens ((^.), _2, (%~))
+import Data.Lens.Traversal (traversed)
 import System.Time (addDays, nowDate, nowTime)
 import Data.DateTime as D
 import Effect.Aff as Aff
@@ -47,6 +51,7 @@ import AppM (AppM)
 import Data.Maybe (fromMaybe)
 import Data.Tuple (uncurry)
 import Crypto.Jwt (fetchInstitution)
+
 
 import Undefined
 
@@ -107,6 +112,7 @@ data Action =
      | ShowAmount Int (Array Back.ForeignDayOfWeeksHourlyTotalSum)
      | LoadWeek Back.Direction
      | AddTransaction TransactionBalancedBook
+     | UpdateWallets (Array WalletBalancedBook)
 
 type Timeline = { date :: String, from :: Int, institution :: Int }
 
@@ -132,8 +138,7 @@ type BookCSS =
 
 component =
   H.mkComponent
-    { initialState: 
-      const 
+    { initialState: const 
       { book: Nothing, 
         error: Nothing, 
         timeline: Nothing,
@@ -181,6 +186,10 @@ handleAction Initialize = do
 
       WS.subscribe loc WS.transactionBalancedBookUrl (Just (WS.encodeResource WS.BalancedBookTransaction)) $
         handleAction <<< AddTransaction <<< _.success
+
+      WS.subscribe loc WS.walletBalancedBookUrl (Just (WS.encodeResource WS.BalancedBookWallet)) $
+        handleAction <<< UpdateWallets <<< _.success
+
 handleAction Finalize = do
   { wsVar } <- getStore
   wsm <- H.liftEffect $ Async.tryTake (wsVar :: Async.AVar (Array WS))
@@ -189,7 +198,8 @@ handleAction Finalize = do
       H.kill forkId
       H.liftEffect $ WS.close ws
       logDebug $ loc <> " ---> ws has been killed"          
-handleAction (LoadTimeline institution amount idx hour) = do 
+handleAction (LoadTimeline institution amount idx hour) = do
+  logDebug $ loc <> " ----> loading timeline, raw data: weekday idx - " <> show idx <> ", hour - " <> show hour
   {book, now: {weekday, hour: currHour}} <- H.get
   {user} <- getStore
   for_ user \{jwtUser: {institution: identf} } -> do 
@@ -202,10 +212,8 @@ handleAction (LoadTimeline institution amount idx hour) = do
       else if amount /= 0  && ident == institution
       then
         for_ book \{from} -> do
-          let days 
-                | toEnum idx == Just Monday || 
-                  toEnum idx == Just Sunday = 0
-                | otherwise = idx - 1
+          let days = idx - 1
+          logDebug $ loc <> " ----> loading timeline, days: " <> show days <> ", from " <> show from      
           from' <- H.liftEffect $ addDays days from
           let msg = 
                   loc <> " ----> loading timeline for " <> 
@@ -224,9 +232,13 @@ handleAction (LoadWeek direction)
   | otherwise = do 
       {canTravelBack} <- H.get
       when canTravelBack $ fetchBalancedBook direction
-handleAction (AddTransaction t) =
+handleAction (AddTransaction t@transactiion) = do
+  logDebug $ loc <> " transaction update ---> " <> 
+    show (transactiion { currency = Back.decodeCurrency (_.currency t) })
   H.modify_ \s -> 
-    s { book = _.book s <#> \b -> b # Back._institutionBalancedBook %~ modify }
+    s { book = _.book s <#> \b -> 
+        b # Back._institutionBalancedBook %~ modify 
+      }
   where 
     modify xs = 
       xs <#> \x@{title} -> 
@@ -250,6 +262,25 @@ handleAction (AddTransaction t) =
                             }
                      else y
                }
+handleAction (UpdateWallets wallets) = do 
+  logDebug $ loc <> " wallets update ---> " <> show wallets
+  H.modify_ \s -> 
+    s { book = _.book s <#> \b -> 
+        b # Back._institutionBalancedBook
+            <<< traversed 
+            <<< Back._balancesBalancedBook
+            <<< traversed
+        %~ modify 
+      }
+  where
+    modify w@{ident} =
+      let newAmount = 
+             fromMaybe (_.amount w) $ 
+               map _.amount $ 
+                 flip find wallets \w' -> 
+                   _.ident w' == ident
+      in w { amount = newAmount }
+    
 
 fetchBalancedBook direction = do
   {book} <- H.get
@@ -306,12 +337,12 @@ render { book: Just { from, to, institutions: xs }, timeline: Nothing, now, isPa
       [HE.onClick (const (LoadWeek Back.Backward)), 
        css "balanced-book-travel-button-previous", 
        HPExt.style $ "cursor:" <> if canTravelBack then "pointer" else "not-allowed" ]
-      [HH.text "prev week"]
+      [HH.h2_ [HH.text "prev week"]]
   ,   HH.span 
       [HE.onClick (const (LoadWeek Back.Forward)), 
        css "balanced-book-travel-button-next", 
        HPExt.style $ "cursor:" <> if isPast then "pointer" else "not-allowed" ] 
-      [HH.text "next week"]
+      [HH.h2_ [HH.text "next week"]]
   ]
 render { book: Just _, timeline: Just {date, from, institution} } = 
   HH.div [css "book-container"] [Timeline.slot 0 {date: date, from: from, institution: institution} HandleChildTimeline]

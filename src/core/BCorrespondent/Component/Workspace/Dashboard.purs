@@ -30,7 +30,7 @@ import Data.Time (hour, minute, Time (..), setHour, setMinute)
 import Data.Time as Time
 import Data.Enum (toEnum, fromEnum)
 import Data.Time.Component
-import Data.Array (uncons, last, snoc, head, findIndex, modifyAt, (:))
+import Data.Array (uncons, last, snoc, head, findIndex, modifyAt, (:), sortWith)
 import Effect.Aff as Aff
 import Store (User)
 import Control.Monad.Rec.Class (forever)
@@ -191,7 +191,7 @@ component =
                                 ident: _.ident item, 
                                 tm: _.tm item
                               }
-                    in x # Back._elements .~ fromMaybe (newItem : x^.Back._elements) res 
+                    in x # Back._elements .~ sortWith (_.tm) (fromMaybe (newItem : x^.Back._elements) res)
                   else x
           H.tell Timeline.proxy 1 $ Timeline.WithNewTransaction newTimeline
 
