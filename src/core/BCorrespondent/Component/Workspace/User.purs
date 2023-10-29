@@ -1,4 +1,10 @@
-module BCorrespondent.Component.Workspace.User ( slot, Output (..) ) where
+module BCorrespondent.Component.Workspace.User
+  ( Output(..)
+  , Query(..)
+  , proxy
+  , slot
+  )
+  where
 
 import Prelude
 
@@ -14,6 +20,7 @@ import Halogen.Store.Monad (getStore)
 import Data.Foldable (for_)
 import Data.Maybe (Maybe (..))
 import Store (User)
+import AppM (AppM)
 
 import Undefined
 
@@ -27,15 +34,24 @@ data Action = Initialize | OpenMenu | OpenNotification
 
 data Output = DropDownMenu | Notification
 
-type State = { user :: String, isMenu :: Boolean }
+type State = 
+     { user :: String, 
+       isMenu :: Boolean, 
+       amountNotification ::  Int 
+     }
+
+data Query a = AmountNotification Int a
 
 component =
   H.mkComponent
-    { initialState: const { user: mempty, isMenu: false }
+    { initialState: const 
+      { user: mempty, isMenu: false, amountNotification: 0 }
     , render: render
     , eval: H.mkEval H.defaultEval
       { handleAction = handleAction
-      , initialize = Just Initialize }
+      , initialize = Just Initialize
+      ,  handleQuery = handleQuery 
+      }
     } 
     where 
       handleAction Initialize = do
@@ -45,7 +61,10 @@ component =
       handleAction OpenMenu = H.raise DropDownMenu
       handleAction OpenNotification = H.raise Notification
 
-render { user } =
+handleQuery :: forall a s . Query a -> H.HalogenM State Action s Output AppM (Maybe a)
+handleQuery (AmountNotification c a) = map (const (Just a)) $ H.modify_ _ { amountNotification = c }
+
+render { user, amountNotification: c } =
   HH.div_
   [
       HH.div [css "user-container"] 
@@ -59,5 +78,7 @@ render { user } =
             ]
           ]
       ]
-  ,   HH.div [css "bell", onClick $ const OpenNotification] [HH.i [css "bell-animate fa fa-bell fa-lg"] []]
+  ,   whenElem (c /= 0) $ HH.div [css "unread-notifs"] [HH.text (show c)]
+  ,   let bellStyle = if c == 0 then "fa fa-bell fa-lg" else "bell-animate fa fa-bell fa-lg"
+      in  HH.div [css "bell", onClick $ const OpenNotification] [HH.i [css bellStyle] []]
   ]

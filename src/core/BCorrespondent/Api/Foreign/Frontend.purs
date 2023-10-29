@@ -29,6 +29,7 @@ module BCorrespondent.Api.Foreign.Frontend
   , TransactionValue
   , Wallet
   , WalletType(..)
+  , Workspace
   , _amount
   , _amounts
   , _balancesBalancedBook
@@ -65,6 +66,7 @@ module BCorrespondent.Api.Foreign.Frontend
   , initDashboard
   , initHistoryTimeline
   , loadNextGap
+  , loadUnreadNotification
   , markNotificationRead
   , mkFrontApi
   , printGapItemAmount
@@ -446,3 +448,10 @@ foreign import _fetchBalancedBook :: Fn6 WithError Int Int Int Foreign FrontApi 
 
 fetchBalancedBook :: Int -> Int -> Int -> Direction -> FrontApi -> AC.EffectFnAff (Object (Response BalancedBook))
 fetchBalancedBook y m d direction = runFn6 _fetchBalancedBook withError y m d (encodeDirection direction)
+
+type Workspace = { unreadNotification :: Int }
+
+foreign import _loadUnreadNotification :: Fn2 WithError FrontApi (AC.EffectFnAff (Object (Response Workspace)))
+
+loadUnreadNotification :: FrontApi -> AC.EffectFnAff (Object (Response Workspace))
+loadUnreadNotification = runFn2 _loadUnreadNotification withError

@@ -14,6 +14,10 @@ import BCorrespondent.Component.Workspace.TechSupport as Workspace.TechSupport
 import BCorrespondent.Component.Workspace.User.Notification as User.Notification
 import BCorrespondent.Component.Workspace.BalancedBook as Workspace.BalancedBook
 import BCorrespondent.Component.Async as Async
+import BCorrespondent.Data.Config (Config(..))
+import BCorrespondent.Api.Foreign.Request as Request
+import BCorrespondent.Api.Foreign.Back as Back
+import BCorrespondent.Api.Foreign.Request.Handler (onFailure)
 
 import Halogen as H
 import Halogen.HTML as HH
@@ -24,6 +28,7 @@ import Data.Maybe (Maybe (..), isJust, fromMaybe)
 import Halogen.Store.Monad (getStore)
 import Data.Date as D
 import Data.Enum (fromEnum)
+import Data.Foldable (for_)
 
 import Undefined
 
@@ -34,7 +39,8 @@ loc = "BCorrespondent.Page.Workspace"
 slot n = HH.slot proxy n component unit
 
 data Acion =
-        HandleChildWorkspaceUser Workspace.User.Menu.Output
+        Initialize
+      | HandleChildWorkspaceUser Workspace.User.Menu.Output
       | HandleChildWorkspace Workspace.User.Output
       | HandleChildWorkspaceMenu Workspace.Menu.Output
       | HandleChildBalancedBook Workspace.BalancedBook.Output
@@ -47,7 +53,7 @@ data Component =
      | BalancedBook
      | Wallet
      | TechSupport
-
+  
 type State = { component :: Component }
 
 component =
@@ -55,9 +61,21 @@ component =
     { initialState: const { component: Dashboard Nothing }
     , render: render
     , eval: H.mkEval H.defaultEval
-      { handleAction = handleAction }
+      { handleAction = handleAction
+      , initialize = pure Initialize 
+      }
     }
     where
+      handleAction Initialize = do 
+        { config: Config { apiBCorrespondentHost: host }, user } <- getStore
+        for_ user \{token} -> do
+          resp <- Request.makeAuth (Just token) host Back.mkFrontApi $
+            Back.loadUnreadNotification
+          let failure = Async.send <<< flip Async.mkException loc 
+          onFailure resp failure \{ success: {unreadNotification} } -> 
+            H.tell Workspace.User.proxy 0 $ 
+              Workspace.User.AmountNotification
+              unreadNotification
       handleAction 
         (HandleChildWorkspaceUser 
           Workspace.User.Menu.LoggedOut) = 
@@ -69,8 +87,9 @@ component =
           Workspace.User.Menu.Open
       handleAction
         (HandleChildWorkspace 
-         Workspace.User.Notification) =
+         Workspace.User.Notification) = do
         H.tell User.Notification.proxy 2 $ User.Notification.Open
+        H.tell Workspace.User.proxy 0 $ Workspace.User.AmountNotification 0
       handleAction 
         (HandleChildBalancedBook
          (Workspace.BalancedBook.OutputLive from)) = do 
