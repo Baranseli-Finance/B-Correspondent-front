@@ -5,7 +5,8 @@ let
    python = pkgs.python;
    git = pkgs.git;
    jdk = pkgs.jdk;
-   ps = import ./purescript.nix { inherit pkgs; };
+   ps = pkgs.purescript;
+  #  ps = import ./purescript.nix { inherit pkgs; };
 in
 pkgs.mkShell {
 
@@ -22,6 +23,6 @@ pkgs.mkShell {
     npm install crypto-js
     npm install @fingerprintjs/fingerprintjs
     npm install --save string-pixel-width
-    export PATH=${ps}:$PATH
+    export PATH=${ps}:/node_modules/.bin:$PATH
    '';
   }
