@@ -72,7 +72,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-              cd back
+              cd B-Correspondent-back
               ./deploy/stop.sh
               rm .env
               ./deploy/start.sh $HOME/docker_envs
