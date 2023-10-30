@@ -121,10 +121,10 @@ export const _fetchBalancedBook =
     }
 
 export const _loadUnreadNotification =
-function(withError, api) {
-    return function(onError, onOk) {
-        api.frontendUserWorkspaceGet().then(onOk).catch(resp => {
-            return withError(resp, onError)
-        })
-    };
-}
+    function(withError, api) {
+        return function(onError, onOk) {
+            api.frontendUserWorkspaceGet().then(onOk).catch(resp => {
+                return withError(resp, onError)
+            })
+        };
+    }
