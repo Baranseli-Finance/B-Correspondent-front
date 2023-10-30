@@ -2,8 +2,8 @@
     "telegramBot": "",
     "telegramChat": "",
     "telegramHost": "https://api.telegram.org/",
-    "apiBCorrespondentHost": "http://127.0.0.1:12000",
-    "apiBCorrespondentHostWS": "ws://127.0.0.1:12000",
+    "apiBCorrespondentHost": "http://api.b-correspondent.app",
+    "apiBCorrespondentHostWS": "ws://api.b-correspondent.app",
     "cssLink": "https://cdn.jsdelivr.net/gh/Baranseli-Finance/B-Correspondent-css@",
     "cssFiles": ["error", "miscellaneous", "main"],
     "jwtName": "b-correspondent_jwt"

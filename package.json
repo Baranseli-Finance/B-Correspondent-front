@@ -19,7 +19,7 @@
   "dependencies": {
     "@fingerprintjs/fingerprintjs": "^4.1.0",
     "babel": "^6.23.0",
-    "crypto-js": "^4.1.1",
+    "crypto-js": "^4.2.0",
     "data.either": "^1.5.2",
     "decimal.js": "^10.4.3",
     "expect.js": "^0.3.1",
