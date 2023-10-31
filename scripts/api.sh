@@ -42,7 +42,7 @@ echo >&2 '
 #   pass="${API_PASS_ENV}"
 # fi
 
-credentials="$login:$pass"
+# credentials="$login:$pass"
 
 generate() { 
 #   node api-downloader.mjs $url $file $credentials
