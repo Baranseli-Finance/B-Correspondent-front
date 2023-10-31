@@ -233,8 +233,7 @@ component =
 
 
 render {serverError: Just msg } = HH.text msg
-render {serverError: Nothing, balances } 
-  | M.isEmpty balances = HH.h3_ [HH.text "there is no money on the accounts to be withdrawn"]
+render {serverError: Nothing, balances } | M.isEmpty balances = HH.div_ [HH.text "loading wallets..."]
 render {serverError: Nothing, amount, balances, compError, history, total, perPage } =
   HH.div_
   [
