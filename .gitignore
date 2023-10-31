@@ -19,6 +19,6 @@ src/lib/BCorrespondent/Web/Bowser
 
 app/*.js
 
-# api*.json
+api*.json
 
 !/src/core/Data/Output

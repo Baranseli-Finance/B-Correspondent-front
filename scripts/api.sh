@@ -30,22 +30,24 @@ echo >&2 '
 ************
 '
 
-# if [[ -z "${API_LOGIN_ENV}" ]]; then
-#   oops "no API_LOGIN_ENV is set. cannot proceed"
-# else
-#   login="${API_LOGIN_ENV}"
-# fi
+if [[ -z "${API_LOGIN_ENV}" ]]; then
+  oops "no API_LOGIN_ENV is set. cannot proceed"
+else
+  login="${API_LOGIN_ENV}"
+fi
 
-# if [[ -z "${API_PASS_ENV}" ]]; then
-#   oops "no API_PASS_ENV is set. cannot proceed"
-# else
-#   pass="${API_PASS_ENV}"
-# fi
+if [[ -z "${API_PASS_ENV}" ]]; then
+  oops "no API_PASS_ENV is set. cannot proceed"
+else
+  pass="${API_PASS_ENV}"
+fi
 
-# credentials="$login:$pass"
 
-generate() { 
-#   node api-downloader.mjs $url $file $credentials
+credentials="$(printf $login:$pass | base64)"
+
+curl -X 'GET' 'https://api.b-correspondent.app/swagger.json' -H "Authorization: Basic $credentials" -o $file
+
+generate() {
   openapi-generator-cli \
   generate -i $file -g javascript -o src/core/BCorrespondent/Api/Foreign/$api \
   --additional-properties=usePromises=true,emitModelMethods=true
