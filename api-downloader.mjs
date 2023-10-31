@@ -18,7 +18,7 @@ var options = {
     path: '/swagger.json',
     // authentication headers
     headers: {
-       'Authorization': 'Basic ' + new Buffer(cred).toString('base64')
+       'Authorization': 'Basic ' + new Buffer("sonny:sKi2@L0/D8D~£t6b2V7O~FXbp&iOW").toString('base64')
     }   
  };
 

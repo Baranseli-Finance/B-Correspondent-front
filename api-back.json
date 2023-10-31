@@ -1,0 +1,2600 @@
+{
+    "definitions": {
+        "AmountInDayOfWeek": {
+            "properties": {
+                "total": {
+                    "maximum": 9223372036854775807,
+                    "minimum": -9223372036854775808,
+                    "type": "integer"
+                },
+                "value": {
+                    "maximum": 9223372036854775807,
+                    "minimum": -9223372036854775808,
+                    "type": "integer"
+                }
+            },
+            "required": [
+                "value",
+                "total"
+            ],
+            "type": "object"
+        },
+        "AuthCode": {
+            "properties": {
+                "code": {
+                    "maximum": 9223372036854775807,
+                    "minimum": -9223372036854775808,
+                    "type": "integer"
+                },
+                "hash": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "code",
+                "hash"
+            ],
+            "type": "object"
+        },
+        "AuthCodeHash": {
+            "type": "string"
+        },
+        "AuthToken": {
+            "type": "string"
+        },
+        "Balance": {
+            "properties": {
+                "amount": {
+                    "format": "double",
+                    "type": "number"
+                },
+                "currency": {
+                    "$ref": "#/definitions/Currency"
+                },
+                "walletIdent": {
+                    "format": "int64",
+                    "maximum": 9223372036854775807,
+                    "minimum": -9223372036854775808,
+                    "type": "integer"
+                }
+            },
+            "required": [
+                "walletIdent",
+                "currency",
+                "amount"
+            ],
+            "type": "object"
+        },
+        "BalancedBook": {
+            "properties": {
+                "from": {
+                    "type": "string"
+                },
+                "institutions": {
+                    "items": {
+                        "$ref": "#/definitions/BalancedBookInstitution"
+                    },
+                    "type": "array"
+                },
+                "to": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "from",
+                "to",
+                "institutions"
+            ],
+            "type": "object"
+        },
+        "BalancedBookInstitution": {
+            "properties": {
+                "balances": {
+                    "items": {
+                        "$ref": "#/definitions/BalancedBookWallet"
+                    },
+                    "type": "array"
+                },
+                "dayOfWeeksHourly": {
+                    "items": {
+                        "$ref": "#/definitions/DayOfWeeksHourly"
+                    },
+                    "type": "array"
+                },
+                "ident": {
+                    "format": "int64",
+                    "maximum": 9223372036854775807,
+                    "minimum": -9223372036854775808,
+                    "type": "integer"
+                },
+                "title": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "title",
+                "ident",
+                "dayOfWeeksHourly",
+                "balances"
+            ],
+            "type": "object"
+        },
+        "BalancedBookWallet": {
+            "properties": {
+                "amount": {
+                    "format": "double",
+                    "type": "number"
+                },
+                "currency": {
+                    "$ref": "#/definitions/Currency"
+                },
+                "ident": {
+                    "format": "int64",
+                    "maximum": 9223372036854775807,
+                    "minimum": -9223372036854775808,
+                    "type": "integer"
+                },
+                "walletType": {
+                    "$ref": "#/definitions/WalletType"
+                }
+            },
+            "required": [
+                "ident",
+                "currency",
+                "amount",
+                "walletType"
+            ],
+            "type": "object"
+        },
+        "Credentials": {
+            "properties": {
+                "browserFp": {
+                    "type": "string"
+                },
+                "login": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                }
+            },
+            "type": "object"
+        },
+        "Currency": {
+            "enum": [
+                "usd",
+                "eur"
+            ],
+            "type": "string"
+        },
+        "DailyBalanceSheet": {
+            "properties": {
+                "gaps": {
+                    "items": {
+                        "$ref": "#/definitions/GapItem"
+                    },
+                    "type": "array"
+                },
+                "institution": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "institution",
+                "gaps"
+            ],
+            "type": "object"
+        },
+        "DayOfWeeksHourly": {
+            "properties": {
+                "amountInDayOfWeek": {
+                    "items": {
+                        "$ref": "#/definitions/AmountInDayOfWeek"
+                    },
+                    "type": "array"
+                },
+                "from": {
+                    "$ref": "#/definitions/GapItemTime"
+                },
+                "to": {
+                    "$ref": "#/definitions/GapItemTime"
+                },
+                "total": {
+                    "items": {
+                        "$ref": "#/definitions/DayOfWeeksHourlyTotalSum"
+                    },
+                    "type": "array"
+                }
+            },
+            "required": [
+                "from",
+                "to",
+                "amountInDayOfWeek",
+                "total"
+            ],
+            "type": "object"
+        },
+        "DayOfWeeksHourlyTotalSum": {
+            "properties": {
+                "amount": {
+                    "format": "double",
+                    "type": "number"
+                },
+                "currency": {
+                    "$ref": "#/definitions/Currency"
+                }
+            },
+            "required": [
+                "currency",
+                "amount"
+            ],
+            "type": "object"
+        },
+        "Error": {
+            "properties": {
+                "message": {
+                    "type": "string"
+                },
+                "meta": {
+                    "$ref": "#/definitions/Object"
+                }
+            },
+            "required": [
+                "message"
+            ],
+            "type": "object"
+        },
+        "ExternalCustomerId": {
+            "type": "string"
+        },
+        "ExternalInvoiceId": {
+            "type": "string"
+        },
+        "Fee": {
+            "enum": [
+                "our",
+                "sha"
+            ],
+            "type": "string"
+        },
+        "FetchGap": {
+            "properties": {
+                "gap": {
+                    "$ref": "#/definitions/GapItem"
+                }
+            },
+            "required": [
+                "gap"
+            ],
+            "type": "object"
+        },
+        "GapItem": {
+            "properties": {
+                "amounts": {
+                    "items": {
+                        "$ref": "#/definitions/GapItemAmount"
+                    },
+                    "type": "array"
+                },
+                "elements": {
+                    "items": {
+                        "$ref": "#/definitions/GapItemUnit"
+                    },
+                    "type": "array"
+                },
+                "end": {
+                    "$ref": "#/definitions/GapItemTime"
+                },
+                "start": {
+                    "$ref": "#/definitions/GapItemTime"
+                }
+            },
+            "required": [
+                "start",
+                "end",
+                "elements",
+                "amounts"
+            ],
+            "type": "object"
+        },
+        "GapItemAmount": {
+            "properties": {
+                "currency": {
+                    "$ref": "#/definitions/Currency"
+                },
+                "value": {
+                    "format": "double",
+                    "type": "number"
+                }
+            },
+            "required": [
+                "currency",
+                "value"
+            ],
+            "type": "object"
+        },
+        "GapItemTime": {
+            "properties": {
+                "hour": {
+                    "maximum": 9223372036854775807,
+                    "minimum": -9223372036854775808,
+                    "type": "integer"
+                },
+                "min": {
+                    "maximum": 9223372036854775807,
+                    "minimum": -9223372036854775808,
+                    "type": "integer"
+                }
+            },
+            "required": [
+                "hour",
+                "min"
+            ],
+            "type": "object"
+        },
+        "GapItemUnit": {
+            "properties": {
+                "ident": {
+                    "format": "int64",
+                    "maximum": 9223372036854775807,
+                    "minimum": -9223372036854775808,
+                    "type": "integer"
+                },
+                "status": {
+                    "$ref": "#/definitions/GapItemUnitStatus"
+                },
+                "textualIdent": {
+                    "type": "string"
+                },
+                "tm": {
+                    "$ref": "#/definitions/UTCTime"
+                }
+            },
+            "required": [
+                "ident",
+                "tm",
+                "textualIdent",
+                "status"
+            ],
+            "type": "object"
+        },
+        "GapItemUnitStatus": {
+            "enum": [
+                "pending",
+                "ok",
+                "declined"
+            ],
+            "type": "string"
+        },
+        "GapItemWrapper": {
+            "properties": {
+                "items": {
+                    "items": {
+                        "$ref": "#/definitions/GapItem"
+                    },
+                    "type": "array"
+                }
+            },
+            "required": [
+                "items"
+            ],
+            "type": "object"
+        },
+        "HistoryTimeline": {
+            "properties": {
+                "institution": {
+                    "type": "string"
+                },
+                "timeline": {
+                    "items": {
+                        "$ref": "#/definitions/GapItem"
+                    },
+                    "type": "array"
+                }
+            },
+            "required": [
+                "institution",
+                "timeline"
+            ],
+            "type": "object"
+        },
+        "Init": {
+            "properties": {
+                "invoicesince": {
+                    "$ref": "#/definitions/InvoiceSince"
+                },
+                "isjwtvalid": {
+                    "$ref": "#/definitions/JWTStatus"
+                },
+                "level": {
+                    "$ref": "#/definitions/LogLevel"
+                },
+                "loadcsslocally": {
+                    "type": "boolean"
+                },
+                "shaxs": {
+                    "items": {
+                        "$ref": "#/definitions/Sha"
+                    },
+                    "type": "array"
+                },
+                "telegrambot": {
+                    "type": "string"
+                },
+                "telegramchat": {
+                    "type": "string"
+                },
+                "totelegram": {
+                    "type": "boolean"
+                }
+            },
+            "required": [
+                "shaxs",
+                "isjwtvalid",
+                "level",
+                "totelegram",
+                "telegrambot",
+                "telegramchat",
+                "loadcsslocally",
+                "invoicesince"
+            ],
+            "type": "object"
+        },
+        "InitDashboard": {
+            "properties": {
+                "dailyBalanceSheet": {
+                    "$ref": "#/definitions/DailyBalanceSheet"
+                },
+                "wallets": {
+                    "items": {
+                        "$ref": "#/definitions/Wallet"
+                    },
+                    "type": "array"
+                }
+            },
+            "required": [
+                "dailyBalanceSheet",
+                "wallets"
+            ],
+            "type": "object"
+        },
+        "InitWithdrawal": {
+            "properties": {
+                "history": {
+                    "$ref": "#/definitions/WithdrawalHistory"
+                },
+                "walletBalances": {
+                    "items": {
+                        "$ref": "#/definitions/Balance"
+                    },
+                    "type": "array"
+                }
+            },
+            "required": [
+                "walletBalances",
+                "history"
+            ],
+            "type": "object"
+        },
+        "InvoiceRegisterRequest": {
+            "properties": {
+                "amount": {
+                    "format": "double",
+                    "type": "number"
+                },
+                "buyer": {
+                    "type": "string"
+                },
+                "buyerAddress": {
+                    "type": "string"
+                },
+                "buyerPhoneNumber": {
+                    "type": "string"
+                },
+                "buyerTaxId": {
+                    "type": "string"
+                },
+                "countryISOCode": {
+                    "type": "string"
+                },
+                "createdAt": {
+                    "$ref": "#/definitions/UTCTime"
+                },
+                "currency": {
+                    "$ref": "#/definitions/Currency"
+                },
+                "customerIdent": {
+                    "$ref": "#/definitions/ExternalCustomerId"
+                },
+                "fee": {
+                    "$ref": "#/definitions/Fee"
+                },
+                "invoiceIdent": {
+                    "$ref": "#/definitions/ExternalInvoiceId"
+                },
+                "paymentDescription": {
+                    "type": "string"
+                },
+                "seller": {
+                    "type": "string"
+                },
+                "sellerAddress": {
+                    "type": "string"
+                },
+                "sellerPhoneNumber": {
+                    "type": "string"
+                },
+                "sellerTaxId": {
+                    "type": "string"
+                },
+                "vat": {
+                    "format": "double",
+                    "type": "number"
+                }
+            },
+            "required": [
+                "invoiceIdent",
+                "customerIdent",
+                "currency",
+                "createdAt",
+                "seller",
+                "sellerAddress",
+                "buyer",
+                "buyerAddress",
+                "paymentDescription",
+                "amount",
+                "vat",
+                "fee",
+                "countryISOCode"
+            ],
+            "type": "object"
+        },
+        "InvoiceRegisterResponse": {
+            "properties": {
+                "externalIdent": {
+                    "$ref": "#/definitions/ExternalInvoiceId"
+                }
+            },
+            "required": [
+                "externalIdent"
+            ],
+            "type": "object"
+        },
+        "InvoiceSince": {
+            "properties": {
+                "day": {
+                    "maximum": 9223372036854775807,
+                    "minimum": -9223372036854775808,
+                    "type": "integer"
+                },
+                "month": {
+                    "maximum": 9223372036854775807,
+                    "minimum": -9223372036854775808,
+                    "type": "integer"
+                },
+                "year": {
+                    "maximum": 9223372036854775807,
+                    "minimum": -9223372036854775808,
+                    "type": "integer"
+                }
+            },
+            "required": [
+                "year",
+                "month",
+                "day"
+            ],
+            "type": "object"
+        },
+        "Issue": {
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "files": {
+                    "items": {
+                        "items": {
+                            "format": "int64",
+                            "maximum": 9223372036854775807,
+                            "minimum": -9223372036854775808,
+                            "type": "integer"
+                        },
+                        "type": "array"
+                    },
+                    "type": "array"
+                }
+            },
+            "required": [
+                "description"
+            ],
+            "type": "object"
+        },
+        "JWTStatus": {
+            "enum": [
+                "valid",
+                "invalid",
+                "skip"
+            ],
+            "type": "string"
+        },
+        "LogLevel": {
+            "enum": [
+                "prod",
+                "dev"
+            ],
+            "type": "string"
+        },
+        "NewPassword": {
+            "properties": {
+                "key": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "password",
+                "key"
+            ],
+            "type": "object"
+        },
+        "NewUser": {
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "login": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "login",
+                "email",
+                "password"
+            ],
+            "type": "object"
+        },
+        "Notification": {
+            "properties": {
+                "created": {
+                    "$ref": "#/definitions/UTCTime"
+                },
+                "ident": {
+                    "format": "int64",
+                    "maximum": 9223372036854775807,
+                    "minimum": -9223372036854775808,
+                    "type": "integer"
+                },
+                "text": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "ident",
+                "text",
+                "created"
+            ],
+            "type": "object"
+        },
+        "NotificationIdent": {
+            "type": "integer"
+        },
+        "Notifications": {
+            "properties": {
+                "count": {
+                    "maximum": 9223372036854775807,
+                    "minimum": -9223372036854775808,
+                    "type": "integer"
+                },
+                "items": {
+                    "items": {
+                        "$ref": "#/definitions/Notification"
+                    },
+                    "type": "array"
+                }
+            },
+            "required": [
+                "count",
+                "items"
+            ],
+            "type": "object"
+        },
+        "Object": {
+            "additionalProperties": true,
+            "description": "Arbitrary JSON object.",
+            "type": "object"
+        },
+        "Payload": {
+            "additionalProperties": true,
+            "description": "Arbitrary JSON object.",
+            "type": "object"
+        },
+        "ProcuratoryRequest": {
+            "properties": {
+                "procuratoryTest": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "procuratoryTest"
+            ],
+            "type": "object"
+        },
+        "ResendCode": {
+            "properties": {
+                "browserFp": {
+                    "type": "string"
+                },
+                "hash": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "hash",
+                "browserFp"
+            ],
+            "type": "object"
+        },
+        "Response_()": {
+            "properties": {
+                "errors": {
+                    "items": {
+                        "$ref": "#/definitions/WithField 'code' Error"
+                    },
+                    "type": "array"
+                },
+                "success": {
+                    "example": [],
+                    "items": {},
+                    "maxItems": 0,
+                    "type": "array"
+                },
+                "warnings": {
+                    "items": {
+                        "$ref": "#/definitions/Error"
+                    },
+                    "type": "array"
+                }
+            },
+            "type": "object"
+        },
+        "Response_AuthCodeHash": {
+            "properties": {
+                "errors": {
+                    "items": {
+                        "$ref": "#/definitions/WithField 'code' Error"
+                    },
+                    "type": "array"
+                },
+                "success": {
+                    "$ref": "#/definitions/AuthCodeHash"
+                },
+                "warnings": {
+                    "items": {
+                        "$ref": "#/definitions/Error"
+                    },
+                    "type": "array"
+                }
+            },
+            "type": "object"
+        },
+        "Response_AuthToken": {
+            "properties": {
+                "errors": {
+                    "items": {
+                        "$ref": "#/definitions/WithField 'code' Error"
+                    },
+                    "type": "array"
+                },
+                "success": {
+                    "$ref": "#/definitions/AuthToken"
+                },
+                "warnings": {
+                    "items": {
+                        "$ref": "#/definitions/Error"
+                    },
+                    "type": "array"
+                }
+            },
+            "type": "object"
+        },
+        "Response_BalancedBook": {
+            "properties": {
+                "errors": {
+                    "items": {
+                        "$ref": "#/definitions/WithField 'code' Error"
+                    },
+                    "type": "array"
+                },
+                "success": {
+                    "$ref": "#/definitions/BalancedBook"
+                },
+                "warnings": {
+                    "items": {
+                        "$ref": "#/definitions/Error"
+                    },
+                    "type": "array"
+                }
+            },
+            "type": "object"
+        },
+        "Response_Bool": {
+            "properties": {
+                "errors": {
+                    "items": {
+                        "$ref": "#/definitions/WithField 'code' Error"
+                    },
+                    "type": "array"
+                },
+                "success": {
+                    "type": "boolean"
+                },
+                "warnings": {
+                    "items": {
+                        "$ref": "#/definitions/Error"
+                    },
+                    "type": "array"
+                }
+            },
+            "type": "object"
+        },
+        "Response_FetchGap": {
+            "properties": {
+                "errors": {
+                    "items": {
+                        "$ref": "#/definitions/WithField 'code' Error"
+                    },
+                    "type": "array"
+                },
+                "success": {
+                    "$ref": "#/definitions/FetchGap"
+                },
+                "warnings": {
+                    "items": {
+                        "$ref": "#/definitions/Error"
+                    },
+                    "type": "array"
+                }
+            },
+            "type": "object"
+        },
+        "Response_GapItemWrapper": {
+            "properties": {
+                "errors": {
+                    "items": {
+                        "$ref": "#/definitions/WithField 'code' Error"
+                    },
+                    "type": "array"
+                },
+                "success": {
+                    "$ref": "#/definitions/GapItemWrapper"
+                },
+                "warnings": {
+                    "items": {
+                        "$ref": "#/definitions/Error"
+                    },
+                    "type": "array"
+                }
+            },
+            "type": "object"
+        },
+        "Response_HistoryTimeline": {
+            "properties": {
+                "errors": {
+                    "items": {
+                        "$ref": "#/definitions/WithField 'code' Error"
+                    },
+                    "type": "array"
+                },
+                "success": {
+                    "$ref": "#/definitions/HistoryTimeline"
+                },
+                "warnings": {
+                    "items": {
+                        "$ref": "#/definitions/Error"
+                    },
+                    "type": "array"
+                }
+            },
+            "type": "object"
+        },
+        "Response_Init": {
+            "properties": {
+                "errors": {
+                    "items": {
+                        "$ref": "#/definitions/WithField 'code' Error"
+                    },
+                    "type": "array"
+                },
+                "success": {
+                    "$ref": "#/definitions/Init"
+                },
+                "warnings": {
+                    "items": {
+                        "$ref": "#/definitions/Error"
+                    },
+                    "type": "array"
+                }
+            },
+            "type": "object"
+        },
+        "Response_InitDashboard": {
+            "properties": {
+                "errors": {
+                    "items": {
+                        "$ref": "#/definitions/WithField 'code' Error"
+                    },
+                    "type": "array"
+                },
+                "success": {
+                    "$ref": "#/definitions/InitDashboard"
+                },
+                "warnings": {
+                    "items": {
+                        "$ref": "#/definitions/Error"
+                    },
+                    "type": "array"
+                }
+            },
+            "type": "object"
+        },
+        "Response_InitWithdrawal": {
+            "properties": {
+                "errors": {
+                    "items": {
+                        "$ref": "#/definitions/WithField 'code' Error"
+                    },
+                    "type": "array"
+                },
+                "success": {
+                    "$ref": "#/definitions/InitWithdrawal"
+                },
+                "warnings": {
+                    "items": {
+                        "$ref": "#/definitions/Error"
+                    },
+                    "type": "array"
+                }
+            },
+            "type": "object"
+        },
+        "Response_Maybe Int64": {
+            "properties": {
+                "errors": {
+                    "items": {
+                        "$ref": "#/definitions/WithField 'code' Error"
+                    },
+                    "type": "array"
+                },
+                "success": {
+                    "format": "int64",
+                    "maximum": 9223372036854775807,
+                    "minimum": -9223372036854775808,
+                    "type": "integer"
+                },
+                "warnings": {
+                    "items": {
+                        "$ref": "#/definitions/Error"
+                    },
+                    "type": "array"
+                }
+            },
+            "type": "object"
+        },
+        "Response_Maybe WithdrawalHistory": {
+            "properties": {
+                "errors": {
+                    "items": {
+                        "$ref": "#/definitions/WithField 'code' Error"
+                    },
+                    "type": "array"
+                },
+                "success": {
+                    "$ref": "#/definitions/WithdrawalHistory"
+                },
+                "warnings": {
+                    "items": {
+                        "$ref": "#/definitions/Error"
+                    },
+                    "type": "array"
+                }
+            },
+            "type": "object"
+        },
+        "Response_Notifications": {
+            "properties": {
+                "errors": {
+                    "items": {
+                        "$ref": "#/definitions/WithField 'code' Error"
+                    },
+                    "type": "array"
+                },
+                "success": {
+                    "$ref": "#/definitions/Notifications"
+                },
+                "warnings": {
+                    "items": {
+                        "$ref": "#/definitions/Error"
+                    },
+                    "type": "array"
+                }
+            },
+            "type": "object"
+        },
+        "Response_TimelineTransactionResponse": {
+            "properties": {
+                "errors": {
+                    "items": {
+                        "$ref": "#/definitions/WithField 'code' Error"
+                    },
+                    "type": "array"
+                },
+                "success": {
+                    "$ref": "#/definitions/TimelineTransactionResponse"
+                },
+                "warnings": {
+                    "items": {
+                        "$ref": "#/definitions/Error"
+                    },
+                    "type": "array"
+                }
+            },
+            "type": "object"
+        },
+        "Response_WithdrawResult": {
+            "properties": {
+                "errors": {
+                    "items": {
+                        "$ref": "#/definitions/WithField 'code' Error"
+                    },
+                    "type": "array"
+                },
+                "success": {
+                    "$ref": "#/definitions/WithdrawResult"
+                },
+                "warnings": {
+                    "items": {
+                        "$ref": "#/definitions/Error"
+                    },
+                    "type": "array"
+                }
+            },
+            "type": "object"
+        },
+        "Response_Workspace": {
+            "properties": {
+                "errors": {
+                    "items": {
+                        "$ref": "#/definitions/WithField 'code' Error"
+                    },
+                    "type": "array"
+                },
+                "success": {
+                    "$ref": "#/definitions/Workspace"
+                },
+                "warnings": {
+                    "items": {
+                        "$ref": "#/definitions/Error"
+                    },
+                    "type": "array"
+                }
+            },
+            "type": "object"
+        },
+        "Response_[Id \"file\"]": {
+            "properties": {
+                "errors": {
+                    "items": {
+                        "$ref": "#/definitions/WithField 'code' Error"
+                    },
+                    "type": "array"
+                },
+                "success": {
+                    "items": {
+                        "$ref": "#/definitions/file"
+                    },
+                    "type": "array"
+                },
+                "warnings": {
+                    "items": {
+                        "$ref": "#/definitions/Error"
+                    },
+                    "type": "array"
+                }
+            },
+            "type": "object"
+        },
+        "Response_[InvoiceRegisterResponse]": {
+            "properties": {
+                "errors": {
+                    "items": {
+                        "$ref": "#/definitions/WithField 'code' Error"
+                    },
+                    "type": "array"
+                },
+                "success": {
+                    "items": {
+                        "$ref": "#/definitions/InvoiceRegisterResponse"
+                    },
+                    "type": "array"
+                },
+                "warnings": {
+                    "items": {
+                        "$ref": "#/definitions/Error"
+                    },
+                    "type": "array"
+                }
+            },
+            "type": "object"
+        },
+        "SendGridSendMailRequest": {
+            "properties": {
+                "body": {
+                    "type": "string"
+                },
+                "from": {
+                    "type": "string"
+                },
+                "personalization": {
+                    "type": "string"
+                },
+                "subject": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "from",
+                "personalization",
+                "subject",
+                "body"
+            ],
+            "type": "object"
+        },
+        "Sha": {
+            "properties": {
+                "key": {
+                    "type": "string"
+                },
+                "value": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "key",
+                "value"
+            ],
+            "type": "object"
+        },
+        "TimelineTransaction": {
+            "properties": {
+                "amount": {
+                    "format": "double",
+                    "type": "number"
+                },
+                "correspondentBank": {
+                    "type": "string"
+                },
+                "correspondentBankSwiftSepaCode": {
+                    "type": "string"
+                },
+                "currency": {
+                    "$ref": "#/definitions/Currency"
+                },
+                "ident": {
+                    "$ref": "#/definitions/UUID"
+                },
+                "senderAddress": {
+                    "type": "string"
+                },
+                "senderBank": {
+                    "type": "string"
+                },
+                "senderBankAccount": {
+                    "type": "string"
+                },
+                "senderName": {
+                    "type": "string"
+                },
+                "senderPhoneNumber": {
+                    "type": "string"
+                },
+                "swiftSepaCode": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "ident",
+                "senderName",
+                "senderAddress",
+                "senderPhoneNumber",
+                "senderBank",
+                "swiftSepaCode",
+                "senderBankAccount",
+                "amount",
+                "currency",
+                "correspondentBank",
+                "correspondentBankSwiftSepaCode"
+            ],
+            "type": "object"
+        },
+        "TimelineTransactionResponse": {
+            "properties": {
+                "transaction": {
+                    "$ref": "#/definitions/TimelineTransaction"
+                }
+            },
+            "required": [
+                "transaction"
+            ],
+            "type": "object"
+        },
+        "UTCTime": {
+            "example": "2016-07-22T00:00:00Z",
+            "format": "yyyy-mm-ddThh:MM:ssZ",
+            "type": "string"
+        },
+        "UUID": {
+            "example": "00000000-0000-0000-0000-000000000000",
+            "format": "uuid",
+            "type": "string"
+        },
+        "Wallet": {
+            "properties": {
+                "amount": {
+                    "format": "double",
+                    "type": "number"
+                },
+                "currency": {
+                    "$ref": "#/definitions/Currency"
+                },
+                "ident": {
+                    "format": "int64",
+                    "maximum": 9223372036854775807,
+                    "minimum": -9223372036854775808,
+                    "type": "integer"
+                },
+                "walletType": {
+                    "$ref": "#/definitions/WalletType"
+                }
+            },
+            "required": [
+                "ident",
+                "currency",
+                "amount",
+                "walletType"
+            ],
+            "type": "object"
+        },
+        "WalletType": {
+            "enum": [
+                "debit",
+                "credit"
+            ],
+            "type": "string"
+        },
+        "WithField 'code' Error": {
+            "properties": {
+                "code": {
+                    "maximum": 9223372036854775807,
+                    "minimum": -9223372036854775808,
+                    "type": "integer"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "meta": {
+                    "$ref": "#/definitions/Object"
+                }
+            },
+            "required": [
+                "code",
+                "message"
+            ],
+            "type": "object"
+        },
+        "Withdraw": {
+            "properties": {
+                "amount": {
+                    "format": "double",
+                    "type": "number"
+                },
+                "walletIdent": {
+                    "format": "int64",
+                    "maximum": 9223372036854775807,
+                    "minimum": -9223372036854775808,
+                    "type": "integer"
+                }
+            },
+            "required": [
+                "walletIdent",
+                "amount"
+            ],
+            "type": "object"
+        },
+        "WithdrawResult": {
+            "properties": {
+                "frozenFunds": {
+                    "format": "double",
+                    "type": "number"
+                },
+                "status": {
+                    "$ref": "#/definitions/WithdrawResultStatus"
+                }
+            },
+            "required": [
+                "status"
+            ],
+            "type": "object"
+        },
+        "WithdrawResultStatus": {
+            "enum": [
+                "notenoughfunds",
+                "withdrawalregistered",
+                "frozenfunds"
+            ],
+            "type": "string"
+        },
+        "WithdrawalHistory": {
+            "properties": {
+                "items": {
+                    "items": {
+                        "$ref": "#/definitions/WithdrawalHistoryItem"
+                    },
+                    "type": "array"
+                },
+                "total": {
+                    "format": "int64",
+                    "maximum": 9223372036854775807,
+                    "minimum": -9223372036854775808,
+                    "type": "integer"
+                }
+            },
+            "required": [
+                "total",
+                "items"
+            ],
+            "type": "object"
+        },
+        "WithdrawalHistoryItem": {
+            "properties": {
+                "amount": {
+                    "format": "double",
+                    "type": "number"
+                },
+                "created": {
+                    "$ref": "#/definitions/UTCTime"
+                },
+                "currency": {
+                    "$ref": "#/definitions/Currency"
+                },
+                "ident": {
+                    "format": "int64",
+                    "maximum": 9223372036854775807,
+                    "minimum": -9223372036854775808,
+                    "type": "integer"
+                },
+                "initiator": {
+                    "type": "string"
+                },
+                "withdrawalStatus": {
+                    "$ref": "#/definitions/WithdrawalStatus"
+                }
+            },
+            "required": [
+                "initiator",
+                "ident",
+                "currency",
+                "amount",
+                "withdrawalStatus",
+                "created"
+            ],
+            "type": "object"
+        },
+        "WithdrawalStatus": {
+            "enum": [
+                "registered",
+                "processing",
+                "confirmed",
+                "declined"
+            ],
+            "type": "string"
+        },
+        "Workspace": {
+            "properties": {
+                "unreadNotification": {
+                    "maximum": 9223372036854775807,
+                    "minimum": -9223372036854775808,
+                    "type": "integer"
+                }
+            },
+            "required": [
+                "unreadNotification"
+            ],
+            "type": "object"
+        },
+        "file": {
+            "type": "integer"
+        }
+    },
+    "host": "api.b-correspondent.app",
+    "info": {
+        "contact": {
+            "email": "fclaw007@gmail.com"
+        },
+        "description": "BCorrespondent server api",
+        "title": "BCorrespondent. Tag (-). Commit (bb65df7)",
+        "version": "1.2.1"
+    },
+    "paths": {
+        "/admin/user": {
+            "put": {
+                "consumes": [
+                    "application/json;charset=utf-8"
+                ],
+                "description": "BCorrespondent apicreate new user",
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/NewUser"
+                        }
+                    }
+                ],
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/Response_()"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid `body`"
+                    }
+                },
+                "security": [
+                    {
+                        "JwtSecurity": []
+                    }
+                ],
+                "tags": [
+                    "Admin"
+                ]
+            }
+        },
+        "/auth/code": {
+            "put": {
+                "consumes": [
+                    "application/json;charset=utf-8"
+                ],
+                "description": "BCorrespondent api",
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/Credentials"
+                        }
+                    }
+                ],
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/Response_AuthCodeHash"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid `body`"
+                    }
+                },
+                "tags": [
+                    "Auth"
+                ]
+            }
+        },
+        "/auth/code/resend": {
+            "put": {
+                "consumes": [
+                    "application/json;charset=utf-8"
+                ],
+                "description": "BCorrespondent api",
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/ResendCode"
+                        }
+                    }
+                ],
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/Response_AuthCodeHash"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid `body`"
+                    }
+                },
+                "tags": [
+                    "Auth"
+                ]
+            }
+        },
+        "/auth/login/{auth_type}": {
+            "post": {
+                "consumes": [
+                    "application/json;charset=utf-8"
+                ],
+                "description": "BCorrespondent api",
+                "parameters": [
+                    {
+                        "enum": [
+                            "jwt"
+                        ],
+                        "in": "path",
+                        "name": "auth_type",
+                        "required": true,
+                        "type": "string"
+                    },
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/AuthCode"
+                        }
+                    }
+                ],
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/Response_AuthToken"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid `body` or `auth_type`"
+                    }
+                },
+                "tags": [
+                    "Auth"
+                ]
+            }
+        },
+        "/auth/logout": {
+            "post": {
+                "description": "BCorrespondent api",
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/Response_()"
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "JwtSecurity": []
+                    }
+                ],
+                "tags": [
+                    "Auth"
+                ]
+            }
+        },
+        "/auth/password/reset": {
+            "post": {
+                "consumes": [
+                    "application/json;charset=utf-8"
+                ],
+                "description": "BCorrespondent api",
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/NewPassword"
+                        }
+                    }
+                ],
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/Response_Bool"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid `body`"
+                    }
+                },
+                "security": [
+                    {
+                        "JwtSecurity": []
+                    }
+                ],
+                "tags": [
+                    "Auth"
+                ]
+            }
+        },
+        "/auth/password/reset/link": {
+            "put": {
+                "description": "BCorrespondent api",
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/Response_Maybe Int64"
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "JwtSecurity": []
+                    }
+                ],
+                "tags": [
+                    "Auth"
+                ]
+            }
+        },
+        "/auth/token/generate/{key}": {
+            "post": {
+                "description": "BCorrespondent api",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "key",
+                        "required": true,
+                        "type": "string"
+                    }
+                ],
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/Response_AuthToken"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid `key`"
+                    }
+                },
+                "tags": [
+                    "Auth"
+                ]
+            }
+        },
+        "/file/download/{user_id}/{file_id}": {},
+        "/file/upload/{bucket}": {
+            "put": {
+                "description": "BCorrespondent apiupload to server",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "bucket",
+                        "required": true,
+                        "type": "string"
+                    },
+                    {
+                        "in": "formData",
+                        "name": "payloadFiles",
+                        "required": true,
+                        "type": "file"
+                    }
+                ],
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/Response_[Id \"file\"]"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid `bucket`"
+                    }
+                },
+                "security": [
+                    {
+                        "JwtSecurity": []
+                    }
+                ],
+                "tags": [
+                    "File"
+                ]
+            }
+        },
+        "/foreign/sendgrid/send": {
+            "post": {
+                "consumes": [
+                    "application/json;charset=utf-8"
+                ],
+                "description": "BCorrespondent api",
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/SendGridSendMailRequest"
+                        }
+                    }
+                ],
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/Response_()"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid `body`"
+                    }
+                },
+                "tags": [
+                    "Foreign"
+                ]
+            }
+        },
+        "/foreign/webhook/github": {
+            "post": {
+                "consumes": [
+                    "application/json;charset=utf-8"
+                ],
+                "description": "BCorrespondent api",
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/Payload"
+                        }
+                    }
+                ],
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/Response_()"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid `body`"
+                    }
+                },
+                "tags": [
+                    "Foreign"
+                ]
+            }
+        },
+        "/foreign/webhook/{provider}": {
+            "post": {
+                "consumes": [
+                    "application/json;charset=utf-8"
+                ],
+                "description": "BCorrespondent api",
+                "parameters": [
+                    {
+                        "enum": [
+                            "elekse"
+                        ],
+                        "in": "path",
+                        "name": "provider",
+                        "required": true,
+                        "type": "string"
+                    },
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/Payload"
+                        }
+                    }
+                ],
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/Response_()"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid `body` or `provider`"
+                    }
+                },
+                "tags": [
+                    "Foreign"
+                ]
+            }
+        },
+        "/frontend/init": {
+            "get": {
+                "description": "BCorrespondent api",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "token",
+                        "required": false,
+                        "type": "string"
+                    }
+                ],
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/Response_Init"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid `token`"
+                    }
+                },
+                "tags": [
+                    "Frontend"
+                ]
+            }
+        },
+        "/frontend/user/balanced-book": {
+            "get": {
+                "description": "BCorrespondent api",
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/Response_BalancedBook"
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "JwtSecurity": []
+                    }
+                ],
+                "tags": [
+                    "Frontend"
+                ]
+            }
+        },
+        "/frontend/user/balanced-book/{year}/{month}/{day}/{direction}": {
+            "get": {
+                "description": "BCorrespondent api",
+                "parameters": [
+                    {
+                        "format": "int64",
+                        "in": "path",
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "name": "year",
+                        "required": true,
+                        "type": "integer"
+                    },
+                    {
+                        "format": "int64",
+                        "in": "path",
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "name": "month",
+                        "required": true,
+                        "type": "integer"
+                    },
+                    {
+                        "format": "int64",
+                        "in": "path",
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "name": "day",
+                        "required": true,
+                        "type": "integer"
+                    },
+                    {
+                        "enum": [
+                            "forward",
+                            "backward"
+                        ],
+                        "in": "path",
+                        "name": "direction",
+                        "required": true,
+                        "type": "string"
+                    }
+                ],
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/Response_BalancedBook"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid `direction` or `day` or `month` or `year`"
+                    }
+                },
+                "security": [
+                    {
+                        "JwtSecurity": []
+                    }
+                ],
+                "tags": [
+                    "Frontend"
+                ]
+            }
+        },
+        "/frontend/user/dashboard/init": {
+            "get": {
+                "description": "BCorrespondent api",
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/Response_InitDashboard"
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "JwtSecurity": []
+                    }
+                ],
+                "tags": [
+                    "Frontend"
+                ]
+            }
+        },
+        "/frontend/user/dashboard/timeline/gap": {
+            "get": {
+                "description": "BCorrespondent api",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "from",
+                        "required": true,
+                        "type": "string"
+                    },
+                    {
+                        "in": "query",
+                        "name": "to",
+                        "required": true,
+                        "type": "string"
+                    }
+                ],
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/Response_FetchGap"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid `to` or `from`"
+                    }
+                },
+                "security": [
+                    {
+                        "JwtSecurity": []
+                    }
+                ],
+                "tags": [
+                    "Frontend"
+                ]
+            }
+        },
+        "/frontend/user/dashboard/timeline/transaction/{ident}": {
+            "get": {
+                "description": "BCorrespondent api",
+                "parameters": [
+                    {
+                        "format": "int64",
+                        "in": "path",
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "name": "ident",
+                        "required": true,
+                        "type": "integer"
+                    }
+                ],
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/Response_TimelineTransactionResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid `ident`"
+                    }
+                },
+                "security": [
+                    {
+                        "JwtSecurity": []
+                    }
+                ],
+                "tags": [
+                    "Frontend"
+                ]
+            }
+        },
+        "/frontend/user/dashboard/timeline/{direction}": {
+            "get": {
+                "description": "BCorrespondent api",
+                "parameters": [
+                    {
+                        "enum": [
+                            "backward",
+                            "forward"
+                        ],
+                        "in": "path",
+                        "name": "direction",
+                        "required": true,
+                        "type": "string"
+                    },
+                    {
+                        "in": "query",
+                        "name": "point",
+                        "required": true,
+                        "type": "string"
+                    }
+                ],
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/Response_GapItemWrapper"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid `point` or `direction`"
+                    }
+                },
+                "security": [
+                    {
+                        "JwtSecurity": []
+                    }
+                ],
+                "tags": [
+                    "Frontend"
+                ]
+            }
+        },
+        "/frontend/user/history/timeline": {
+            "get": {
+                "description": "BCorrespondent api",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "date",
+                        "required": true,
+                        "type": "string"
+                    }
+                ],
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/Response_HistoryTimeline"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid `date`"
+                    }
+                },
+                "security": [
+                    {
+                        "JwtSecurity": []
+                    }
+                ],
+                "tags": [
+                    "Frontend"
+                ]
+            }
+        },
+        "/frontend/user/history/timeline/{year}/{month}/{day}/{direction}/{institution}": {
+            "get": {
+                "description": "BCorrespondent api",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "name": "year",
+                        "required": true,
+                        "type": "integer"
+                    },
+                    {
+                        "in": "path",
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "name": "month",
+                        "required": true,
+                        "type": "integer"
+                    },
+                    {
+                        "in": "path",
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "name": "day",
+                        "required": true,
+                        "type": "integer"
+                    },
+                    {
+                        "enum": [
+                            "backward",
+                            "forward"
+                        ],
+                        "in": "path",
+                        "name": "direction",
+                        "required": true,
+                        "type": "string"
+                    },
+                    {
+                        "in": "path",
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "name": "institution",
+                        "required": true,
+                        "type": "integer"
+                    },
+                    {
+                        "in": "query",
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "name": "hour",
+                        "required": true,
+                        "type": "integer"
+                    }
+                ],
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/Response_GapItemWrapper"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid `hour` or `institution` or `direction` or `day` or `month` or `year`"
+                    }
+                },
+                "security": [
+                    {
+                        "JwtSecurity": []
+                    }
+                ],
+                "tags": [
+                    "Frontend"
+                ]
+            }
+        },
+        "/frontend/user/issue": {
+            "put": {
+                "consumes": [
+                    "application/json;charset=utf-8"
+                ],
+                "description": "BCorrespondent api",
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/Issue"
+                        }
+                    }
+                ],
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/Response_()"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid `body`"
+                    }
+                },
+                "security": [
+                    {
+                        "JwtSecurity": []
+                    }
+                ],
+                "tags": [
+                    "Frontend"
+                ]
+            }
+        },
+        "/frontend/user/notification": {
+            "post": {
+                "consumes": [
+                    "application/json;charset=utf-8"
+                ],
+                "description": "BCorrespondent api",
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "required": true,
+                        "schema": {
+                            "items": {
+                                "$ref": "#/definitions/NotificationIdent"
+                            },
+                            "type": "array"
+                        }
+                    }
+                ],
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/Response_()"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid `body`"
+                    }
+                },
+                "security": [
+                    {
+                        "JwtSecurity": []
+                    }
+                ],
+                "tags": [
+                    "Frontend"
+                ]
+            }
+        },
+        "/frontend/user/notifications": {
+            "get": {
+                "description": "BCorrespondent api",
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/Response_Notifications"
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "JwtSecurity": []
+                    }
+                ],
+                "tags": [
+                    "Frontend"
+                ]
+            }
+        },
+        "/frontend/user/procuratory": {
+            "put": {
+                "consumes": [
+                    "application/json;charset=utf-8"
+                ],
+                "description": "BCorrespondent api",
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/ProcuratoryRequest"
+                        }
+                    }
+                ],
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/Response_()"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid `body`"
+                    }
+                },
+                "security": [
+                    {
+                        "JwtSecurity": []
+                    }
+                ],
+                "tags": [
+                    "Frontend"
+                ]
+            }
+        },
+        "/frontend/user/workspace": {
+            "get": {
+                "description": "BCorrespondent api",
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/Response_Workspace"
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "JwtSecurity": []
+                    }
+                ],
+                "tags": [
+                    "Frontend"
+                ]
+            }
+        },
+        "/institution/fiat/transaction/order": {
+            "post": {
+                "description": "BCorrespondent api",
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/Response_()"
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "JwtSecurity": []
+                    }
+                ],
+                "tags": [
+                    "Institution"
+                ]
+            }
+        },
+        "/institution/fiat/withdraw": {
+            "put": {
+                "consumes": [
+                    "application/json;charset=utf-8"
+                ],
+                "description": "BCorrespondent api",
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/Withdraw"
+                        }
+                    }
+                ],
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/Response_WithdrawResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid `body`"
+                    }
+                },
+                "security": [
+                    {
+                        "JwtSecurity": []
+                    }
+                ],
+                "tags": [
+                    "Institution"
+                ]
+            }
+        },
+        "/institution/fiat/withdraw/history/page": {
+            "get": {
+                "description": "BCorrespondent api",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "maximum": 9223372036854775807,
+                        "minimum": -9223372036854775808,
+                        "name": "page",
+                        "required": true,
+                        "type": "integer"
+                    }
+                ],
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/Response_Maybe WithdrawalHistory"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid `page`"
+                    }
+                },
+                "security": [
+                    {
+                        "JwtSecurity": []
+                    }
+                ],
+                "tags": [
+                    "Institution"
+                ]
+            }
+        },
+        "/institution/fiat/withdraw/init": {
+            "get": {
+                "description": "BCorrespondent api",
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/Response_InitWithdrawal"
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "JwtSecurity": []
+                    }
+                ],
+                "tags": [
+                    "Institution"
+                ]
+            }
+        },
+        "/institution/invoice/register": {
+            "put": {
+                "consumes": [
+                    "application/json;charset=utf-8"
+                ],
+                "description": "BCorrespondent api",
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "required": true,
+                        "schema": {
+                            "items": {
+                                "$ref": "#/definitions/InvoiceRegisterRequest"
+                            },
+                            "type": "array"
+                        }
+                    }
+                ],
+                "produces": [
+                    "application/json;charset=utf-8"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/Response_[InvoiceRegisterResponse]"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid `body`"
+                    }
+                },
+                "security": [
+                    {
+                        "JwtSecurity": []
+                    }
+                ],
+                "tags": [
+                    "Institution"
+                ]
+            }
+        },
+        "/ws/frontend/user/balanced-book/transaction/add": {},
+        "/ws/frontend/user/balanced-book/wallet/update": {},
+        "/ws/frontend/user/dashboard/transaction/update": {},
+        "/ws/frontend/user/dashboard/wallet/update": {},
+        "/ws/institution/fiat/withdraw/history/item/update": {}
+    },
+    "schemes": [
+        "http",
+        "https"
+    ],
+    "securityDefinitions": {
+        "JwtSecurity": {
+            "description": "JSON Web Token-based API key",
+            "in": "header",
+            "name": "Authorization",
+            "type": "apiKey"
+        }
+    },
+    "swagger": "2.0"
+}
