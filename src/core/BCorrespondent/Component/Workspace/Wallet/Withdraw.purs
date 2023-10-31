@@ -124,8 +124,13 @@ component =
               perPage = 10,
               total = total
             }
-          WS.subscribe loc WS.withdrawalUrl (Just (WS.encodeResource WS.Withdrawal)) 
-            \{success: history} -> handleAction $ UpdateWithdrawalhistoryItem (history :: Back.WithdrawalHistory)
+
+          void $ H.fork $   
+            WS.subscribe loc WS.withdrawalUrl (Just (WS.encodeResource WS.Withdrawal)) 
+              \{success: history} -> 
+                handleAction $ 
+                  UpdateWithdrawalhistoryItem $
+                    (history :: Back.WithdrawalHistory)
     handleAction (Withdraw ev) = do 
       H.liftEffect $ preventDefault ev
       {compError, amount} <- H.get

@@ -184,11 +184,13 @@ handleAction Initialize = do
               dow /= weekday) $
           H.modify_ _ { now = {weekday: dow, hour: currHour} }
 
-      WS.subscribe loc WS.transactionBalancedBookUrl (Just (WS.encodeResource WS.BalancedBookTransaction)) $
-        handleAction <<< AddTransaction <<< _.success
+      void $ H.fork $ do
 
-      WS.subscribe loc WS.walletBalancedBookUrl (Just (WS.encodeResource WS.BalancedBookWallet)) $
-        handleAction <<< UpdateWallets <<< _.success
+        WS.subscribe loc WS.transactionBalancedBookUrl (Just (WS.encodeResource WS.BalancedBookTransaction)) $
+          handleAction <<< AddTransaction <<< _.success
+
+        WS.subscribe loc WS.walletBalancedBookUrl (Just (WS.encodeResource WS.BalancedBookWallet)) $
+          handleAction <<< UpdateWallets <<< _.success
 
 handleAction Finalize = do
   { wsVar } <- getStore

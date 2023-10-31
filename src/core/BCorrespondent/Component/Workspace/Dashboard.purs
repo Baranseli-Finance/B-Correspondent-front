@@ -116,12 +116,13 @@ component =
             forkId <-  H.fork $ do
                logDebug $ loc <> " ---> timeline updater has been activated"
                forever $ delay *> handleAction AddGap
+            
+            void $ H.fork $ do
+               WS.subscribe loc WS.transactionUrl (Just (WS.encodeResource WS.Transaction)) $ 
+                 handleAction <<< UpdateTransaction <<< _.success
 
-            WS.subscribe loc WS.transactionUrl (Just (WS.encodeResource WS.Transaction)) $ 
-              handleAction <<< UpdateTransaction <<< _.success
-
-            WS.subscribe loc WS.walletUrl (Just (WS.encodeResource WS.Wallet)) $
-              handleAction <<< UpdateWallet <<< _.success
+               WS.subscribe loc WS.walletUrl (Just (WS.encodeResource WS.Wallet)) $
+                 handleAction <<< UpdateWallet <<< _.success
 
             H.modify_ _ 
               { forkId = Just forkId,
