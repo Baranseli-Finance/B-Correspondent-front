@@ -62,8 +62,8 @@ derive instance genericResource :: Generic Resource _
 encodeResource :: Resource -> String
 encodeResource = unsafeFromForeign <<< genericEncodeEnum {constructorTagTransform: toLower}
 
-transactionUrl = "frontend/user/dashboard/transaction/update"
-walletUrl = "frontend/user/dashboard/wallet/update"
-withdrawalUrl = "institution/fiat/withdraw/history/item/update"
-transactionBalancedBookUrl = "frontend/user/balanced-book/transaction/add"
-walletBalancedBookUrl = "frontend/user/balanced-book/wallet/update"
+transactionUrl = "ws/frontend/user/dashboard/transaction/update"
+walletUrl = "ws/frontend/user/dashboard/wallet/update"
+withdrawalUrl = "ws/institution/fiat/withdraw/history/item/update"
+transactionBalancedBookUrl = "ws/frontend/user/balanced-book/transaction/add"
+walletBalancedBookUrl = "ws/frontend/user/balanced-book/wallet/update"
