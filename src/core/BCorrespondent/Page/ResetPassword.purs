@@ -61,7 +61,7 @@ component key =
 
 render key { isOk, timeleft } =
   HH.div 
-  [ css "loading-container" ] 
+  [ css "password-reset-container" ] 
   [ Async.slot 0, chooseElem isOk ok no ]
   where 
     ok =  
