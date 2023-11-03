@@ -10,6 +10,7 @@ import BCorrespondent.Api.Foreign.Request.Handler (onFailure)
 import BCorrespondent.Data.Config (Config(..))
 import BCorrespondent.Capability.LogMessages (logDebug)
 import BCorrespondent.Component.HTML.Utils (css, safeHref)
+import BCorrespondent.Component.Async as Async
 
 import Halogen as H
 import Halogen.HTML as HH
@@ -123,8 +124,10 @@ component =
                     , login = Nothing
                     , password = Nothing
                     }
-          else H.modify_ _ { hash = Just hash, errMsg = Nothing, stage = "Code" }
-
+          else do
+                 let msg = "warning: it may take several minutes to have the code delivered"
+                 Async.send $ Async.mkOrdinary msg Async.Warning Nothing
+                 H.modify_ _ { hash = Just hash, errMsg = Nothing, stage = "Code" }
   handleAction (FillCode c) =
     case fromString c of 
       Just new ->
