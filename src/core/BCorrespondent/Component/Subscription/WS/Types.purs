@@ -5,6 +5,7 @@ module BCorrespondent.Component.Subscription.WS.Types
   , Wallet
   , WalletBalancedBook
   , encodeResource
+  , notificationUrl
   , transactionBalancedBookUrl
   , transactionUrl
   , walletBalancedBookUrl
@@ -56,6 +57,7 @@ data Resource =
      | Withdrawal 
      | BalancedBookTransaction
      | BalancedBookWallet
+     | Notification
 
 derive instance genericResource :: Generic Resource _
 
@@ -67,3 +69,4 @@ walletUrl = "ws/frontend/user/dashboard/wallet/update"
 withdrawalUrl = "ws/institution/fiat/withdraw/history/item/update"
 transactionBalancedBookUrl = "ws/frontend/user/balanced-book/transaction/add"
 walletBalancedBookUrl = "ws/frontend/user/balanced-book/wallet/update"
+notificationUrl = "ws/frontend/user/notification"
