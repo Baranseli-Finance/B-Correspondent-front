@@ -26,6 +26,9 @@ import Web.HTML (window)
 import Store (Action(UpdateJwtUser))
 import Data.String (length)
 import Effect.Exception (Error)
+import Web.HTML.HTMLDocument (setTitle)
+import Web.HTML.Window (document)
+import Web.HTML (window)
 
 import Undefined
 
@@ -64,6 +67,10 @@ component =
       handleAction Initialize = do 
         {user} <- getStore
         when (isNothing user) $ navigate Error404
+        H.liftEffect $ 
+          window >>= 
+            document >>= 
+              setTitle "BCorrespondent | Password"
       handleAction (MakeSetPassRequest ev) = do
         H.liftEffect $ preventDefault ev
         {key, password, againPassword} <- H.get
