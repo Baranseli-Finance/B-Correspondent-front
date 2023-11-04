@@ -49,7 +49,7 @@ import Data.Date (Date)
 
 type User = { jwtUser :: JwtUser, token :: Back.JWTToken }
 
-type WS = { ws :: WS.WebSocket, forkId :: H.ForkId }
+type WS = { ws :: WS.WebSocket, forkId :: H.ForkId, component :: String }
 
 -- | We can now construct our central state which will be available to all
 -- | components (if they opt-in).

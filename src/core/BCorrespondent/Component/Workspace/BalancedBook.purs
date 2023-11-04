@@ -22,7 +22,8 @@ import Halogen.HTML.Core (HTML)
 import Type.Proxy (Proxy(..))
 import Data.Array 
        (zip, (..), (:), snoc, head, foldl, length, 
-        index, singleton, findIndex, modifyAt, reverse, find
+        index, singleton, findIndex, modifyAt, reverse, find,
+        foldM
        )
 import Data.Lens (_1, _2, (^.))
 import Data.Generic.Rep (class Generic)
@@ -184,22 +185,25 @@ handleAction Initialize = do
               dow /= weekday) $
           H.modify_ _ { now = {weekday: dow, hour: currHour} }
 
-      void $ H.fork $ do
+      WS.subscribe loc WS.transactionBalancedBookUrl (Just (WS.encodeResource WS.BalancedBookTransaction)) $
+        handleAction <<< AddTransaction <<< _.success
 
-        WS.subscribe loc WS.transactionBalancedBookUrl (Just (WS.encodeResource WS.BalancedBookTransaction)) $
-          handleAction <<< AddTransaction <<< _.success
-
-        WS.subscribe loc WS.walletBalancedBookUrl (Just (WS.encodeResource WS.BalancedBookWallet)) $
-          handleAction <<< UpdateWallets <<< _.success
-
+      WS.subscribe loc WS.walletBalancedBookUrl (Just (WS.encodeResource WS.BalancedBookWallet)) $
+        handleAction <<< UpdateWallets <<< _.success
 handleAction Finalize = do
   { wsVar } <- getStore
   wsm <- H.liftEffect $ Async.tryTake (wsVar :: Async.AVar (Array WS))
-  for_ wsm \xs ->
-    for_ xs \{ ws, forkId } -> do
-      H.kill forkId
-      H.liftEffect $ WS.close ws
-      logDebug $ loc <> " ---> ws has been killed"          
+  for_ wsm \xs -> do
+    let release ys y@{ ws, forkId, component: l}
+          | l == loc = do
+              H.kill forkId
+              H.liftEffect $ WS.close ws
+              pure ys
+          | otherwise = pure $ y : ys
+    logDebug $ loc <> " ---> ws has been killed"
+    xs' <- foldM release [] xs
+    H.liftEffect $ xs' `Async.tryPut` wsVar 
+  logDebug $ loc <> " component is closed"       
 handleAction (LoadTimeline institution amount idx hour) = do
   logDebug $ loc <> " ----> loading timeline, raw data: weekday idx - " <> show idx <> ", hour - " <> show hour
   {book, now: {weekday, hour: currHour}} <- H.get

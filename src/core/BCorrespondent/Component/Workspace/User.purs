@@ -25,6 +25,7 @@ import Store (User, WS)
 import AppM (AppM)
 import Web.Socket as WS
 import Effect.AVar as Async
+import Data.Array ((:), foldM)
 
 import Undefined
 
@@ -39,7 +40,7 @@ data Action =
       | Finalize  
       | OpenMenu 
       | OpenNotification 
-      | IncreaseNotificationCount
+      | IncreaseNotificationCount Int
 
 data Output = DropDownMenu | Notification
 
@@ -68,21 +69,27 @@ component =
         { user } <- getStore
         for_ (user :: Maybe User) \{jwtUser: {login}} -> 
           H.modify_ _ { user = login }
-        void $ H.fork $
-          WS.subscribe loc WS.notificationUrl (Just (WS.encodeResource WS.Notification)) $
-            handleAction <<< const IncreaseNotificationCount <<< _.success
+        WS.subscribe loc WS.notificationUrl (Just (WS.encodeResource WS.Notification)) $
+          handleAction <<< IncreaseNotificationCount <<< _.success
+        logDebug $ loc <> " component is initialized"  
       handleAction Finalize = do
         { wsVar } <- getStore
         wsm <- H.liftEffect $ Async.tryTake (wsVar :: Async.AVar (Array WS))
-        for_ wsm \xs ->
-          for_ xs \{ ws, forkId } -> do
-            H.kill forkId
-            H.liftEffect $ WS.close ws
-            logDebug $ loc <> " ---> ws has been killed"         
+        for_ wsm \xs -> do
+          let release ys y@{ ws, forkId, component: l}
+                | l == loc = do
+                    H.kill forkId
+                    H.liftEffect $ WS.close ws
+                    pure ys
+                | otherwise = pure $ y : ys
+          logDebug $ loc <> " ---> ws has been killed"
+          xs' <- foldM release [] xs
+          H.liftEffect $ xs' `Async.tryPut` wsVar   
+        logDebug $ loc <> " component is closed"             
       handleAction OpenMenu = H.raise DropDownMenu
       handleAction OpenNotification = H.raise Notification
-      handleAction IncreaseNotificationCount = 
-        H.modify_ \s -> s { amountNotification = 1 + _.amountNotification s }
+      handleAction (IncreaseNotificationCount cnt) = 
+        H.modify_ \s -> s { amountNotification = cnt + _.amountNotification s }
 
 handleQuery :: forall a s . Query a -> H.HalogenM State Action s Output AppM (Maybe a)
 handleQuery (AmountNotification c a) = map (const (Just a)) $ H.modify_ _ { amountNotification = c }

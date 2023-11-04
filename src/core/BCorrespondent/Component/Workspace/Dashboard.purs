@@ -30,9 +30,9 @@ import Data.Time (hour, minute, Time (..), setHour, setMinute)
 import Data.Time as Time
 import Data.Enum (toEnum, fromEnum)
 import Data.Time.Component
-import Data.Array (uncons, last, snoc, head, findIndex, modifyAt, (:), sortWith)
+import Data.Array (uncons, last, snoc, head, findIndex, modifyAt, (:), sortWith, foldM)
 import Effect.Aff as Aff
-import Store (User)
+import Store (User, WS)
 import Control.Monad.Rec.Class (forever)
 import Control.Alt ((<|>))
 import Data.Lens
@@ -142,12 +142,18 @@ component =
       handleAction Finalize = do
         map (_.forkId) H.get >>= flip for_ H.kill
         { wsVar } <- getStore
-        wsm <- H.liftEffect $ Async.tryTake wsVar
-        for_ wsm \xs ->
-          for_ xs \{ ws, forkId } -> do
-            H.kill forkId
-            H.liftEffect $ WS.close ws
-            logDebug $ loc <> " ---> ws has been killed"
+        wsm <- H.liftEffect $ Async.tryTake (wsVar :: Async.AVar (Array WS))
+        for_ wsm \xs -> do
+          let release ys y@{ ws, forkId, component: l}
+                | l == loc = do
+                    H.kill forkId
+                    H.liftEffect $ WS.close ws
+                    pure ys
+                | otherwise = pure $ y : ys
+          logDebug $ loc <> " ---> ws has been killed"
+          xs' <- foldM release [] xs
+          H.liftEffect $ xs' `Async.tryPut` wsVar 
+        logDebug $ loc <> " component is closed"       
       handleAction (HandleChild (Timeline.OutputDirection Back.Backward timeline)) = 
         handleBackward timeline
       handleAction (HandleChild (Timeline.OutputDirection Back.Forward timeline)) = do

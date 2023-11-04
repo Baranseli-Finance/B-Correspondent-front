@@ -22,10 +22,10 @@ import Data.Maybe (Maybe (..), fromMaybe, isNothing, isJust)
 import Halogen.Store.Monad (getStore)
 import Data.Foldable (for_)
 import Data.Traversable (for)
-import Store (User)
+import Store (User, WS)
 import Effect.Exception (message, error)
 import Data.Int (toNumber)
-import Data.Array (sort, length, zip, (..), head, (:), findIndex, updateAt, tail, init, elem)
+import Data.Array (sort, length, zip, (..), head, (:), findIndex, updateAt, tail, init, elem, foldM)
 import Data.Array as A
 import Data.Number (fromString)
 import Data.Either (Either (..), isLeft, fromLeft)
@@ -228,14 +228,18 @@ component =
         then H.modify_ \s ->  s { total = total, history = newHistory }
         else modifyItemsOnPage total currPage
     handleAction Finalize = do
-        { wsVar } <- getStore
-        wsm <- H.liftEffect $ Async.tryTake wsVar
-        for_ wsm \xs ->
-          for_ xs \{ ws, forkId } -> do
-            H.kill forkId
-            H.liftEffect $ WS.close ws
-            logDebug $ loc <> " ---> ws has been killed"
-
+      { wsVar } <- getStore
+      wsm <- H.liftEffect $ Async.tryTake (wsVar :: Async.AVar (Array WS))
+      for_ wsm \xs -> do
+        let release ys y@{ ws, forkId, component: l}
+              | l == loc = do
+                  H.kill forkId
+                  H.liftEffect $ WS.close ws
+                  pure ys
+              | otherwise = pure $ y : ys
+        logDebug $ loc <> " ---> ws has been killed"
+        xs' <- foldM release [] xs
+        H.liftEffect $ xs' `Async.tryPut` wsVar 
 
 render {serverError: Just msg } = HH.text msg
 render {serverError: Nothing, balances } | M.isEmpty balances = HH.div_ [HH.text "loading wallets..."]

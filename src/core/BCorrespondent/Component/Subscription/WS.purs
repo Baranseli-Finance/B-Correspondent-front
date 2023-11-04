@@ -62,7 +62,7 @@ subscribe loc url trigger goCompHandle = do
           onFailure resp (Async.send <<< flip Async.mkException loc) goCompHandle
         void $ H.liftEffect $ do
           st <- Async.status wsVar
-          if Async.isEmpty st then void $ singleton { ws: ws, forkId: forkId } `Async.tryPut` wsVar
+          if Async.isEmpty st then void $ singleton { ws: ws, forkId: forkId, component: loc } `Async.tryPut` wsVar
           else do
             mxs <- Async.tryTake wsVar
-            for_ mxs \xs -> ({ ws: ws, forkId: forkId } : xs) `Async.tryPut` wsVar
+            for_ mxs \xs -> ({ ws: ws, forkId: forkId, component: loc } : xs) `Async.tryPut` wsVar
