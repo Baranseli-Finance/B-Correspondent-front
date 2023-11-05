@@ -13,6 +13,8 @@ import AppM (AppM)
 import Data.Maybe (Maybe (..), fromMaybe)
 import Data.Functor (($>))
 import Data.Array (length)
+import Data.Decimal (fromNumber, toFixed)
+
 
 proxy = Proxy :: _ "workspace_dashboard_gap"
 
@@ -66,5 +68,5 @@ renderAmounts xs =
        [HPExt.style "position:relative;font-size:20px"] 
        [HH.text (show (decodeCurrency currency))]
     ,  HH.span [HPExt.style "font-size:20px; padding-left:10px"]
-       [HH.text (show value)]
+       [HH.text (toFixed 2 (fromNumber value))]
     ]

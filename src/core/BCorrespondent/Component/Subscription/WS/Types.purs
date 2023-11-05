@@ -28,7 +28,9 @@ type Transaction =
        min :: Int,
        textualIdent :: String,
        tm :: String,
-       ident :: Int
+       ident :: Int,
+       currency :: Foreign,
+       amount :: Number
      }
 
 type Wallet = 

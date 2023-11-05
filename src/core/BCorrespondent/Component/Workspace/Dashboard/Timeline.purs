@@ -121,7 +121,8 @@ component =
             H.tell Dashboard.Transaction.proxy 1 $ 
               Dashboard.Transaction.Open ident
       handleAction (TotalAmountInGap idx xs ev) = do
-        H.tell Dashboard.Gap.proxy 2 $ 
+        logDebug $ loc <> " ---> TotalAmountInGap, xs: " <> show (xs <#> Back.printGapItemAmount)
+        H.tell Dashboard.Gap.proxy 2 $
           Dashboard.Gap.Open 
             { x: Just (clientX ev), 
               y: Just (clientY ev), 

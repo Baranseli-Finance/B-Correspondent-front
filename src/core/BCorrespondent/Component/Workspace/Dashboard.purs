@@ -197,8 +197,20 @@ component =
                                 textualIdent: _.textualIdent item, 
                                 ident: _.ident item, 
                                 tm: _.tm item
-                              }       
+                              }   
+                        modifyAmounts xs =
+                          let idxm = 
+                                flip findIndex xs \{currency} ->
+                                  Back.decodeCurrency currency == 
+                                  Back.decodeCurrency (_.currency item)
+                              modify el = el { value = _.value el + _.amount item }
+                              res = join $ flip map idxm \idx -> modifyAt idx modify xs
+                              x= { currency: _.currency item,
+                                   value: _.amount item 
+                                  } 
+                          in fromMaybe (x : xs) res      
                     in x # Back._elements .~ sortWith (_.tm) (fromMaybe (newItem : x^.Back._elements) res)
+                         # Back._amounts %~ modifyAmounts 
                   else x
           H.tell Timeline.proxy 1 $ Timeline.WithNewTransaction newTimeline
 
