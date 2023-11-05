@@ -309,12 +309,20 @@ fetchBalancedBook direction = do
         onFailure resp faiure \{success: book@{from, to}} -> do
           can <- canMoveBack from to
           now <- H.liftEffect nowDate
+          let month = 
+                if fromEnum (D.month now) < 10 
+                then "0" <> show (fromEnum (D.month now)) 
+                else show (fromEnum (D.month now))
+          let day =
+                if fromEnum (D.day now) < 10 
+                then "0" <> show (fromEnum (D.day now)) 
+                else show (fromEnum (D.day now))    
           let mkNowDate = 
                 show (fromEnum (D.year now)) <> "-" <> 
-                show (fromEnum (D.month now)) <> "-" <> 
-                show (fromEnum (D.day now))
+                month <> "-" <> day  
           let isPast | mkNowDate >= from && mkNowDate <= to = false
                      | otherwise = true
+          logDebug $ loc <> " fetchBalancedBook ---> now: " <> mkNowDate <> ", from: " <> from <> ", to: " <> to
           H.modify_ _ { book = pure book, isPast = isPast, canTravelBack = can }
 
 
