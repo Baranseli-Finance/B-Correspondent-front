@@ -42,9 +42,9 @@ import System.Time (addDays, nowDate, nowTime)
 import Data.DateTime as D
 import Effect.Aff as Aff
 import Control.Monad.Rec.Class (forever)
-import Data.String (split)
+import Data.String (split, take)
 import Data.String.Pattern (Pattern (..))
-import Data.Int (fromString)
+import Data.Int (fromString, floor)
 import Data.DateTime as D
 import Web.Socket as WS
 import Effect.AVar as Async
@@ -52,6 +52,7 @@ import AppM (AppM)
 import Data.Maybe (fromMaybe)
 import Data.Tuple (uncurry)
 import Crypto.Jwt (fetchInstitution)
+import Data.Decimal (fromNumber, toFixed)
 
 
 import Undefined
@@ -387,7 +388,9 @@ renderRow position ident container {weekday, hour} isPast {shift: oldShift, rows
              | otherwise = flip snoc
       timeStyle | position == 1 = "border-left: 1px solid black"
                 | otherwise = "border-right: 1px solid black"  
-      renderTotal {amount, currency} = show amount <> "..."
+      renderTotal {amount, currency} 
+        | floor amount > 999_999 = take 6 (toFixed 2 (fromNumber amount)) <> "..."
+        | otherwise = toFixed 2 (fromNumber amount)
       x = 
           HH.div [css container, HPExt.style $ "top:" <> show newShift <> "px" ] $
             HH.span 

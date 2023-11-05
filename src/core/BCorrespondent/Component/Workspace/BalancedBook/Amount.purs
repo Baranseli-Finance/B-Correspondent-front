@@ -16,6 +16,7 @@ import Web.Event.Event (preventDefault, Event)
 import Data.Array (snoc)
 import Effect.Aff as Aff
 import Data.Traversable (for_)
+import Data.Decimal (fromNumber, toFixed)
 
 proxy = Proxy :: _ "workspace_balanced_book_amount"
 
@@ -61,6 +62,6 @@ render {isOpen, amount: xs} =
   ] $
   xs <#> \{amount, currency} -> 
     HH.div 
-    [HPExt.style "padding-top:10px"] 
-    [HH.text $ show (amount) <> " " <> show (Back.decodeCurrency currency) ]
+    [HPExt.style "padding-top:10px"]
+    [HH.text $ toFixed 2 (fromNumber amount) <> " " <> show (Back.decodeCurrency currency) ]
   where display = if isOpen then "display:block" else "display:none"
