@@ -310,7 +310,7 @@ renderTimeline coordX idx xs currGap =
          item idx hour min amounts elements : renderTimeline (coordX + width) (idx + 1) tail currGap
 
 populateTransactions x@coordX coordY width xs = 
-  go coordY $ flip sortBy xs \x y -> compare (_.tm x :: String) (_.tm y)
+  go coordY xs --  flip sortBy xs \x y -> compare (_.tm x :: String) (_.tm y)
   where
     height = toNumber 50
     go y xs =
