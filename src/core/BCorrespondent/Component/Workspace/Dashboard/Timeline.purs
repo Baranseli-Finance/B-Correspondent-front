@@ -22,6 +22,7 @@ import BCorrespondent.Component.HTML.Utils (cssSvg, css)
 import BCorrespondent.Component.Workspace.Dashboard.Transaction as Dashboard.Transaction
 import BCorrespondent.Component.Workspace.Dashboard.Gap as Dashboard.Gap
 import BCorrespondent.Capability.LogMessages (logDebug, logError)
+import BCorrespondent.Component.Workspace.Dashboard.Timeline.All as Timeline.All 
 
 import Halogen as H
 import Web.UIEvent.MouseEvent (MouseEvent, clientX, clientY)
@@ -82,9 +83,10 @@ _currentGapIdx = lens _.currentGapIdx $ \el x -> el { currentGapIdx = x }
 data Action =
        Backward
      | Forward
-     | FetchTransaction Int (Maybe Back.GapItemUnitStatus)
+     | FetchTransaction Int Back.GapItemUnitStatus
      | TotalAmountInGap Int (Array Back.GapItemAmount) MouseEvent
      | CancelTotalAmountInGap
+     | ShowAllTransactionForParticularGap (Array Back.GapItemUnit)
 
 data ShiftInit = ShiftInit Boolean Boolean
 
@@ -113,9 +115,9 @@ component =
         {timeline, isForward} <- H.get
         when (isForward) $ H.raise $ OutputDirection Back.Forward timeline
       handleAction (FetchTransaction  ident status)
-        | status == Nothing = 
+        | status == Back.GapItemUnitStatusNotResolved = 
             logError $ loc <> " ---> FetchTransaction, status unknown" 
-        | status == Just Back.Pending = 
+        | status == Back.Pending = 
             logDebug $ loc <> " ---> FetchTransaction , pending, skip" 
         | otherwise = 
             H.tell Dashboard.Transaction.proxy 1 $ 
@@ -134,6 +136,7 @@ component =
         H.tell Dashboard.Gap.proxy 2 $
           Dashboard.Gap.Open { x: Nothing, y: Nothing, amounts: [] }
         H.modify_ _ { currentGapIdx = -1 }
+      handleAction (ShowAllTransactionForParticularGap xs) = H.tell Timeline.All.proxy 3 $ Timeline.All.Open xs
       handleQuery 
         :: forall a s . Query a
         -> H.HalogenM State Action s Output AppM (Maybe a)
@@ -148,6 +151,7 @@ component =
         {timeline} <- H.get
         map (const (Just a)) $ H.raise (OutputTransactionUpdate timeline)
       handleQuery (WithNewTransaction newTimeline a) = map (const (Just a)) (H.modify_ \s -> s # _timeline .~ newTimeline)
+
 
 intToTimePiece :: forall a . BoundedEnum a => Int -> a
 intToTimePiece = fromMaybe bottom <<< toEnum
@@ -199,8 +203,7 @@ populatGaps timeline xs =
     let elm = flip find xs \x -> _.start x == start && _.end x == end
     in fromMaybe curr $ flip map elm \{elements, amounts } -> curr # Back._elements .~ elements # Back._amounts .~ amounts
 
- -- x # Back._start <<< Back._hour %~ ((+) timezone) 
---    # Back._end <<< Back._hour %~ ((+) timezone)
+
 applyTimezone :: Int -> Back.GapItem -> Back.GapItem
 applyTimezone _ x = x
 
@@ -259,7 +262,8 @@ render {institution, isBackward, isForward, timezone, timeline, currentGapIdx} =
               renderTimeline (toNumber 10) 0 (map (applyTimezone timezone) timeline) currentGapIdx
        ]
    ,   Dashboard.Transaction.slot 1
-   ,   Dashboard.Gap.slot 2   
+   ,   Dashboard.Gap.slot 2
+   ,   Timeline.All.slot 3
    ]
 
 renderTimeline coordX idx xs currGap = 
@@ -294,7 +298,7 @@ renderTimeline coordX idx xs currGap =
   in case uncons xs of
        Nothing -> []
        Just {head: x, tail: []} -> 
-         [Svg.g 
+         [Svg.g
           [onMouseMove (TotalAmountInGap idx (_.amounts x)), onMouseOut (const CancelTotalAmountInGap) ] $
           [gap,
            mkTm 
@@ -311,20 +315,21 @@ renderTimeline coordX idx xs currGap =
          item idx hour min amounts elements : renderTimeline (coordX + width) (idx + 1) tail currGap
 
 populateTransactions x@coordX coordY width xs = 
-  go coordY xs --  flip sortBy xs \x y -> compare (_.tm x :: String) (_.tm y)
+  go 1 coordY xs
   where
     height = toNumber 50
-    go y xs =
+    go c y _ | c == 17 = [mkAllItem y]
+    go c y xs =
       case uncons xs of
          Nothing -> []
          Just {head: x, tail: []} -> 
            [mkItem y x]
          Just {head: x, tail} -> 
-           mkItem y x : go (y - height) tail
+           mkItem y x : go (c + 1) (y - height) tail
     mkItem y {textualIdent, status: s, ident} = 
       Svg.g 
       [ cssSvg $ 
-          if status == Just Back.Pending
+          if status == Back.Pending
           then "timeline-transaction-g-not-allowed" 
           else "timeline-transaction-g", 
         onClick (const (FetchTransaction ident status))
@@ -337,6 +342,18 @@ populateTransactions x@coordX coordY width xs =
        [HH.text textualIdent]
       ]
       where status = Back.decodeGapItemUnitStatus s
+    mkAllItem y =
+      Svg.g 
+      [onClick (const (ShowAllTransactionForParticularGap xs))]
+      [ allRegion y,
+        Svg.text 
+        [cssSvg "timeline-transaction-all-region-item",
+         Svg.x (x + width / toNumber 2), 
+         Svg.y (y + toNumber 25),
+         Svg.dominantBaseline Svg.BaselineMiddle,
+         Svg.textAnchor Svg.AnchorMiddle] 
+        [HH.text "all"]
+      ] 
     region y status =
       Svg.rect
       [ cssSvg "timeline-transaction-region",
@@ -347,7 +364,16 @@ populateTransactions x@coordX coordY width xs =
         Svg.height height
       ]
       where
-        chooseColour Nothing = Svg.Named "#ffffff"
-        chooseColour (Just Back.Pending) = Svg.Named "#ffffff"
-        chooseColour (Just Back.Ok) = Svg.Named "#7ddF3a"
-        chooseColour (Just Back.Declined) = Svg.Named "#ff5959"
+        chooseColour Back.GapItemUnitStatusNotResolved = Svg.Named "#ffffff"
+        chooseColour Back.Pending = Svg.Named "#ffffff"
+        chooseColour Back.Ok = Svg.Named "#7ddF3a"
+        chooseColour Back.Declined = Svg.Named "#ff5959"
+    allRegion y = 
+     Svg.rect
+      [ cssSvg "timeline-transaction-all-region-background",
+        Svg.fill $ Svg.Named "#8a8a8a",
+        Svg.x coordX, 
+        Svg.y y, 
+        Svg.width width, 
+        Svg.height height
+      ]

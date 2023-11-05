@@ -169,18 +169,19 @@ foreign import _init :: Fn3 WithError Json FrontApi (AC.EffectFnAff (Object (Res
 init :: Maybe JWTToken -> FrontApi -> AC.EffectFnAff (Object (Response Init))
 init token = runFn3 _init withError (fromMaybe jsonEmptyObject (map encodeJson token))
 
-data GapItemUnitStatus = Pending | Ok | Declined
+data GapItemUnitStatus = Pending | Ok | Declined | GapItemUnitStatusNotResolved
 
 derive instance genericGapItemUnitStatus :: Generic GapItemUnitStatus _
 derive instance eqGapItemUnitStatus :: Eq GapItemUnitStatus
 
 instance Show GapItemUnitStatus where
+  show GapItemUnitStatusNotResolved = "unknown"
   show Pending = "pending"
   show Ok = "ok"
   show Declined = "declined"
 
-decodeGapItemUnitStatus :: Foreign -> Maybe GapItemUnitStatus
-decodeGapItemUnitStatus = decodeEnumG
+decodeGapItemUnitStatus :: Foreign -> GapItemUnitStatus
+decodeGapItemUnitStatus = fromMaybe GapItemUnitStatusNotResolved <<< decodeEnumG
 
 type GapItemUnit = 
      { status :: Foreign, 

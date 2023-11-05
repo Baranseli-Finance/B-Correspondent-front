@@ -1,4 +1,4 @@
-module BCorrespondent.Component.Workspace.Dashboard.Transaction ( Query(..), slot, proxy ) where
+module BCorrespondent.Component.Workspace.Dashboard.Transaction ( Query(..), slot, proxy, transactionWin) where
 
 import Prelude
 
@@ -69,11 +69,10 @@ render {isOpen, transaction: value} =
   HH.div 
   [css "transaction-modal-container", 
    HPExt.style display]
-  [maybeElem value transactionWin]
+  [maybeElem value \x -> HH.div [css "transaction-modal"] $ transactionWin x <> [closeButton]]
   where display = if isOpen then "display:block" else "display:none"
 
-transactionWin value = 
-  HH.div [css "transaction-modal"] 
+transactionWin value =
   [  HH.div [HPExt.style "padding-top:20px"] [HH.h3_ [HH.text "transaction details"]]
   ,  HH.div 
      [HPExt.style "padding-top:20px"] 
@@ -129,8 +128,10 @@ transactionWin value =
      [HPExt.style "padding-top:20px"] 
      [ HH.span_ [HH.text "swift code (correspondent bank):  "]
      , HH.span_ [HH.text $ value^.Back._transaction <<< Back._correspondentBankSwiftSepaCode]
-     ]      
-  ,  HH.form 
-     [HPExt.style "padding-top:40px", HE.onSubmit Close ] 
-     [ HH.input [ HPExt.type_ HPExt.InputSubmit, HPExt.value "close", HPExt.style "cursor: pointer;font-size:20px" ] ]
+     ]
   ]
+
+closeButton = 
+  HH.form
+  [HPExt.style "padding-top:40px", HE.onSubmit Close ] 
+  [ HH.input [ HPExt.type_ HPExt.InputSubmit, HPExt.value "close", HPExt.style "cursor: pointer;font-size:20px" ] ]
