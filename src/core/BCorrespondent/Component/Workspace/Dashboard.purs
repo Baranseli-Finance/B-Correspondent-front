@@ -209,7 +209,7 @@ component =
                                    value: _.amount item 
                                   } 
                           in fromMaybe (x : xs) res      
-                    in x # Back._elements .~ sortWith (_.tm) (fromMaybe (newItem : x^.Back._elements) res)
+                    in x # Back._elements .~ fromMaybe (reverse (newItem : reverse (x^.Back._elements))) res
                          # Back._amounts %~ modifyAmounts 
                   else x
           H.tell Timeline.proxy 1 $ Timeline.WithNewTransaction newTimeline
