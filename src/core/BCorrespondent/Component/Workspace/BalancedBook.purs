@@ -207,12 +207,12 @@ handleAction Finalize = do
   logDebug $ loc <> " component is closed"       
 handleAction (LoadTimeline institution amount idx hour) = do
   logDebug $ loc <> " ----> loading timeline, raw data: weekday idx - " <> show idx <> ", hour - " <> show hour
-  {book, now: {weekday, hour: currHour}} <- H.get
+  {book, now: {weekday, hour: currHour}, isPast} <- H.get
   {user} <- getStore
   for_ user \{jwtUser: {institution: identf} } -> do 
     res <- fetchInstitution identf
     for_ res \ident ->
-      if amount == 0 && idx /= weekday
+      if amount == 0 && (idx /= weekday || isPast)
       then pure unit
       else if idx == weekday && ident == institution
       then H.raise $ OutputLive currHour
@@ -418,7 +418,7 @@ renderRow position ident container {weekday, hour} isPast {shift: oldShift, rows
                         | total > 0 && not isNow = "book-timeline-item-past"
                         | otherwise = 
                             "book-timeline-item " <> 
-                            if dow == weekday 
+                            if dow == weekday && not isPast 
                             then "pointer-to-live-tm" 
                             else mempty
                   pulseStyle = "book-timeline-item-active-live pulse-live"     
