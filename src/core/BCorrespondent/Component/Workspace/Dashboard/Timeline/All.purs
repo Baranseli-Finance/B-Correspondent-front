@@ -22,6 +22,7 @@ import Effect.Aff as Aff
 import Data.Foldable (for_)
 import Data.Traversable (for)
 import Halogen.Store.Monad (getStore)
+import Data.Array (sortWith)
 
 
 proxy = Proxy :: _ "workspace_dashboard_timeline_all"
@@ -89,7 +90,7 @@ handleAction (FetchInfo textualIdent ident status)
 handleQuery :: forall a s . Query a -> H.HalogenM State Action s Unit AppM (Maybe a)
 handleQuery (Open xs a) = do 
   forkCloseTimer
-  map (const (Just a)) $ H.modify_ _ { transactions = xs, isOpen = true }
+  map (const (Just a)) $ H.modify_ _ { transactions = sortWith (_.tm) xs, isOpen = true }
 
 render {isOpen, transactions, isShow, transaction} = 
  whenElem isOpen $

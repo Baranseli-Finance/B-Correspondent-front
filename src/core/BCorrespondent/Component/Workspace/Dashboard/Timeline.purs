@@ -30,7 +30,7 @@ import Data.Maybe (Maybe, fromMaybe, Maybe (..))
 import Data.Enum (toEnum, fromEnum, class BoundedEnum)
 import Data.Time (setHour, setMinute, Time (..), hour, minute)
 import Control.Alt ((<|>))
-import Data.Array (reverse, (:), find, uncons, sortBy, head, last)
+import Data.Array (reverse, (:), find, uncons, sortBy, head, last, length)
 import Data.Lens
 import Halogen.Svg.Elements as Svg
 import Halogen.Svg.Attributes.FontSize as Svg
@@ -356,7 +356,7 @@ populateTransactions x@coordX coordY width xs =
          Svg.y (y + toNumber 25),
          Svg.dominantBaseline Svg.BaselineMiddle,
          Svg.textAnchor Svg.AnchorMiddle] 
-        [HH.text "show more ..."]
+        [HH.text $ "show all of " <> show (length xs)]
       ] 
     region y status =
       Svg.rect
