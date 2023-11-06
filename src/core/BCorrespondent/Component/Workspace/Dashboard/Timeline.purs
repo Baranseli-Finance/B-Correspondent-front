@@ -282,37 +282,41 @@ renderTimeline coordX idx xs currGap =
             then cssSvg "gap-selected" 
             else cssSvg mempty
           ]
-      tmCircle = Svg.circle [Svg.fill (Svg.Named "black"), Svg.cy (height + toNumber 50), Svg.cx coordX, Svg.r (toNumber 5) ]
-      lastTmCircle = Svg.circle [Svg.fill (Svg.Named "black"), Svg.cy (height + toNumber 50), Svg.cx (coordX + width), Svg.r (toNumber 5) ]
+      tmCircle = 
+        Svg.circle 
+        [Svg.fill (Svg.Named "black"), 
+         Svg.cy (height + toNumber 50), 
+         Svg.cx coordX, 
+         Svg.r (toNumber 5) 
+        ]
+      tmLastCircle = 
+        Svg.circle 
+        [Svg.fill (Svg.Named "black"), 
+         Svg.cy (height + toNumber 50), 
+         Svg.cx (coordX + width), 
+         Svg.r (toNumber 5) 
+        ]
       mkTm h m shiftX = 
                 Svg.text 
                 [Svg.x shiftX, 
                 Svg.y (height + toNumber 70), 
                 Svg.fill (Svg.Named "black")] 
                 [HH.text (show (h :: Int) <> ":" <> show (m :: Int))]
-      item i h m xs ys = 
+      item i h m xs ys endTime = 
         Svg.g [onMouseMove (TotalAmountInGap i xs), onMouseOut (const CancelTotalAmountInGap) ] $ 
           [gap, mkTm h m (coordX - toNumber 10)] <> 
+          fromMaybe [] endTime <>
           populateTransactions coordX height width ys <>
-          [tmCircle]
+          [tmCircle] <> fromMaybe [] (map (const [tmLastCircle]) endTime)
   in case uncons xs of
        Nothing -> []
-       Just {head: x, tail: []} -> 
-         [Svg.g
-          [onMouseMove (TotalAmountInGap idx (_.amounts x)), onMouseOut (const CancelTotalAmountInGap) ] $
-          [gap,
-           mkTm 
-           ((_.hour <<< _.start) x) 
-           ((_.min <<< _.start) x)
-           (coordX - toNumber 10),
-           mkTm 
-           ((_.hour <<< _.end) x) 
-           ((_.min <<< _.end) x)
-           (coordX + width - toNumber 10) ]] <> 
-           populateTransactions coordX height width (x^.Back._elements) <>
-           [tmCircle, lastTmCircle]
-       Just {head: {amounts, elements, start: {hour, min}}, tail} -> 
-         item idx hour min amounts elements : renderTimeline (coordX + width) (idx + 1) tail currGap
+       Just {head: {amounts, elements, start: {hour, min}, end}, tail} ->
+         let endTime =
+               case tail of 
+                 [] -> Just $ [mkTm (_.hour end) (_.min end) (coordX + width - toNumber 10)]
+                 _ -> Nothing
+         in item idx hour min amounts elements endTime : 
+            renderTimeline (coordX + width) (idx + 1) tail currGap
 
 populateTransactions x@coordX coordY width xs = 
   go 1 coordY xs
@@ -352,7 +356,7 @@ populateTransactions x@coordX coordY width xs =
          Svg.y (y + toNumber 25),
          Svg.dominantBaseline Svg.BaselineMiddle,
          Svg.textAnchor Svg.AnchorMiddle] 
-        [HH.text "all"]
+        [HH.text "show more ..."]
       ] 
     region y status =
       Svg.rect
