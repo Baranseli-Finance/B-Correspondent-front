@@ -33,7 +33,7 @@ subscribe loc url trigger goCompHandle = do
 
   let
     isOpen = do
-      Aff.delay $ Aff.Milliseconds 100.0
+      Aff.delay $ Aff.Milliseconds 200.0
       st <- H.liftEffect $ WS.readState ws
       if (st == Closed)
       then pure $ Just (Left "connecton error")

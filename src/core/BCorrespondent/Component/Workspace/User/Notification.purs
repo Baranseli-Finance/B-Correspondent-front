@@ -153,10 +153,10 @@ render {isOpen, list} =
       else  
         HH.div [HPExt.style "padding-top:10px"] [] :
         (list <#> \{ident, text} -> 
-          HH.div_ 
+          HH.div [HPExt.style "margin-right:10px;margin-left:10px"]
           [ 
               HH.div 
-              [css "notification-item", 
+              [css "notification-item",
                 HPExt.attr (AttrName notificationItemAttr) (show ident)] 
               [ HH.text text ]
           ,   HH.div [HPExt.style "padding-top:10px"] [] 
