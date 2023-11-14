@@ -214,7 +214,7 @@ handleAction (LoadTimeline institution amount idx hour) = do
     for_ res \ident ->
       if amount == 0 && (idx /= weekday || isPast)
       then pure unit
-      else if idx == weekday && ident == institution
+      else if idx == weekday && ident == institution && not isPast
       then H.raise $ OutputLive currHour
       else if amount /= 0  && ident == institution
       then
