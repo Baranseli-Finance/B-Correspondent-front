@@ -10,6 +10,7 @@ module BCorrespondent.Api.Foreign.Frontend
   , EnumResolvedWallet
   , FetchShiftHistoryTimelineParams
   , ForeignDayOfWeeksHourlyTotalSum
+  , FromNotification
   , FrontApi
   , GapItem
   , GapItemAmount
@@ -385,10 +386,12 @@ type Notification = { ident :: Int, text :: String }
 
 type Notifications = { count :: Int, items :: Array Notification }
 
-foreign import _fetchNotifications :: Fn2 WithError FrontApi (AC.EffectFnAff (Object (Response Notifications)))
+foreign import _fetchNotifications :: Fn3 WithError FromNotification FrontApi (AC.EffectFnAff (Object (Response Notifications)))
 
-fetchNotifications :: FrontApi -> AC.EffectFnAff (Object (Response Notifications))
-fetchNotifications = runFn2 _fetchNotifications withError
+type FromNotification = { from :: Int }
+
+fetchNotifications :: FromNotification -> FrontApi -> AC.EffectFnAff (Object (Response Notifications))
+fetchNotifications = runFn3 _fetchNotifications withError
 
 type Issue = { description :: String, files :: Array Int }
 

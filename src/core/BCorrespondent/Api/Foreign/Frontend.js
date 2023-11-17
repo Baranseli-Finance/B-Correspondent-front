@@ -76,9 +76,10 @@ export const _fetchShiftHistoryTimeline =
     }
 
 export const _fetchNotifications =
-    function(withError, api) {
+    function(withError, from, api) {
         return function(onError, onOk) {
-            api.frontendUserNotificationsGet().then(onOk).catch(resp => {
+            let _from = from['from'] == 0 ? null : from
+            api.frontendUserNotificationsGet(_from).then(onOk).catch(resp => {
                 return withError(resp, onError)
             })
         };

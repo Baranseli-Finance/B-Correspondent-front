@@ -22,13 +22,13 @@ import Halogen.HTML.Properties.Extended as HPExt
 import Halogen.HTML.Events (onMouseOver, onMouseOut, onScroll)
 import Type.Proxy (Proxy(..))
 import AppM (AppM)
-import Data.Maybe (Maybe (..))
+import Data.Maybe (Maybe (..), maybe)
 import Effect.Aff as Aff
 import Data.Foldable (for_)
 import Store (User)
 import Halogen.Store.Monad (getStore)
 import Data.Maybe (Maybe)
-import Data.Array ((:), null, nub, take)
+import Data.Array ((:), null, nub, take, last)
 import Web.Event.Event (Event, target, preventDefault)
 import Web.DOM.Element (fromEventTarget, toNode, getAttribute, fromNode)
 import Web.DOM.Node (nodeName, childNodes)
@@ -52,7 +52,8 @@ type State =
        forkId :: Maybe H.ForkId, 
        list :: Array Back.Notification, 
        isScroll :: Boolean,
-       isReadList :: Array Int
+       isReadList :: Array Int,
+       lastElement :: Int
      }
 
 data Query a = Open a
@@ -61,6 +62,7 @@ data Action =
         Close 
       | CancelClose 
       | MakeNotificationReadRequest Event
+      | FetchNextBatch Int
 
 component =
   H.mkComponent
@@ -69,7 +71,8 @@ component =
         forkId: Nothing, 
         list: [],
         isScroll: false,
-        isReadList: []
+        isReadList: [],
+        lastElement: 0
       }
     , render: render
     , eval: H.mkEval H.defaultEval
@@ -86,10 +89,12 @@ forkCloseTimer = do
     H.modify_ _ { isOpen = false, forkId = Nothing, list = [] }
   H.modify_ _ { forkId = Just forkId }
 
+handleAction :: forall q . Action -> H.HalogenM State Action q Unit AppM Unit
 handleAction Close = forkCloseTimer
 handleAction CancelClose = map (_.forkId) H.get >>= flip for_ H.kill
 handleAction (MakeNotificationReadRequest ev) = do
-  {isScroll} <- H.get
+  {isScroll, lastElement} <- H.get
+  logDebug $ loc <> " ----> last element: " <> show lastElement
   when (not isScroll) $ do
     H.modify_ _ { isScroll = true }
     logDebug $ loc <> " ----> scroll event is evoked"
@@ -112,7 +117,18 @@ handleAction (MakeNotificationReadRequest ev) = do
                 when isVisible $ do
                   for_ (fromString ident) \i -> do
                     H.modify_ \s -> s { isReadList = nub $ i : _.isReadList s }
+                    when (i == lastElement) $ handleAction (FetchNextBatch i)
     H.modify_ _ { isScroll = false }
+handleAction (FetchNextBatch idx) = do
+  { config: Config { apiBCorrespondentHost: host }, user } <- getStore
+  for_ (user :: Maybe User) \{ token } -> do
+    resp <- Request.makeAuth (Just token) host Back.mkFrontApi $ 
+      Back.fetchNotifications $ { from: idx }
+    let failure = Async.send <<< flip Async.mkException loc
+    onFailure resp failure \{success: {items}} -> do
+      logDebug $ loc <> " notification ----> " <> show (items :: Array Back.Notification)
+      let lastEl = maybe 0 _.ident $ last items
+      H.modify_ \s -> s { list = _.list s <> items, lastElement = lastEl }
 
 dumpNotifications = do
   { config: Config { apiBCorrespondentHost: host }, user } <- getStore
@@ -134,11 +150,12 @@ handleQuery (Open a) = do
   map (const (Just a)) $ 
     for_ (user :: Maybe User) \{ token } -> do
       resp <- Request.makeAuth (Just token) host Back.mkFrontApi $ 
-        Back.fetchNotifications
+        Back.fetchNotifications { from: 0 }
       let failure = Async.send <<< flip Async.mkException loc
       onFailure resp failure \{success: {items}} -> do
         logDebug $ loc <> " notification ----> " <> show (items :: Array Back.Notification)
-        H.modify_ _ { isOpen = true, list = items, isReadList = take 6 $ map _.ident items }
+        let lastEl = maybe 0 _.ident $ last items
+        H.modify_ _ { isOpen = true, list = items, isReadList = take 6 $ map _.ident items, lastElement = lastEl }
 
 render {isOpen, list} = 
   whenElem isOpen $ 
