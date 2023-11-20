@@ -240,12 +240,14 @@ handleAction (LoadWeek direction)
       {canTravelBack} <- H.get
       when canTravelBack $ fetchBalancedBook direction
 handleAction (AddTransaction t@transactiion) = do
-  logDebug $ loc <> " transaction update ---> " <> 
-    show (transactiion { currency = Back.decodeCurrency (_.currency t) })
-  H.modify_ \s -> 
-    s { book = _.book s <#> \b -> 
-        b # Back._institutionBalancedBook %~ modify 
-      }
+  {isPast} <- H.get
+  when (not isPast) $ do
+    logDebug $ loc <> " transaction update ---> " <> 
+      show (transactiion { currency = Back.decodeCurrency (_.currency t) })
+    H.modify_ \s -> 
+      s { book = _.book s <#> \b -> 
+          b # Back._institutionBalancedBook %~ modify 
+        }
   where 
     modify xs = 
       xs <#> \x@{title} -> 
