@@ -218,10 +218,10 @@ mkBackwardButton isBackward =
       if isBackward 
       then "timeline-travel-button-active" 
       else "timeline-travel-button-blocked",
-      Svg.x (toNumber (canvas / 2 - 80)), 
-      Svg.y (toNumber 950), 
+      Svg.x (toNumber (canvas / 2 - 150)), 
+      Svg.y (toNumber 1000), 
       Svg.fill (Svg.Named "black"),
-      Svg.fontSize Svg.Large]
+      Svg.fontSize Svg.XXLarge]
     [HH.text "backward"]
   ]
 
@@ -235,9 +235,9 @@ mkForwardButton isForward =
       then "timeline-travel-button-active" 
       else "timeline-travel-button-blocked",
       Svg.x (toNumber (canvas / 2 + 10)),
-      Svg.y (toNumber 950), 
+      Svg.y (toNumber 1000), 
       Svg.fill (Svg.Named "black"),
-      Svg.fontSize Svg.Large]
+      Svg.fontSize Svg.XXLarge]
     [HH.text "forward"]
   ]
 
