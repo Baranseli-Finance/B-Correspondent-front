@@ -2,7 +2,7 @@ module BCorrespondent.Component.Workspace.BalancedBook (slot, Output (..)) where
 
 import Prelude
 
-import BCorrespondent.Component.HTML.Utils (css, maybeElem)
+import BCorrespondent.Component.HTML.Utils (css, maybeElem, whenElem)
 import BCorrespondent.Api.Foreign.Request as Request
 import BCorrespondent.Api.Foreign.Back as Back
 import BCorrespondent.Api.Foreign.Request.Handler (onFailure)
@@ -126,7 +126,8 @@ type State =
        timeline :: Maybe Timeline,
        now :: Now,
        isPast :: Boolean,
-       canTravelBack :: Boolean
+       canTravelBack :: Boolean,
+       isLoading :: Boolean
      }
 
 type Row = { shift :: Int, rows :: forall w i . Array (HTML w i) }
@@ -146,7 +147,8 @@ component =
         timeline: Nothing,
         now: { weekday: 0, hour: 0 },
         isPast: false,
-        canTravelBack: true
+        canTravelBack: true,
+        isLoading: false
       }
     , render: render
     , eval: H.mkEval H.defaultEval
@@ -232,13 +234,19 @@ handleAction (LoadTimeline institution amount idx hour) = do
            in Async.send $ Async.mkOrdinary msg Async.Error Nothing
 handleAction (HandleChildTimeline Timeline.OutputBack) = H.modify_ _ { timeline = Nothing }
 handleAction (ShowAmount idx xs) = H.tell Amount.proxy idx $ Amount.Open xs
-handleAction (LoadWeek direction) 
+handleAction (LoadWeek direction)
   | direction == Back.Forward = do 
       {isPast} <- H.get
-      when isPast $ fetchBalancedBook direction
+      when isPast $ do
+        H.modify_ _ { isLoading = true } 
+        fetchBalancedBook direction
+        H.modify_ _ { isLoading = false }
   | otherwise = do 
       {canTravelBack} <- H.get
-      when canTravelBack $ fetchBalancedBook direction
+      when canTravelBack $ do
+        H.modify_ _ { isLoading = true }
+        fetchBalancedBook direction
+        H.modify_ _ { isLoading = false }
 handleAction (AddTransaction t@transactiion) = do
   {isPast} <- H.get
   when (not isPast) $ do
@@ -340,14 +348,15 @@ bookCSSxs =
   ]
 
 render { book: Nothing, error: Nothing } = 
-  HH.div [css "book-container"] [HH.text "book loading..."]
+  HH.div [css "book-container"] [HH.div [css "loader"] []]
 render { book: _, error: Just e } = 
   HH.div [css "book-container"] [ HH.text $ "error occured during loading: " <> e ]
-render { book: Just { from, to, institutions: xs }, timeline: Nothing, now, isPast, canTravelBack } = 
+render { book: Just { from, to, institutions: xs }, timeline: Nothing, now, isPast, canTravelBack, isLoading } =
   HH.div [css "book-container"] $
   [
-      HH.div_ [HH.h2_ [HH.text $ "accounting period: " <> from <> " - " <> to]]
-  ] <> 
+      whenElem isLoading $ HH.div [css "loader"] []  
+  ,   HH.div_ [HH.h2_ [HH.text $ "accounting period: " <> from <> " - " <> to]]  
+  ] <>
   (zip bookCSSxs xs <#> uncurry (renderTimeline now isPast canTravelBack)) <>
   [  
       HH.span 

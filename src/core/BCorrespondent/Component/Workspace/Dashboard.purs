@@ -5,7 +5,7 @@ module BCorrespondent.Component.Workspace.Dashboard
 
 import Prelude
 
-import BCorrespondent.Component.HTML.Utils (css)
+import BCorrespondent.Component.HTML.Utils (css, whenElem)
 import BCorrespondent.Data.Config (Config(..))
 import BCorrespondent.Capability.LogMessages (logDebug, logError)
 import BCorrespondent.Api.Foreign.Request as Request
@@ -64,7 +64,8 @@ type State =
        wallets :: Array Back.EnumResolvedWallet,
        timeline :: Array Back.GapItem,
        institution :: String,
-       transaction :: Maybe Transaction
+       transaction :: Maybe Transaction,
+       isLoading :: Boolean
      }
 
 delay = H.liftAff $ Aff.delay $ Aff.Milliseconds 300_000.0
@@ -78,7 +79,8 @@ component =
         wallets: [],
         timeline: [],
         institution: mempty,
-        transaction: Nothing
+        transaction: Nothing,
+        isLoading: false
       }
     , render: render
     , eval: H.mkEval H.defaultEval
@@ -154,12 +156,16 @@ component =
           xs' <- foldM release [] xs
           H.liftEffect $ xs' `Async.tryPut` wsVar 
         logDebug $ loc <> " component is closed"       
-      handleAction (HandleChild (Timeline.OutputDirection Back.Backward timeline)) = 
+      handleAction (HandleChild (Timeline.OutputDirection Back.Backward timeline)) = do 
+        H.modify_ _ { isLoading = true }
         handleBackward timeline
+        H.modify_ _ { isLoading = false }
       handleAction (HandleChild (Timeline.OutputDirection Back.Forward timeline)) = do
          {stepsBackward} <- H.get
-         when (stepsBackward /= 0) $ 
+         when (stepsBackward /= 0) $ do 
+           H.modify_ _ { isLoading = true }
            handleforward timeline $ handleAction AddGap
+           H.modify_ _ { isLoading = false }
       handleAction (HandleChild (Timeline.OutputUpdate timeline)) = do 
         { config: Config { apiBCorrespondentHost: host }, user } <- getStore
         for_ (user :: Maybe User) \{ token } -> do
@@ -337,11 +343,12 @@ renderWallets xs =
     ]
 
 render {error: Just e} = HH.text e
-render { timeline: [] } = HH.div_ [HH.text "loading..."]
-render { error: Nothing, wallets, timeline, institution } =
+render { timeline: [] } = HH.div [css "book-container"] [HH.div [css "loader"] []]
+render { error: Nothing, wallets, timeline, institution , isLoading } =
   HH.div_ 
-  [
-      HH.div [css "wallet-container"] $ renderWallets wallets
+  [ 
+      whenElem isLoading $ HH.div [css "loader"] []
+  ,   HH.div [css "wallet-container"] $ renderWallets wallets
   ,   Timeline.slot 1 {timeline: timeline, institution: institution, initShift: Timeline.ShiftInit initBackward false} HandleChild
   ]
   where initBackward = fromMaybe false $ flip map (head timeline) \el -> not $ (el^.Back._start <<< Back._hour) == 0
