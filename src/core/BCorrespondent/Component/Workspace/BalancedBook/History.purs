@@ -2,7 +2,7 @@ module BCorrespondent.Component.Workspace.BalancedBook.History ( Date, slot ) wh
 
 import Prelude
 
-import BCorrespondent.Component.HTML.Utils (css)
+import BCorrespondent.Component.HTML.Utils (css, whenElem)
 import BCorrespondent.Capability.LogMessages (logDebug)
 import BCorrespondent.Data.Config (Config(..))
 import BCorrespondent.Api.Foreign.Request as Request
@@ -51,7 +51,8 @@ type State =
        error :: Maybe String,
        timeline :: Array Back.GapItem,
        institution :: String,
-       institutionIdent :: Int
+       institutionIdent :: Int,
+       isLoading :: Boolean
      }
 
 _timeline = lens _.timeline $ \el x -> el { timeline = x }
@@ -71,7 +72,8 @@ component =
         error: Nothing,
         timeline: [],
         institution: mempty :: String,
-        institutionIdent: institution
+        institutionIdent: institution,
+        isLoading: false
       }
     , render: render
     , eval: H.mkEval H.defaultEval
@@ -153,14 +155,28 @@ component =
                             (direction == Back.Forward && hour /= 23)
                       H.tell Timeline.proxy 0 $ Timeline.NewTimeline newTimeline isBackward isForward
         case direction of 
-          Back.Backward -> for_ (head timeline) \el -> go $ el^.Back._start <<< Back._hour
-          Back.Forward -> for_ (last timeline) \el -> go $ el^.Back._end <<< Back._hour
+          Back.Backward -> do 
+            H.modify_ _ { isLoading = true } 
+            for_ (head timeline) \el -> go $ el^.Back._start <<< Back._hour
+            H.modify_ _ { isLoading = false }
+          Back.Forward -> do 
+             H.modify_ _ { isLoading = true } 
+             for_ (last timeline) \el -> go $ el^.Back._end <<< Back._hour
+             H.modify_ _ { isLoading = false }
       handleAction (HandleChild (Timeline.OutputUpdate _)) = pure unit
       handleAction (HandleChild (Timeline.OutputTransactionUpdate _)) = pure unit
 
-render {isInit, error: Nothing, timeline, institution}
-  | isInit = textContainer "loading"
-  | otherwise = Timeline.slot 0 {timeline: timeline, institution: institution, initShift: Timeline.ShiftInit false true } HandleChild
+render {isInit, error: Nothing, timeline, institution, isLoading}
+  | isInit = HH.div [css "balanced-book-history-loading"] [HH.div [css "loader"] []]
+  | otherwise = 
+      HH.div_ 
+      [
+          whenElem isLoading $ HH.div [css "loader"] []
+      ,   let init = 
+                { timeline: timeline, 
+                  institution: institution, 
+                  initShift: Timeline.ShiftInit false true 
+                } 
+          in Timeline.slot 0 init HandleChild
+      ]
 render {error: Just val} = HH.div_ [HH.text val]
-  
-textContainer text = HH.div [css "balanced-book-history-loading"] [HH.h3 [HPExt.style "text-transform: uppercase"] [HH.text text]]
