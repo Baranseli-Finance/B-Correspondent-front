@@ -242,7 +242,7 @@ component =
         H.liftEffect $ xs' `Async.tryPut` wsVar 
 
 render {serverError: Just msg } = HH.text msg
-render {serverError: Nothing, balances } | M.isEmpty balances = HH.div_ [HH.text "loading wallets..."]
+render {serverError: Nothing, balances } | M.isEmpty balances = HH.div [css "loader"] []
 render {serverError: Nothing, amount, balances, compError, history, total, perPage } =
   HH.div_
   [
