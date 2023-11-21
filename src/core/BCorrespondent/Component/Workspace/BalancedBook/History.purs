@@ -10,6 +10,7 @@ import BCorrespondent.Api.Foreign.Back as Back
 import BCorrespondent.Api.Foreign.Request.Handler (onFailure)
 import BCorrespondent.Component.Workspace.Dashboard.Timeline as Timeline
 import BCorrespondent.Component.Async as Async
+import BCorrespondent.Component.Utils (withLoader)
 
 import Halogen as H
 import Halogen.HTML as HH
@@ -156,13 +157,9 @@ component =
                       H.tell Timeline.proxy 0 $ Timeline.NewTimeline newTimeline isBackward isForward
         case direction of 
           Back.Backward -> do 
-            H.modify_ _ { isLoading = true } 
-            for_ (head timeline) \el -> go $ el^.Back._start <<< Back._hour
-            H.modify_ _ { isLoading = false }
+            withLoader $ for_ (head timeline) \el -> go $ el^.Back._start <<< Back._hour
           Back.Forward -> do 
-             H.modify_ _ { isLoading = true } 
-             for_ (last timeline) \el -> go $ el^.Back._end <<< Back._hour
-             H.modify_ _ { isLoading = false }
+            withLoader $ for_ (last timeline) \el -> go $ el^.Back._end <<< Back._hour
       handleAction (HandleChild (Timeline.OutputUpdate _)) = pure unit
       handleAction (HandleChild (Timeline.OutputTransactionUpdate _)) = pure unit
 

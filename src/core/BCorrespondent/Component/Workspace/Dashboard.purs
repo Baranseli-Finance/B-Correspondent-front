@@ -15,6 +15,7 @@ import BCorrespondent.Component.Async as Async
 import BCorrespondent.Component.Subscription.WS as WS
 import BCorrespondent.Component.Subscription.WS.Types
 import BCorrespondent.Component.Workspace.Dashboard.Timeline as Timeline
+import BCorrespondent.Component.Utils (withLoader)
 
 import Halogen.Store.Monad (getStore)
 import Halogen as H
@@ -156,16 +157,12 @@ component =
           xs' <- foldM release [] xs
           H.liftEffect $ xs' `Async.tryPut` wsVar 
         logDebug $ loc <> " component is closed"       
-      handleAction (HandleChild (Timeline.OutputDirection Back.Backward timeline)) = do 
-        H.modify_ _ { isLoading = true }
-        handleBackward timeline
-        H.modify_ _ { isLoading = false }
+      handleAction (HandleChild (Timeline.OutputDirection Back.Backward timeline)) =
+        withLoader $ handleBackward timeline
       handleAction (HandleChild (Timeline.OutputDirection Back.Forward timeline)) = do
          {stepsBackward} <- H.get
          when (stepsBackward /= 0) $ do 
-           H.modify_ _ { isLoading = true }
-           handleforward timeline $ handleAction AddGap
-           H.modify_ _ { isLoading = false }
+           withLoader $ handleforward timeline $ handleAction AddGap
       handleAction (HandleChild (Timeline.OutputUpdate timeline)) = do 
         { config: Config { apiBCorrespondentHost: host }, user } <- getStore
         for_ (user :: Maybe User) \{ token } -> do

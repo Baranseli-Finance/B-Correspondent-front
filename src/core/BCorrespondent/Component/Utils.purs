@@ -1,5 +1,5 @@
 -- | Some utilities are useful across any component. We'll maintain them in this catch-all module.
-module BCorrespondent.Component.Utils (OpaqueSlot, with404, withAuth) where
+module BCorrespondent.Component.Utils (OpaqueSlot, with404, withAuth, withLoader) where
 
 import Prelude
 
@@ -25,3 +25,5 @@ with404 Nothing _ = navigate Route.Error404
 
 withAuth (Just x) go = go x
 withAuth Nothing _ = navigate Route.Home
+
+withLoader fn = H.modify_ _ { isLoading = true } *> fn *> H.modify_ _ { isLoading = false }

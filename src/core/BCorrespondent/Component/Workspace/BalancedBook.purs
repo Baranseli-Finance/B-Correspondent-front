@@ -13,6 +13,7 @@ import BCorrespondent.Component.Workspace.BalancedBook.Amount as Amount
 import BCorrespondent.Component.Subscription.WS as WS
 import BCorrespondent.Component.Subscription.WS.Types (TransactionBalancedBook, WalletBalancedBook)
 import BCorrespondent.Component.Async as Async
+import BCorrespondent.Component.Utils (withLoader)
 
 import Halogen as H
 import Halogen.HTML as HH
@@ -237,16 +238,14 @@ handleAction (ShowAmount idx xs) = H.tell Amount.proxy idx $ Amount.Open xs
 handleAction (LoadWeek direction)
   | direction == Back.Forward = do 
       {isPast} <- H.get
-      when isPast $ do
-        H.modify_ _ { isLoading = true } 
-        fetchBalancedBook direction
-        H.modify_ _ { isLoading = false }
+      when isPast $
+        withLoader $ 
+          fetchBalancedBook direction
   | otherwise = do 
       {canTravelBack} <- H.get
-      when canTravelBack $ do
-        H.modify_ _ { isLoading = true }
-        fetchBalancedBook direction
-        H.modify_ _ { isLoading = false }
+      when canTravelBack $
+        withLoader $ 
+          fetchBalancedBook direction
 handleAction (AddTransaction t@transactiion) = do
   {isPast} <- H.get
   when (not isPast) $ do
