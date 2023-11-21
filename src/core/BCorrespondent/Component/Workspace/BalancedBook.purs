@@ -424,9 +424,9 @@ renderRow position ident container {weekday, hour} isPast {shift: oldShift, rows
                   isNow = 
                     dow == weekday && 
                     _.hour from == hour
-                  style | total > 0 && dow == weekday = 
+                  style | total > 0 && dow == weekday && not isPast = 
                            "book-timeline-item-today pointer-to-live-tm"
-                        | total > 0 && not isNow = "book-timeline-item-past"
+                        | total > 0 && (isPast || not isNow) = "book-timeline-item-past"
                         | otherwise = 
                             "book-timeline-item " <> 
                             if dow == weekday && not isPast 
