@@ -277,7 +277,7 @@ handleAction (AddTransaction t@transactiion) = do
                                   addNewItem = 
                                     if null (_.total y) 
                                     then singleton { currency: _.currency t, amount: _.amount t } 
-                                    else { currency: _.currency t, amount: _.amount t } : _.total y 
+                                    else _.total y `snoc` { currency: _.currency t, amount: _.amount t } 
                               in maybe addNewItem (fromMaybe undefined <<< add) idxm
                             }
                      else y
