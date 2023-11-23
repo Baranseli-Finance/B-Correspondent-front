@@ -24,7 +24,7 @@ import Type.Proxy (Proxy(..))
 import Data.Array 
        (zip, (..), (:), snoc, head, foldl, length, 
         index, singleton, findIndex, modifyAt, reverse, find,
-        foldM
+        foldM, null
        )
 import Data.Lens (_1, _2, (^.))
 import Data.Generic.Rep (class Generic)
@@ -274,7 +274,11 @@ handleAction (AddTransaction t@transactiion) = do
                                       Back.decodeCurrency currency ==
                                       Back.decodeCurrency (_.currency t)
                                   add i = flip (modifyAt i) (_.total y) \z -> z { amount = _.amount z + _.amount t }
-                              in maybe (singleton { currency: _.currency t, amount: _.amount t }) (fromMaybe undefined <<< add) idxm
+                                  addNewItem = 
+                                    if null (_.total y) 
+                                    then singleton { currency: _.currency t, amount: _.amount t } 
+                                    else { currency: _.currency t, amount: _.amount t } : _.total y 
+                              in maybe addNewItem (fromMaybe undefined <<< add) idxm
                             }
                      else y
                }
