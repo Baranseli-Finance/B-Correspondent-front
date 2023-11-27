@@ -6,7 +6,8 @@ let ctx = await esbuild.context({
   // ... your build options go here ...
   entryPoints: ['index.js'],
   bundle: true,
-  outfile: 'app/app.js'
+  outfile: 'app/app.js',
+  minify: true
 });
 
 // The return value tells us where esbuild's local server is
