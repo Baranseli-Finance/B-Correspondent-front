@@ -7,13 +7,13 @@ let ctx = await esbuild.context({
   entryPoints: ['index.js'],
   bundle: true,
   outfile: 'app/app.js',
-  minify: true
+  minify: true,
+  color: true,
+  logLevel: 'info'
 });
 
 // The return value tells us where esbuild's local server is
 let { host, port } = await ctx.serve({ servedir: 'app', port: 8080, host: "127.0.0.1"});
-
-console.log('\x1b[44m', 'server has been started: ' + 'http://' + host + ':' + port, '\x1b[0m');
 
 // Then start a proxy server on port 3000
 http.createServer((req, res) => {
@@ -32,4 +32,6 @@ http.createServer((req, res) => {
 
   // Forward the body of the request to esbuild
   req.pipe(proxyReq, { end: true });
-}).listen(3000);
+}).listen(3000, null, null, () => {
+  console.log('\x1b[44m', 'server has been started: ' + 'http://' + host + ':' + port, '\x1b[0m'); 
+});
