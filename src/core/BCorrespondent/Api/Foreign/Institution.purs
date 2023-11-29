@@ -5,9 +5,10 @@ module BCorrespondent.Api.Foreign.Institution
   , ForeignWithdrawalHistoryItem
   , InitWithdrawal
   , InstitutionApi
-  , Withdraw
   , WithdrawResult
   , WithdrawResultStatus(..)
+  , Withdrawal
+  , WithdrawalCode
   , WithdrawalHistory
   , WithdrawalHistoryItem
   , WithdrawalStatus
@@ -21,6 +22,7 @@ module BCorrespondent.Api.Foreign.Institution
   , _initiator
   , _walletIdent
   , _withdrawalStatus
+  , confirmWithdrawal
   , decodeWithdrawResultStatus
   , decodeWithdrawalStatus
   , fetchWithdrawHistoryPage
@@ -29,7 +31,7 @@ module BCorrespondent.Api.Foreign.Institution
   , initWithdrawal
   , mkColour
   , mkInstitutionApi
-  , withdraw
+  , registerWithdrawal
   )
   where
 
@@ -134,7 +136,9 @@ foreign import _initWithdrawal :: Fn2 WithError InstitutionApi (AC.EffectFnAff (
 initWithdrawal :: InstitutionApi -> AC.EffectFnAff (Object (Response InitWithdrawal))
 initWithdrawal = runFn2 _initWithdrawal withError
 
-type Withdraw = { amount :: Number, walletIdent :: Int }
+type Withdrawal = { amount :: Number, walletIdent :: Int }
+
+type WithdrawalCode = { code :: Int }
 
 data WithdrawResultStatus = 
         WithdrawResultStatusNotResolved 
@@ -151,10 +155,15 @@ type ForeignWithdrawResult = { frozenFunds :: Foreign, status :: Foreign }
 
 type WithdrawResult = { frozenFunds :: Foreign, status :: WithdrawResultStatus }
 
-foreign import _withdraw :: Fn3 WithError Withdraw InstitutionApi (AC.EffectFnAff (Object (Response ForeignWithdrawResult)))
+foreign import _registerWithdrawal :: Fn3 WithError Withdrawal InstitutionApi (AC.EffectFnAff (Object (Response Unit)))
 
-withdraw :: Withdraw -> InstitutionApi -> AC.EffectFnAff (Object (Response ForeignWithdrawResult))
-withdraw = runFn3 _withdraw withError
+registerWithdrawal :: Withdrawal -> InstitutionApi -> AC.EffectFnAff (Object (Response Unit))
+registerWithdrawal = runFn3 _registerWithdrawal withError
+
+foreign import _confirmWithdrawal :: Fn3 WithError WithdrawalCode InstitutionApi (AC.EffectFnAff (Object (Response ForeignWithdrawResult)))
+
+confirmWithdrawal :: WithdrawalCode -> InstitutionApi -> AC.EffectFnAff (Object (Response ForeignWithdrawResult))
+confirmWithdrawal = runFn3 _confirmWithdrawal withError
 
 foreign import _fetchWithdrawHistoryPage :: Fn3 WithError Int InstitutionApi (AC.EffectFnAff (Object (Response WithdrawalHistory)))
 

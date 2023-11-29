@@ -15,10 +15,19 @@ export const _initWithdrawal =
         };
     }
 
-export const _withdraw =
-    function(withError, body, api) {
+export const _registerWithdrawal =
+    function(withError, withdrawal, api) {
         return function(onError, onOk) {
-            api.institutionFiatWithdrawPut(body).then(onOk).catch(resp => {
+            api.institutionFiatWithdrawRegisterPostWithHttpInfo(withdrawal).then(onOk).catch(resp => {
+                return withError(resp, onError)
+            })
+        };
+    }
+
+export const _confirmWithdrawal =
+    function(withError, code, api) {
+        return function(onError, onOk) {
+            api.institutionFiatWithdrawConfirmPut(code).then(onOk).catch(resp => {
                 return withError(resp, onError)
             })
         };

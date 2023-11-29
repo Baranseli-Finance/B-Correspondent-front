@@ -25,6 +25,7 @@ import Data.Traversable (for)
 import Store (User, WS)
 import Effect.Exception (message, error)
 import Data.Int (toNumber)
+import Data.Int as I
 import Data.Array (sort, length, zip, (..), head, (:), findIndex, updateAt, tail, init, elem, foldM)
 import Data.Array as A
 import Data.Number (fromString)
@@ -49,13 +50,15 @@ slot n = HH.slot_ proxy n component unit
 
 data Action = 
        Initialize 
-     | Withdraw Event 
+     | Register Event
+     | Confirm Event 
      | FillAmount String 
      | SetCurrency Int
      | AddAll
      | HandleChildPagination Pagination.Output
      | UpdateWithdrawalhistoryItem Back.WithdrawalHistory
      | Finalize
+     | FillCode String
 
 type State = 
      { serverError :: Maybe String, 
@@ -66,7 +69,10 @@ type State =
        compError :: Maybe String,
        perPage :: Int,
        total :: Int,
-       currPage :: Int
+       currPage :: Int,
+       isCode :: Boolean,
+       code :: String,
+       currency :: Back.Currency
      }
 
 component =
@@ -82,7 +88,10 @@ component =
          compError: Nothing,
          perPage: 0,
          total: 0,
-         currPage: 1
+         currPage: 1,
+         isCode: false,
+         code: mempty,
+         currency: Back.CurrencyNotResolved
        }
     , render: render
     , eval: H.mkEval H.defaultEval
@@ -131,7 +140,7 @@ component =
                 handleAction $ 
                   UpdateWithdrawalhistoryItem $
                     (history :: Back.WithdrawalHistory)
-    handleAction (Withdraw ev) = do 
+    handleAction (Register ev) = do 
       H.liftEffect $ preventDefault ev
       {compError, amount} <- H.get
       when (isNothing compError && isNothing amount) $ H.modify_ _ { compError = pure "number not specified"}
@@ -141,30 +150,41 @@ component =
         { config: Config { apiBCorrespondentHost: host }, user } <- getStore
         for_ (user :: Maybe User) \{ token } -> do
           {currencyidx, balances} <- H.get
-          for_ (M.lookup currencyidx balances) \{walletIdent: ident, currency} -> do
+          for_ (M.lookup currencyidx balances) \{walletIdent: ident, currency: c} -> do
             let body = { amount: fromMaybe 0.0 amount, walletIdent: ident }
-            resp <- Request.makeAuth (Just token) host Back.mkInstitutionApi $ Back.withdraw body
+            resp <- Request.makeAuth (Just token) host Back.mkInstitutionApi $ Back.registerWithdrawal body
             let failure e = Async.send $ Async.mkException e loc
-            onFailure resp failure \{success: {frozenFunds, status}} -> do 
-              let withStatus _ Back.WithdrawalRegistered =
-                    let msg = 
-                          "the request for withdrawal of " <> 
-                          show (fromMaybe 0.0 amount) <> " " <> 
-                          show currency <> " has been submitted"
-                    in Async.send $ Async.mkOrdinary msg Async.Success Nothing
-                  withStatus _ Back.NotEnoughFunds = 
-                    Async.send $ Async.mkOrdinary "funds are not suffecient" Async.Warning Nothing
-                  withStatus amount Back.FrozenFunds = 
-                    let n = unsafeFromForeign amount :: Number
-                    in Async.send $ Async.mkOrdinary ("there are the frozen funds of " <> show n) Async.Warning Nothing
-                  withStatus _ Back.WithdrawResultStatusNotResolved = do 
-                    logError $ loc <> " cannot convert WithdrawResultStatus"
-                    Async.send $ Async.mkException (error ("cannot convert WithdrawResultStatus")) loc
-              withStatus frozenFunds $ Back.decodeWithdrawResultStatus status     
+            onFailure resp failure \{success: _} -> H.modify_ _ { isCode = true, currency = c }
+    handleAction (Confirm ev) = do
+      H.liftEffect $ preventDefault ev
+      { config: Config { apiBCorrespondentHost: host }, user } <- getStore
+      for_ (user :: Maybe User) \{ token } -> do
+        {code, amount, currency} <- H.get
+        for_ (I.fromString code) \c -> do
+          resp <- Request.makeAuth (Just token) host Back.mkInstitutionApi $ Back.confirmWithdrawal {code: c}
+          let failure e = Async.send $ Async.mkException e loc
+          onFailure resp failure \{success: {frozenFunds, status}} -> do
+            let withStatus _ Back.WithdrawalRegistered =
+                  let msg = 
+                        "the request for withdrawal of " <> 
+                        show (fromMaybe 0.0 amount) <> " " <> 
+                        show currency <> " has been submitted"
+                  in Async.send $ Async.mkOrdinary msg Async.Success Nothing
+                withStatus _ Back.NotEnoughFunds = 
+                  Async.send $ Async.mkOrdinary "funds are not suffecient" Async.Warning Nothing
+                withStatus amount Back.FrozenFunds = 
+                  let n = unsafeFromForeign amount :: Number
+                  in Async.send $ Async.mkOrdinary ("there are the frozen funds of " <> show n) Async.Warning Nothing
+                withStatus _ Back.WithdrawResultStatusNotResolved = do 
+                  logError $ loc <> " cannot convert WithdrawResultStatus"
+                  Async.send $ Async.mkException (error ("cannot convert WithdrawResultStatus")) loc
+            withStatus frozenFunds $ Back.decodeWithdrawResultStatus status
+            H.modify_ _ { isCode = false, amount = Nothing }
     handleAction (FillAmount s) 
       | not (isValidNote s) = 
           H.modify_ _ { compError = pure "number in the format of {xxx.xx} is expected" }
     handleAction (FillAmount s) = for_ (fromString s) \x -> H.modify_ _ { amount = Just x, compError = Nothing }
+    handleAction (FillCode c) = H.modify_ _ { code = c }
     handleAction (SetCurrency idx) = do
       logDebug $ loc <> " set currency"
       H.modify_ _ { currencyidx = idx, compError = Nothing, amount = Nothing }
@@ -243,34 +263,37 @@ component =
 
 render {serverError: Just msg } = HH.text msg
 render {serverError: Nothing, balances } | M.isEmpty balances = HH.div [css "loader"] []
-render {serverError: Nothing, amount, balances, compError, history, total, perPage } =
+render {serverError: Nothing, amount, balances, compError, history, total, perPage, isCode } =
   HH.div_
   [
-      HH.form [ HE.onSubmit Withdraw ]
-      [
-          HH.span_
-          [
-            HH.input
-            [ HPExt.type_ HPExt.InputText
-            , HE.onValueInput FillAmount
-            , HPExt.value $ show $ fromMaybe 0.0 amount
-            , HPExt.style "font-size:20px"
-            , HPExt.size 16
-            , HPExt.maxLength 16
+      if not isCode
+      then
+        HH.form [ HE.onSubmit Register ]
+        [
+            HH.span_
+            [
+              HH.input
+              [ HPExt.type_ HPExt.InputText
+              , HE.onValueInput FillAmount
+              , HPExt.value $ show $ fromMaybe 0.0 amount
+              , HPExt.style "font-size:20px"
+              , HPExt.size 16
+              , HPExt.maxLength 16
+              ]
             ]
-          ]
 
-      ,   HH.span [HPExt.style "padding-right:10px;padding-left:5px"] []  
-      ,   HH.span_
-          [
-              HH.select [HE.onSelectedIndexChange SetCurrency, HPExt.style "font-size:20px" ] $
-              flip map (toUnfoldable (M.values balances)) \{currency} -> HH.option_ [ HH.text (show currency) ]
-          ]
-      ,   HH.span [HPExt.style "padding-right:10px;padding-left:5px"] []     
-      ,   HH.span [ HE.onClick (const AddAll), css "withdraw-all" ] [HH.text "all"]
-      ,   HH.span [HPExt.style "padding-right:10px;padding-left:5px"] []    
-      ,   HH.span_ [ HH.input [ HPExt.type_ HPExt.InputSubmit, HPExt.value "withdraw", HPExt.style "cursor: pointer;font-size:20px" ] ]
-      ]
+        ,   HH.span [HPExt.style "padding-right:10px;padding-left:5px"] []  
+        ,   HH.span_
+            [
+                HH.select [HE.onSelectedIndexChange SetCurrency, HPExt.style "font-size:20px" ] $
+                flip map (toUnfoldable (M.values balances)) \{currency} -> HH.option_ [ HH.text (show currency) ]
+            ]
+        ,   HH.span [HPExt.style "padding-right:10px;padding-left:5px"] []     
+        ,   HH.span [ HE.onClick (const AddAll), css "withdraw-all" ] [HH.text "all"]
+        ,   HH.span [HPExt.style "padding-right:10px;padding-left:5px"] []    
+        ,   HH.span_ [ HH.input [ HPExt.type_ HPExt.InputSubmit, HPExt.value "withdraw", HPExt.style "cursor: pointer;font-size:20px" ] ]
+        ]
+      else renderCode
   ,   HH.div [HPExt.style "padding-top:10px"] []
   ,   maybeElem compError \text -> HH.span [HPExt.style "color:red;font-size:20px;"] [HH.text text]
   ,   whenElem (length history > 0) $ HH.div [css "withdraw-history-container"] $ renderHistory history
@@ -325,3 +348,12 @@ modifyItemsOnPage total page = do
             for_ (init history) \xs ->
               H.modify_ \s ->  s { total = total, history = item : xs }
         else H.modify_ \s ->  s { total = total, history = item : history }
+
+renderCode = 
+  HH.form 
+  [ HE.onSubmit Confirm ] 
+  [ 
+      HH.span_ [HH.input [HPExt.type_ HPExt.InputText, HE.onValueInput FillCode]]
+  ,   HH.span [HPExt.style "padding-right:10px;padding-left:5px"] [] 
+  ,   HH.span_ [ HH.input [ HPExt.type_ HPExt.InputSubmit, HPExt.value "confirm", HPExt.style "cursor: pointer;font-size:20px" ] ] 
+  ]
