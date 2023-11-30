@@ -352,8 +352,12 @@ modifyItemsOnPage total page = do
 renderCode = 
   HH.form 
   [ HE.onSubmit Confirm ] 
-  [ 
-      HH.span_ [HH.input [HPExt.type_ HPExt.InputText, HE.onValueInput FillCode]]
-  ,   HH.span [HPExt.style "padding-right:10px;padding-left:5px"] [] 
-  ,   HH.span_ [ HH.input [ HPExt.type_ HPExt.InputSubmit, HPExt.value "confirm", HPExt.style "cursor: pointer;font-size:20px" ] ] 
+  [
+      HH.div_ [HH.h3_ [HH.text "enter the code we've sent to your email"]]
+  ,   HH.div_ 
+      [ 
+          HH.span_ [HH.input [HPExt.type_ HPExt.InputText, HE.onValueInput FillCode]]
+      ,   HH.span [HPExt.style "padding-right:10px;padding-left:5px"] [] 
+      ,   HH.span_ [ HH.input [ HPExt.type_ HPExt.InputSubmit, HPExt.value "confirm", HPExt.style "cursor: pointer;font-size:20px" ] ]
+      ] 
   ]
