@@ -62,7 +62,10 @@ component =
             resp <- Request.makeAuth (Just token) host Back.mkFrontApi $ Back.fetchTrnsaction ident
             let failure e = Async.send $ Async.mkException e loc
             onFailure resp failure \{ success: x :: Back.Transaction } -> do
-              logDebug $ loc <> " transaction ---> " <> Back.printTransaction x
+              let tr = 
+                       x # (Back._transaction <<< Back._currency) %~ Back.decodeCurrency 
+                         # (Back._transaction <<< Back._charges) %~ Back.decodeFee
+              logDebug $ loc <> " transaction ---> " <> show tr
               H.modify_ _ { isOpen = true, transaction = Just x }
       handleAction (Close ev) = H.liftEffect (preventDefault ev) *> H.modify_ _ { isOpen = false }
 

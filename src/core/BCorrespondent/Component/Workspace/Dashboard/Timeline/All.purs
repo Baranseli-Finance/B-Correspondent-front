@@ -23,6 +23,7 @@ import Data.Foldable (for_)
 import Data.Traversable (for)
 import Halogen.Store.Monad (getStore)
 import Data.Array (sortWith)
+import Data.Lens ((%~))
 
 
 proxy = Proxy :: _ "workspace_dashboard_timeline_all"
@@ -83,8 +84,11 @@ handleAction (FetchInfo textualIdent ident status)
         resp <- Request.makeAuth (Just token) host Back.mkFrontApi $ 
           Back.fetchTrnsaction ident
         let failure e = Async.send $ Async.mkException e loc
-        onFailure resp failure \{ success: x :: Back.Transaction } -> do 
-          logDebug $ loc <> " transaction ---> " <> Back.printTransaction x
+        onFailure resp failure \{ success: x :: Back.Transaction } -> do
+          let tr = 
+                  x # (Back._transaction <<< Back._currency) %~ Back.decodeCurrency 
+                    # (Back._transaction <<< Back._charges) %~ Back.decodeFee
+          logDebug $ loc <> " transaction ---> " <> show tr
           H.modify_ _ { isShow = true, transaction = Just x }
 
 handleQuery :: forall a s . Query a -> H.HalogenM State Action s Unit AppM (Maybe a)

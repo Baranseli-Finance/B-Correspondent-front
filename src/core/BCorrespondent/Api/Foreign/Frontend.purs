@@ -11,6 +11,7 @@ module BCorrespondent.Api.Foreign.Frontend
   , Fee(..)
   , FetchShiftHistoryTimelineParams
   , ForeignDayOfWeeksHourlyTotalSum
+  , ForeignTransactionValue
   , FromNotification
   , FrontApi
   , GapItem
@@ -28,7 +29,7 @@ module BCorrespondent.Api.Foreign.Frontend
   , Notifications
   , Sha
   , Transaction
-  , TransactionValue
+  , ForeignTransactionValue
   , Wallet
   , WalletType(..)
   , Workspace
@@ -78,7 +79,6 @@ module BCorrespondent.Api.Foreign.Frontend
   , printGapItemUnit
   , printInit
   , printTimline
-  , printTransaction
   , shaPred
   , submitIssue
   )
@@ -351,11 +351,11 @@ encodeDirection = genericEncodeEnum {constructorTagTransform: toLower}
 fetchTimelineForParticularHour :: Direction -> String -> FrontApi -> AC.EffectFnAff (Object (Response GapItemWrapper))
 fetchTimelineForParticularHour direction = runFn4 _fetchTimelineForParticularHour withError (encodeDirection direction)
 
-type Transaction = { transaction :: TransactionValue }
+type Transaction = { transaction :: ForeignTransactionValue }
 
 _transaction = lens _.transaction $ \el x -> el { transaction = x }
 
-type TransactionValue = 
+type ForeignTransactionValue = 
      { sender :: String,
        senderCountry :: String,
        senderCity :: String,
@@ -376,24 +376,10 @@ _senderBank = lens _.senderBank $ \el x -> el { senderBank = x }
 _receiver = lens _.receiver $ \el x -> el { receiver = x }
 _receiverBank = lens _.receiverBank $ \el x -> el { receiverBank = x }
 _amount = lens _.amount $ \el x -> el { amount = x }
-_currency = lens _.currency $ \el x -> el { currency = encodeCurrency x }
+_currency = lens _.currency $ \el x -> el { currency = x }
 _description = lens _.description $ \el x -> el { description = x }
-_charges = lens _.charges $ \el x -> el { charges = encodeFee x }
+_charges = lens _.charges $ \el x -> el { charges = x }
 _timestamp = lens _.tm $ \el x -> el { tm = x }
-
-printTransaction :: Transaction -> String
-printTransaction { transaction } = 
-  transaction^._sender <>
-  transaction^._senderCountry <>
-  transaction^._senderCity <>
-  transaction^._senderBank <>
-  transaction^._receiver <>
-  transaction^._receiverBank <>
-  show (transaction^._amount) <> 
-  show (decodeCurrency (transaction^._currency)) <>
-  transaction^._description <>
-  show (decodeFee (transaction^._charges)) <>
-  transaction^._timestamp
 
 foreign import _fetchTransaction :: Fn3 WithError Int FrontApi (AC.EffectFnAff (Object (Response Transaction)))
 
