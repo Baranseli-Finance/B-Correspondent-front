@@ -23,6 +23,7 @@ import Data.Functor (($>))
 import Data.Traversable (for)
 import Data.Lens
 
+
 import Undefined
 
 proxy = Proxy :: _ "workspace_dashboard_transaction"
@@ -60,8 +61,8 @@ component =
           for user \{ token } -> do
             resp <- Request.makeAuth (Just token) host Back.mkFrontApi $ Back.fetchTrnsaction ident
             let failure e = Async.send $ Async.mkException e loc
-            onFailure resp failure \{ success: x :: Back.Transaction } -> do 
-              logDebug $ loc <> " transaction ---> " <> show x
+            onFailure resp failure \{ success: x :: Back.Transaction } -> do
+              logDebug $ loc <> " transaction ---> " <> Back.printTransaction x
               H.modify_ _ { isOpen = true, transaction = Just x }
       handleAction (Close ev) = H.liftEffect (preventDefault ev) *> H.modify_ _ { isOpen = false }
 
@@ -76,8 +77,33 @@ transactionWin value =
   [  HH.div [HPExt.style "padding-top:20px"] [HH.h3_ [HH.text "transaction details"]]
   ,  HH.div 
      [HPExt.style "padding-top:20px"] 
-     [ HH.span_ [HH.text "transaction id:  "]
-     , HH.span_ [HH.text $ value^.Back._transaction <<< Back._ident]
+     [ HH.span_ [HH.text "sender:  "]
+     , HH.span_ [HH.text $ value^.Back._transaction <<< Back._sender]
+     ]
+  ,  HH.div 
+     [HPExt.style "padding-top:20px"] 
+     [ HH.span_ [HH.text "country:  "]
+     , HH.span_ [HH.text $ show $ value^.Back._transaction <<< Back._senderCountry]
+     ]
+  ,  HH.div 
+     [HPExt.style "padding-top:20px"] 
+     [ HH.span_ [HH.text "city:  "]
+     , HH.span_ [HH.text $ value^.Back._transaction <<< Back._senderCity]
+     ]
+  ,  HH.div 
+     [HPExt.style "padding-top:20px"] 
+     [ HH.span_ [HH.text "sender bank:  "]
+     , HH.span_ [HH.text $ value^.Back._transaction <<< Back._senderBank]
+     ]
+  ,  HH.div 
+     [HPExt.style "padding-top:20px"] 
+     [ HH.span_ [HH.text "recipient:  "]
+     , HH.span_ [HH.text $ value^.Back._transaction <<< Back._receiver]
+     ]
+  ,  HH.div 
+     [HPExt.style "padding-top:20px"] 
+     [ HH.span_ [HH.text "recipient bank:  "]
+     , HH.span_ [HH.text $ value^.Back._transaction <<< Back._receiverBank]
      ]
   ,  HH.div 
      [HPExt.style "padding-top:20px"] 
@@ -87,47 +113,22 @@ transactionWin value =
   ,  HH.div 
      [HPExt.style "padding-top:20px"] 
      [ HH.span_ [HH.text "currency:  "]
-     , HH.span_ [HH.text $ value^.Back._transaction <<< Back._currency]
+     , HH.span_ [HH.text $ show $ Back.decodeCurrency $ value^.Back._transaction <<< Back._currency]
      ]
   ,  HH.div 
      [HPExt.style "padding-top:20px"] 
-     [ HH.span_ [HH.text "sender:  "]
-     , HH.span_ [HH.text $ value^.Back._transaction <<< Back._senderName]
+     [ HH.span_ [HH.text "description:  "]
+     , HH.span_ [HH.text $ value^.Back._transaction <<< Back._description]
      ]
   ,  HH.div 
      [HPExt.style "padding-top:20px"] 
-     [ HH.span_ [HH.text "sender address:  "]
-     , HH.span_ [HH.text $ value^.Back._transaction <<< Back._senderAddress]
+     [ HH.span_ [HH.text "charges:  "]
+     , HH.span_ [HH.text $ show $ Back.decodeFee $ value^.Back._transaction <<< Back._charges]
      ]
   ,  HH.div 
      [HPExt.style "padding-top:20px"] 
-     [ HH.span_ [HH.text "sender phone:  "]
-     , HH.span_ [HH.text $ value^.Back._transaction <<< Back._senderPhoneNumber]
-     ]
-  ,  HH.div 
-     [HPExt.style "padding-top:20px"] 
-     [ HH.span_ [HH.text "sender bank:  "]
-     , HH.span_ [HH.text $ value^.Back._transaction <<< Back._senderBank]
-     ]
-  ,  HH.div 
-     [HPExt.style "padding-top:20px"] 
-     [ HH.span_ [HH.text "sender bank account:  "]
-     , HH.span_ [HH.text $ value^.Back._transaction <<< Back._senderBankAccount]
-     ]
-  ,  HH.div 
-     [HPExt.style "padding-top:20px"] 
-     [ HH.span_ [HH.text "swift code:  "]
-     , HH.span_ [HH.text $ value^.Back._transaction <<< Back._swiftSepaCode]
-     ]
-  ,  HH.div 
-     [HPExt.style "padding-top:20px"] 
-     [ HH.span_ [HH.text "correspondent bank:  "]
-     , HH.span_ [HH.text $ value^.Back._transaction <<< Back._correspondentBank]
-     ]
-  ,  HH.div 
-     [HPExt.style "padding-top:20px"] 
-     [ HH.span_ [HH.text "swift code (correspondent bank):  "]
-     , HH.span_ [HH.text $ value^.Back._transaction <<< Back._correspondentBankSwiftSepaCode]
+     [ HH.span_ [HH.text "tm:  "]
+     , HH.span_ [HH.text $ value^.Back._transaction <<< Back._timestamp]
      ]
   ]
 

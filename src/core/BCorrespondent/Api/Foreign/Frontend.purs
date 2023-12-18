@@ -8,6 +8,7 @@ module BCorrespondent.Api.Foreign.Frontend
   , DayOfWeekHourly
   , Direction(..)
   , EnumResolvedWallet
+  , Fee(..)
   , FetchShiftHistoryTimelineParams
   , ForeignDayOfWeeksHourlyTotalSum
   , FromNotification
@@ -34,28 +35,31 @@ module BCorrespondent.Api.Foreign.Frontend
   , _amount
   , _amounts
   , _balancesBalancedBook
-  , _correspondentBank
-  , _correspondentBankSwiftSepaCode
+  , _charges
   , _currency
+  , _description
   , _elements
   , _end
   , _hour
   , _ident
   , _institutionBalancedBook
   , _min
-  , _senderAddress
+  , _receiver
+  , _receiverBank
+  , _sender
   , _senderBank
-  , _senderBankAccount
-  , _senderName
-  , _senderPhoneNumber
+  , _senderCity
+  , _senderCountry
   , _start
-  , _swiftSepaCode
+  , _timestamp
   , _transaction
   , decodeCurrency
+  , decodeFee
   , decodeGapItemUnitStatus
   , decodeWalletType
   , encodeCurrency
   , encodeDirection
+  , encodeFee
   , fetchBalancedBook
   , fetchNotifications
   , fetchShiftHistoryTimeline
@@ -74,6 +78,7 @@ module BCorrespondent.Api.Foreign.Frontend
   , printGapItemUnit
   , printInit
   , printTimline
+  , printTransaction
   , shaPred
   , submitIssue
   )
@@ -98,12 +103,13 @@ import Data.Map as Map
 import Data.Either (Either)
 import Effect.Exception as E
 import Data.Array (uncons)
-import Data.Lens (lens, Lens, (%~))
+import Data.Lens (lens, Lens, (%~), (^.))
 import Data.Generic.Rep (class Generic)
 import Foreign.Enum
 import Data.String (toLower)
 import Data.Enum (class Enum, class BoundedEnum, fromEnum, toEnum)
 import Data.Enum.Generic (genericCardinality, genericToEnum, genericFromEnum, genericSucc, genericPred)
+
 
 import Undefined
 
@@ -264,6 +270,37 @@ decodeCurrency = fromMaybe CurrencyNotResolved <<< decodeEnumG
 encodeCurrency :: Currency -> Foreign
 encodeCurrency = genericEncodeEnum defaultGenericEnumOptions { constructorTagTransform = toLower }
 
+data Fee = FeeNotResolved | OUR | SHA
+
+derive instance genericFee :: Generic Fee _
+derive instance eqFee :: Eq Fee
+derive instance ordFee :: Ord Fee
+
+instance Enum Fee where
+  succ = genericSucc
+  pred = genericPred
+
+instance Bounded Fee where
+  top = SHA
+  bottom = FeeNotResolved
+
+instance BoundedEnum Fee where
+  cardinality = genericCardinality
+  toEnum = genericToEnum
+  fromEnum = genericFromEnum
+
+instance Show Fee where
+  show OUR = "OUR"
+  show SHA = "SHA"
+  show FeeNotResolved = "fee type not resolved"
+
+decodeFee :: Foreign -> Fee
+decodeFee = fromMaybe FeeNotResolved <<< decodeEnumG
+
+encodeFee :: Fee -> Foreign
+encodeFee = genericEncodeEnum defaultGenericEnumOptions { constructorTagTransform = toLower }
+
+
 type Wallet = 
     { ident :: Int,
       walletType :: Foreign,
@@ -319,30 +356,44 @@ type Transaction = { transaction :: TransactionValue }
 _transaction = lens _.transaction $ \el x -> el { transaction = x }
 
 type TransactionValue = 
-     { correspondentBank :: String,
-       correspondentBankSwiftSepaCode :: String,
-       currency :: String,
-       ident :: String,
-       senderAddress :: String,
+     { sender :: String,
+       senderCountry :: String,
+       senderCity :: String,
        senderBank :: String,
-       senderBankAccount :: String,
-       senderName :: String,
-       senderPhoneNumber :: String,
-       swiftSepaCode :: String,
-       amount :: Number
+       receiver :: String,
+       receiverBank :: String,
+       amount :: Number,
+       currency :: Foreign,
+       description :: String,
+       charges :: Foreign,
+       tm :: String
      }
 
-_correspondentBank = lens _.correspondentBank $ \el x -> el { correspondentBank = x }
-_correspondentBankSwiftSepaCode = lens _.correspondentBankSwiftSepaCode $ \el x -> el { correspondentBankSwiftSepaCode = x }
-_currency = lens _.currency $ \el x -> el { currency = x }
-_ident = lens _.ident $ \el x -> el { ident = x }
-_senderAddress = lens _.senderAddress $ \el x -> el { senderAddress = x }
+_sender = lens _.sender $ \el x -> el { sender = x }
+_senderCountry = lens _.senderCountry $ \el x -> el { senderCountry = x }
+_senderCity = lens _.senderCity $ \el x -> el { senderCity = x }
 _senderBank = lens _.senderBank $ \el x -> el { senderBank = x }
-_senderBankAccount = lens _.senderBankAccount $ \el x -> el { senderBankAccount = x }
-_senderName = lens _.senderName $ \el x -> el { senderName = x }
-_senderPhoneNumber = lens _.senderPhoneNumber $ \el x -> el { senderPhoneNumber = x }
-_swiftSepaCode = lens _.swiftSepaCode $ \el x -> el { swiftSepaCode = x }
+_receiver = lens _.receiver $ \el x -> el { receiver = x }
+_receiverBank = lens _.receiverBank $ \el x -> el { receiverBank = x }
 _amount = lens _.amount $ \el x -> el { amount = x }
+_currency = lens _.currency $ \el x -> el { currency = encodeCurrency x }
+_description = lens _.description $ \el x -> el { description = x }
+_charges = lens _.charges $ \el x -> el { charges = encodeFee x }
+_timestamp = lens _.tm $ \el x -> el { tm = x }
+
+printTransaction :: Transaction -> String
+printTransaction { transaction } = 
+  transaction^._sender <>
+  transaction^._senderCountry <>
+  transaction^._senderCity <>
+  transaction^._senderBank <>
+  transaction^._receiver <>
+  transaction^._receiverBank <>
+  show (transaction^._amount) <> 
+  show (decodeCurrency (transaction^._currency)) <>
+  transaction^._description <>
+  show (decodeFee (transaction^._charges)) <>
+  transaction^._timestamp
 
 foreign import _fetchTransaction :: Fn3 WithError Int FrontApi (AC.EffectFnAff (Object (Response Transaction)))
 
@@ -459,3 +510,5 @@ foreign import _loadUnreadNotification :: Fn2 WithError FrontApi (AC.EffectFnAff
 
 loadUnreadNotification :: FrontApi -> AC.EffectFnAff (Object (Response Workspace))
 loadUnreadNotification = runFn2 _loadUnreadNotification withError
+
+_ident = lens _.ident $ \el x -> el { ident = x }

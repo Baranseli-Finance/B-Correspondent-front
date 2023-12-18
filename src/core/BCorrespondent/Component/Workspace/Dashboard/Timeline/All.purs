@@ -84,7 +84,7 @@ handleAction (FetchInfo textualIdent ident status)
           Back.fetchTrnsaction ident
         let failure e = Async.send $ Async.mkException e loc
         onFailure resp failure \{ success: x :: Back.Transaction } -> do 
-          logDebug $ loc <> " transaction ---> " <> show x
+          logDebug $ loc <> " transaction ---> " <> Back.printTransaction x
           H.modify_ _ { isShow = true, transaction = Just x }
 
 handleQuery :: forall a s . Query a -> H.HalogenM State Action s Unit AppM (Maybe a)
