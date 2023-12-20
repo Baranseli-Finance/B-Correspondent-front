@@ -84,12 +84,12 @@ handleAction (FetchInfo textualIdent ident status)
         resp <- Request.makeAuth (Just token) host Back.mkFrontApi $ 
           Back.fetchTrnsaction ident
         let failure e = Async.send $ Async.mkException e loc
-        onFailure resp failure \{ success: x :: Back.Transaction } -> do
+        onFailure resp failure \{ success: x :: Back.ForeignTransaction } -> do
           let tr = 
                   x # (Back._transaction <<< Back._currency) %~ Back.decodeCurrency 
                     # (Back._transaction <<< Back._charges) %~ Back.decodeFee
           logDebug $ loc <> " transaction ---> " <> show tr
-          H.modify_ _ { isShow = true, transaction = Just x }
+          H.modify_ _ { isShow = true, transaction = Just tr }
 
 handleQuery :: forall a s . Query a -> H.HalogenM State Action s Unit AppM (Maybe a)
 handleQuery (Open xs a) = do 

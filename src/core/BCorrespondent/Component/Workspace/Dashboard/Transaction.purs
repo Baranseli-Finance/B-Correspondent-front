@@ -22,6 +22,7 @@ import Data.Maybe (Maybe (..))
 import Data.Functor (($>))
 import Data.Traversable (for)
 import Data.Lens
+import Date.Format (format)
 
 
 import Undefined
@@ -38,7 +39,7 @@ data Action = Close Event
 
 type State = 
     { isOpen :: Boolean, 
-      transaction :: Maybe Back.Transaction 
+      transaction :: Maybe Back.Transaction
     }
 
 component =
@@ -61,12 +62,14 @@ component =
           for user \{ token } -> do
             resp <- Request.makeAuth (Just token) host Back.mkFrontApi $ Back.fetchTrnsaction ident
             let failure e = Async.send $ Async.mkException e loc
-            onFailure resp failure \{ success: x :: Back.Transaction } -> do
+            onFailure resp failure \{ success: x :: Back.ForeignTransaction } -> do
+              ftm <- H.liftEffect $ format $ x^.Back._transaction <<< Back._timestamp
               let tr = 
                        x # (Back._transaction <<< Back._currency) %~ Back.decodeCurrency 
                          # (Back._transaction <<< Back._charges) %~ Back.decodeFee
+                         # (Back._transaction <<< Back._timestamp) .~ ftm
               logDebug $ loc <> " transaction ---> " <> show tr
-              H.modify_ _ { isOpen = true, transaction = Just x }
+              H.modify_ _ { isOpen = true, transaction = Just tr }
       handleAction (Close ev) = H.liftEffect (preventDefault ev) *> H.modify_ _ { isOpen = false }
 
 render {isOpen, transaction: value} = 
@@ -116,7 +119,7 @@ transactionWin value =
   ,  HH.div 
      [HPExt.style "padding-top:20px"] 
      [ HH.span_ [HH.text "currency:  "]
-     , HH.span_ [HH.text $ show $ Back.decodeCurrency $ value^.Back._transaction <<< Back._currency]
+     , HH.span_ [HH.text $ show $ value^.Back._transaction <<< Back._currency]
      ]
   ,  HH.div 
      [HPExt.style "padding-top:20px"] 
@@ -126,7 +129,7 @@ transactionWin value =
   ,  HH.div 
      [HPExt.style "padding-top:20px"] 
      [ HH.span_ [HH.text "charges:  "]
-     , HH.span_ [HH.text $ show $ Back.decodeFee $ value^.Back._transaction <<< Back._charges]
+     , HH.span_ [HH.text $ show $ value^.Back._transaction <<< Back._charges]
      ]
   ,  HH.div 
      [HPExt.style "padding-top:20px"] 

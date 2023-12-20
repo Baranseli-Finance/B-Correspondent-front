@@ -11,6 +11,8 @@ module BCorrespondent.Api.Foreign.Frontend
   , Fee(..)
   , FetchShiftHistoryTimelineParams
   , ForeignDayOfWeeksHourlyTotalSum
+  , ForeignTransaction
+  , ForeignTransactionValue
   , ForeignTransactionValue
   , FromNotification
   , FrontApi
@@ -29,7 +31,7 @@ module BCorrespondent.Api.Foreign.Frontend
   , Notifications
   , Sha
   , Transaction
-  , ForeignTransactionValue
+  , TransactionValue
   , Wallet
   , WalletType(..)
   , Workspace
@@ -351,9 +353,7 @@ encodeDirection = genericEncodeEnum {constructorTagTransform: toLower}
 fetchTimelineForParticularHour :: Direction -> String -> FrontApi -> AC.EffectFnAff (Object (Response GapItemWrapper))
 fetchTimelineForParticularHour direction = runFn4 _fetchTimelineForParticularHour withError (encodeDirection direction)
 
-type Transaction = { transaction :: ForeignTransactionValue }
-
-_transaction = lens _.transaction $ \el x -> el { transaction = x }
+type ForeignTransaction = { transaction :: ForeignTransactionValue }
 
 type ForeignTransactionValue = 
      { sender :: String,
@@ -369,6 +369,24 @@ type ForeignTransactionValue =
        tm :: String
      }
 
+
+type Transaction = { transaction :: TransactionValue }
+
+type TransactionValue = 
+     { sender :: String,
+       senderCountry :: String,
+       senderCity :: String,
+       senderBank :: String,
+       receiver :: String,
+       receiverBank :: String,
+       amount :: Number,
+       currency :: Currency,
+       description :: String,
+       charges :: Fee,
+       tm :: String
+     }
+
+_transaction = lens _.transaction $ \el x -> el { transaction = x }
 _sender = lens _.sender $ \el x -> el { sender = x }
 _senderCountry = lens _.senderCountry $ \el x -> el { senderCountry = x }
 _senderCity = lens _.senderCity $ \el x -> el { senderCity = x }
@@ -381,9 +399,9 @@ _description = lens _.description $ \el x -> el { description = x }
 _charges = lens _.charges $ \el x -> el { charges = x }
 _timestamp = lens _.tm $ \el x -> el { tm = x }
 
-foreign import _fetchTransaction :: Fn3 WithError Int FrontApi (AC.EffectFnAff (Object (Response Transaction)))
+foreign import _fetchTransaction :: Fn3 WithError Int FrontApi (AC.EffectFnAff (Object (Response ForeignTransaction)))
 
-fetchTrnsaction :: Int -> FrontApi -> AC.EffectFnAff (Object (Response Transaction))
+fetchTrnsaction :: Int -> FrontApi -> AC.EffectFnAff (Object (Response ForeignTransaction))
 fetchTrnsaction = runFn3 _fetchTransaction withError
 
 type HistoryTimeline = 
