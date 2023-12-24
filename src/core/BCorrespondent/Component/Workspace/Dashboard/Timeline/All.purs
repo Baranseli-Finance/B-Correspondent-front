@@ -2,7 +2,7 @@ module BCorrespondent.Component.Workspace.Dashboard.Timeline.All (slot, proxy, Q
 
 import Prelude
 
-import BCorrespondent.Component.Workspace.Dashboard.Transaction (transactionWin)
+import BCorrespondent.Component.Workspace.Dashboard.Transaction (transactionWinOk, transactionWinFailure)
 import BCorrespondent.Api.Foreign.Request as Request
 import BCorrespondent.Api.Foreign.Back as Back
 import BCorrespondent.Api.Foreign.Request.Handler (onFailure)
@@ -23,8 +23,12 @@ import Data.Foldable (for_)
 import Data.Traversable (for)
 import Halogen.Store.Monad (getStore)
 import Data.Array (sortWith)
-import Data.Lens ((%~))
+import Control.Alt (alt)
+import Data.Maybe (fromMaybe)
+import Date.Format (format)
+import Data.Lens
 
+import Undefined
 
 proxy = Proxy :: _ "workspace_dashboard_timeline_all"
 
@@ -44,7 +48,7 @@ type State =
        isOpen :: Boolean, 
        forkId :: Maybe H.ForkId,
        isShow :: Boolean,
-       transaction :: Maybe Back.Transaction
+       transaction :: Maybe Back.NoForeignTransaction
      }
 
 component =
@@ -84,12 +88,17 @@ handleAction (FetchInfo textualIdent ident status)
         resp <- Request.makeAuth (Just token) host Back.mkFrontApi $ 
           Back.fetchTrnsaction ident
         let failure e = Async.send $ Async.mkException e loc
-        onFailure resp failure \{ success: x :: Back.ForeignTransaction } -> do
-          let tr = 
-                  x # (Back._transaction <<< Back._currency) %~ Back.decodeCurrency 
-                    # (Back._transaction <<< Back._charges) %~ Back.decodeFee
-          logDebug $ loc <> " transaction ---> " <> show tr
-          H.modify_ _ { isShow = true, transaction = Just tr }
+        onFailure resp failure \{ success: foreignTr :: Back.ForeignTransaction } -> do
+          let res = Back.resolveTransaction foreignTr
+          onFailure res failure \tr@{ok, failure} -> do
+            oktm <- H.liftEffect $ for ok \x -> do 
+              ftm <- format $ x^.Back._timestamp
+              pure $ x # Back._timestamp .~ ftm
+            failuretm <- H.liftEffect $ for failure \x -> do
+              ftm <- format $ x^.Back._timestamp
+              pure $ x # Back._timestamp .~ ftm
+            logDebug $ loc <> " transaction ---> " <> show tr
+            H.modify_ _ { isShow = true, transaction = Just { ok: oktm, failure: failuretm } }
 
 handleQuery :: forall a s . Query a -> H.HalogenM State Action s Unit AppM (Maybe a)
 handleQuery (Open xs a) = do 
@@ -118,5 +127,9 @@ render {isOpen, transactions, isShow, transaction} =
                 ] 
                 [HH.text textualIdent]
    ,    HH.div [css $ "transaction-all-item-info transform " <> if isShow then "transform-active" else mempty] 
-        [maybeElem transaction (HH.div_ <<< transactionWin) ]
+        [maybeElem transaction $ \{ok, failure} ->
+          fromMaybe (HH.div_ [HH.text "not transaction to be rendered"]) $
+            (ok <#> HH.div_ <<< transactionWinOk) `alt` 
+            (failure <#> HH.div_ <<< transactionWinFailure)
+        ]
    ]

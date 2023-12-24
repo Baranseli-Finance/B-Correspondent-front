@@ -1,4 +1,11 @@
-module BCorrespondent.Component.Workspace.Dashboard.Transaction ( Query(..), slot, proxy, transactionWin) where
+module BCorrespondent.Component.Workspace.Dashboard.Transaction
+  ( Query(..)
+  , proxy
+  , slot
+  , transactionWinFailure
+  , transactionWinOk
+  )
+  where
 
 import Prelude
 
@@ -23,6 +30,8 @@ import Data.Functor (($>))
 import Data.Traversable (for)
 import Data.Lens
 import Date.Format (format)
+import Control.Alt (alt)
+import Data.Maybe (fromMaybe)
 
 
 import Undefined
@@ -39,7 +48,7 @@ data Action = Close Event
 
 type State = 
     { isOpen :: Boolean, 
-      transaction :: Maybe Back.Transaction
+      transaction :: Maybe Back.NoForeignTransaction
     }
 
 component =
@@ -62,80 +71,101 @@ component =
           for user \{ token } -> do
             resp <- Request.makeAuth (Just token) host Back.mkFrontApi $ Back.fetchTrnsaction ident
             let failure e = Async.send $ Async.mkException e loc
-            onFailure resp failure \{ success: x :: Back.ForeignTransaction } -> do
-              ftm <- H.liftEffect $ format $ x^.Back._transaction <<< Back._timestamp
-              let tr = 
-                       x # (Back._transaction <<< Back._currency) %~ Back.decodeCurrency 
-                         # (Back._transaction <<< Back._charges) %~ Back.decodeFee
-                         # (Back._transaction <<< Back._timestamp) .~ ftm
-              logDebug $ loc <> " transaction ---> " <> show tr
-              H.modify_ _ { isOpen = true, transaction = Just tr }
+            onFailure resp failure \{ success: foreignTr :: Back.ForeignTransaction } -> do
+               let res = Back.resolveTransaction foreignTr
+               onFailure res failure \tr@{ok, failure} -> do
+                 oktm <- H.liftEffect $ for ok \x -> do
+                   ftm <- format $ x^.Back._timestamp
+                   pure $ x # Back._timestamp .~ ftm
+                 failuretm <- H.liftEffect $ for failure \x -> do
+                   ftm <- format $ x^.Back._timestamp
+                   pure $ x # Back._timestamp .~ ftm
+                 logDebug $ loc <> " transaction ---> " <> show tr
+                 H.modify_ _ { isOpen = true, transaction = Just { ok: oktm, failure: failuretm } }
       handleAction (Close ev) = H.liftEffect (preventDefault ev) *> H.modify_ _ { isOpen = false }
 
-render {isOpen, transaction: value} = 
+render {isOpen, transaction: value} =
   HH.div 
   [css "transaction-modal-container", 
    HPExt.style display]
-  [maybeElem value \x -> HH.div [css "transaction-modal"] $ transactionWin x <> [closeButton]]
+  [maybeElem value \{ok, failure} -> 
+    fromMaybe (HH.div_ [HH.text "not transaction to be rendered"]) $
+      (ok <#> \x -> HH.div [css "transaction-modal-ok"] $ transactionWinOk x <> [closeButton]) `alt`
+      (failure <#> \x -> HH.div [css "transaction-modal-failure"] $ transactionWinFailure x <> [closeButton])
+  ]
   where display = if isOpen then "display:block" else "display:none"
 
-transactionWin value =
+transactionWinOk value =
   [  HH.div [HPExt.style "padding-top:20px"] [HH.h3_ [HH.text "transaction details"]]
   ,  HH.div 
      [HPExt.style "padding-top:20px"] 
      [ HH.span_ [HH.text "sender:  "]
-     , HH.span_ [HH.text $ value^.Back._transaction <<< Back._sender]
+     , HH.span_ [HH.text $ value^.Back._sender]
      ]
   ,  HH.div 
      [HPExt.style "padding-top:20px"] 
      [ HH.span_ [HH.text "country:  "]
-     , HH.span_ [HH.text $ show $ value^.Back._transaction <<< Back._senderCountry]
+     , HH.span_ [HH.text $ show $ value^.Back._senderCountry]
      ]
   ,  HH.div 
      [HPExt.style "padding-top:20px"] 
      [ HH.span_ [HH.text "city:  "]
-     , HH.span_ [HH.text $ value^.Back._transaction <<< Back._senderCity]
+     , HH.span_ [HH.text $ value^.Back._senderCity]
      ]
   ,  HH.div 
      [HPExt.style "padding-top:20px"] 
      [ HH.span_ [HH.text "sender bank:  "]
-     , HH.span_ [HH.text $ value^.Back._transaction <<< Back._senderBank]
+     , HH.span_ [HH.text $ value^.Back._senderBank]
      ]
-  ,  HH.div 
-     [HPExt.style "padding-top:20px"] 
-     [ HH.span_ [HH.text "recipient:  "]
-     , HH.span_ [HH.text $ value^.Back._transaction <<< Back._receiver]
-     ]
+--   ,  HH.div 
+--      [HPExt.style "padding-top:20px"] 
+--      [ HH.span_ [HH.text "recipient:  "]
+--      , HH.span_ [HH.text $ value^.Back._receiver]
+--      ]
   ,  HH.div 
      [HPExt.style "padding-top:20px"] 
      [ HH.span_ [HH.text "recipient bank:  "]
-     , HH.span_ [HH.text $ value^.Back._transaction <<< Back._receiverBank]
+     , HH.span_ [HH.text $ value^.Back._receiverBank]
      ]
   ,  HH.div 
      [HPExt.style "padding-top:20px"] 
      [ HH.span_ [HH.text "amount:  "]
-     , HH.span_ [HH.text $ show $ value^.Back._transaction <<< Back._amount]
+     , HH.span_ [HH.text $ show $ value^.Back._amount]
      ]
   ,  HH.div 
      [HPExt.style "padding-top:20px"] 
      [ HH.span_ [HH.text "currency:  "]
-     , HH.span_ [HH.text $ show $ value^.Back._transaction <<< Back._currency]
+     , HH.span_ [HH.text $ show $ value^.Back._currency]
      ]
   ,  HH.div 
      [HPExt.style "padding-top:20px"] 
      [ HH.span_ [HH.text "description:  "]
-     , HH.span_ [HH.text $ value^.Back._transaction <<< Back._description]
+     , HH.span_ [HH.text $ value^.Back._description]
      ]
   ,  HH.div 
      [HPExt.style "padding-top:20px"] 
      [ HH.span_ [HH.text "charges:  "]
-     , HH.span_ [HH.text $ show $ value^.Back._transaction <<< Back._charges]
+     , HH.span_ [HH.text $ show $ value^.Back._charges]
      ]
   ,  HH.div 
      [HPExt.style "padding-top:20px"] 
      [ HH.span_ [HH.text "tm:  "]
-     , HH.span_ [HH.text $ value^.Back._transaction <<< Back._timestamp]
+     , HH.span_ [HH.text $ value^.Back._timestamp]
      ]
+  ]
+
+transactionWinFailure value = 
+  [  HH.div [HPExt.style "padding-top:20px"] [HH.h3_ [HH.text "transaction details"]]
+  ,  HH.div 
+     [HPExt.style "padding-top:20px"] 
+     [ HH.span_ [HH.text "reason:  "]
+     , HH.span_ [HH.text $ value^.Back._reason]
+     ]
+  ,  HH.div 
+     [HPExt.style "padding-top:20px"] 
+     [ HH.span_ [HH.text "tm:  "]
+     , HH.span_ [HH.text $ value^.Back._timestamp]
+     ]   
   ]
 
 closeButton = 

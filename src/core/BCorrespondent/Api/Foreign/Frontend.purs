@@ -12,8 +12,8 @@ module BCorrespondent.Api.Foreign.Frontend
   , FetchShiftHistoryTimelineParams
   , ForeignDayOfWeeksHourlyTotalSum
   , ForeignTransaction
-  , ForeignTransactionValue
-  , ForeignTransactionValue
+  , ForeignTransactionOk
+  , ForeignTransactionOption
   , FromNotification
   , FrontApi
   , GapItem
@@ -27,11 +27,13 @@ module BCorrespondent.Api.Foreign.Frontend
   , InvoiceSince
   , Issue
   , NextGap
+  , NoForeignTransaction
   , Notification
   , Notifications
   , Sha
   , Transaction
-  , TransactionValue
+  , TransactionFailure
+  , TransactionOk
   , Wallet
   , WalletType(..)
   , Workspace
@@ -47,6 +49,7 @@ module BCorrespondent.Api.Foreign.Frontend
   , _ident
   , _institutionBalancedBook
   , _min
+  , _reason
   , _receiver
   , _receiverBank
   , _sender
@@ -81,6 +84,7 @@ module BCorrespondent.Api.Foreign.Frontend
   , printGapItemUnit
   , printInit
   , printTimline
+  , resolveTransaction
   , shaPred
   , submitIssue
   )
@@ -99,10 +103,10 @@ import Data.Argonaut.Encode.Combinators
 import Data.Argonaut.Core (jsonEmptyObject)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Undefined
-import Foreign (Foreign)
+import Foreign (Foreign, isUndefined, tagOf, unsafeFromForeign)
 import Effect (Effect)
 import Data.Map as Map
-import Data.Either (Either)
+import Data.Either (Either (..))
 import Effect.Exception as E
 import Data.Array (uncons)
 import Data.Lens (lens, Lens, (%~), (^.))
@@ -111,6 +115,7 @@ import Foreign.Enum
 import Data.String (toLower)
 import Data.Enum (class Enum, class BoundedEnum, fromEnum, toEnum)
 import Data.Enum.Generic (genericCardinality, genericToEnum, genericFromEnum, genericSucc, genericPred)
+import Effect.Exception (Error, error)
 
 
 import Undefined
@@ -353,15 +358,18 @@ encodeDirection = genericEncodeEnum {constructorTagTransform: toLower}
 fetchTimelineForParticularHour :: Direction -> String -> FrontApi -> AC.EffectFnAff (Object (Response GapItemWrapper))
 fetchTimelineForParticularHour direction = runFn4 _fetchTimelineForParticularHour withError (encodeDirection direction)
 
-type ForeignTransaction = { transaction :: ForeignTransactionValue }
+type ForeignTransaction = { transaction :: ForeignTransactionOption }
 
-type ForeignTransactionValue = 
+type ForeignTransactionOption = { ok :: Foreign, failure :: Foreign }
+
+type ForeignTransactionOk = 
      { sender :: String,
        senderCountry :: String,
        senderCity :: String,
        senderBank :: String,
-       receiver :: String,
+      --  receiver :: String,
        receiverBank :: String,
+       correspondentBank :: String,
        amount :: Number,
        currency :: Foreign,
        description :: String,
@@ -369,22 +377,39 @@ type ForeignTransactionValue =
        tm :: String
      }
 
-
-type Transaction = { transaction :: TransactionValue }
-
-type TransactionValue = 
+type TransactionOk = 
      { sender :: String,
        senderCountry :: String,
        senderCity :: String,
        senderBank :: String,
-       receiver :: String,
+      --  receiver :: String,
        receiverBank :: String,
+       correspondentBank :: String,
        amount :: Number,
        currency :: Currency,
        description :: String,
        charges :: Fee,
        tm :: String
      }
+
+type TransactionFailure = { reason :: String, tm :: String }
+
+type Transaction = { ok :: Maybe ForeignTransactionOk, failure :: Maybe TransactionFailure }
+
+type NoForeignTransaction = { ok :: Maybe TransactionOk, failure :: Maybe TransactionFailure }
+
+resolveTransaction :: ForeignTransaction -> Either Error NoForeignTransaction
+resolveTransaction { transaction: { ok: okValue, failure: failureValue } } 
+  | isUndefined failureValue && 
+     tagOf okValue  == "Object"
+     = let fok = unsafeFromForeign okValue :: ForeignTransactionOk
+           rok = fok # _currency %~ decodeCurrency 
+                    # _charges %~ decodeFee
+       in Right { ok: Just rok, failure: Nothing }
+  | isUndefined okValue && 
+    tagOf failureValue  == "Object"
+     = Right { failure: Just (unsafeFromForeign failureValue), ok: Nothing }
+  | otherwise = Left $ error "cannot resolve transaction"
 
 _transaction = lens _.transaction $ \el x -> el { transaction = x }
 _sender = lens _.sender $ \el x -> el { sender = x }
@@ -398,6 +423,7 @@ _currency = lens _.currency $ \el x -> el { currency = x }
 _description = lens _.description $ \el x -> el { description = x }
 _charges = lens _.charges $ \el x -> el { charges = x }
 _timestamp = lens _.tm $ \el x -> el { tm = x }
+_reason = lens _.reason $ \el x -> el { reason = x }
 
 foreign import _fetchTransaction :: Fn3 WithError Int FrontApi (AC.EffectFnAff (Object (Response ForeignTransaction)))
 
